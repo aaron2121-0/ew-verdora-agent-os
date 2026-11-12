@@ -37,3 +37,27 @@ test("Railway bundle packages fonts, AI scripts, self-hosted SDK and both health
  }
  assert.doesNotMatch(build,/cdn\.jsdelivr\.net/);
 });
+
+test("typeText resolves when skipped and never exposes partial emoji",async()=>{
+ const {typeText}=await import("../public/motion.js");
+ const before={matchMedia:globalThis.matchMedia,requestAnimationFrame:globalThis.requestAnimationFrame,cancelAnimationFrame:globalThis.cancelAnimationFrame};
+ let frame=null,canceled=false;
+ globalThis.matchMedia=()=>({matches:false});
+ globalThis.requestAnimationFrame=fn=>{frame=fn;return 1};
+ globalThis.cancelAnimationFrame=()=>{canceled=true};
+ const listeners=new Map();
+ const node={textContent:"",addEventListener:(type,fn)=>listeners.set(type,fn),removeEventListener:type=>listeners.delete(type)};
+ try{
+  const result=typeText(node,"A👩‍💻中",{duration:15});
+  frame(100);
+  frame(120);
+  assert.equal(node.textContent,"A");
+  listeners.get("click")();
+  await result;
+  assert.equal(node.textContent,"A👩‍💻中");
+  assert.equal(canceled,true);
+  assert.equal(listeners.has("click"),false);
+ }finally{
+  for(const [name,value] of Object.entries(before)){if(value===undefined)delete globalThis[name];else globalThis[name]=value}
+ }
+});
