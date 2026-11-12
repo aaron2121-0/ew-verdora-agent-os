@@ -77,9 +77,14 @@ Deno.serve(async req=>{
 
   try{
     if(action==="today"){
-      const {data,error}=await admin.rpc("agent_training_today_internal",{p_agent_id:agent.id,p_date:day});
+      const start=body.start===true;
+      const {data:existing,error:existingError}=await admin.from("training_daily_attempts")
+        .select("id,status").eq("agent_id",agent.id).eq("training_date",day).maybeSingle();
+      if(existingError)throw existingError;
+      const rpc=(!existing&&!start)?"agent_training_summary_internal":"agent_training_today_internal";
+      const {data,error}=await admin.rpc(rpc,{p_agent_id:agent.id,p_date:day});
       if(error)throw error;
-      return reply({ok:true,today:safeQuestionPayload(data,false),server_date:day});
+      return reply({ok:true,today:safeQuestionPayload(data,false),server_date:day,server_now:new Date().toISOString()});
     }
     if(action==="answer"){
       const position=int(body.position),selected=int(body.selected_index);
@@ -88,17 +93,17 @@ Deno.serve(async req=>{
         p_agent_id:agent.id,p_date:day,p_position:position,p_selected_index:selected
       });
       if(error)throw error;
-      return reply({ok:true,answer:safeQuestionPayload(data,true),server_date:day});
+      return reply({ok:true,answer:safeQuestionPayload(data,true),server_date:day,server_now:new Date().toISOString()});
     }
     if(action==="finish"){
       const {data,error}=await admin.rpc("agent_training_finish_internal",{p_agent_id:agent.id,p_date:day});
       if(error)throw error;
-      return reply({ok:true,result:safeQuestionPayload(data,true),server_date:day});
+      return reply({ok:true,result:safeQuestionPayload(data,true),server_date:day,server_now:new Date().toISOString()});
     }
     if(action==="exam_start"){
       const {data,error}=await admin.rpc("agent_training_exam_start_internal",{p_agent_id:agent.id});
       if(error)throw error;
-      return reply({ok:true,exam:safeQuestionPayload(data,false),server_date:day});
+      return reply({ok:true,exam:safeQuestionPayload(data,false),server_date:day,server_now:new Date().toISOString()});
     }
     if(action==="exam_answer"){
       const attemptId=uuid(body.attempt_id),position=int(body.position),selected=int(body.selected_index);
@@ -107,14 +112,14 @@ Deno.serve(async req=>{
         p_agent_id:agent.id,p_attempt_id:attemptId,p_position:position,p_selected_index:selected
       });
       if(error)throw error;
-      return reply({ok:true,answer:safeQuestionPayload(data,true),server_date:day});
+      return reply({ok:true,answer:safeQuestionPayload(data,true),server_date:day,server_now:new Date().toISOString()});
     }
     if(action==="exam_finish"){
       const attemptId=uuid(body.attempt_id);
       if(!attemptId)return reply({error:"exam_attempt_not_found"},404);
       const {data,error}=await admin.rpc("agent_training_exam_finish_internal",{p_agent_id:agent.id,p_attempt_id:attemptId});
       if(error)throw error;
-      return reply({ok:true,result:safeQuestionPayload(data,true),server_date:day});
+      return reply({ok:true,result:safeQuestionPayload(data,true),server_date:day,server_now:new Date().toISOString()});
     }
     return reply({error:"unknown_action"},400);
   }catch(e){
