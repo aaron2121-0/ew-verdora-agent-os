@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: qa-p0-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   qa-regression:
@@ -22,13 +22,6 @@ jobs:
       QA_AGENT_URL: https://agent-mobile-production.up.railway.app
       QA_OWNER_URL: https://owner-mobile-production.up.railway.app
       QA_SUPABASE_URL: https://vuibesuahnhlafsfraeo.supabase.co
-      QA_AGENT_A_TOKEN: ${{ secrets.QA_AGENT_A_TOKEN }}
-      QA_AGENT_B_TOKEN: ${{ secrets.QA_AGENT_B_TOKEN }}
-      QA_OWNER_TOKEN: ${{ secrets.QA_OWNER_TOKEN }}
-      QA_NO_ROLE_TOKEN: ${{ secrets.QA_NO_ROLE_TOKEN }}
-      QA_AGENT_A_ID: ${{ secrets.QA_AGENT_A_ID }}
-      QA_AGENT_B_ID: ${{ secrets.QA_AGENT_B_ID }}
-      QA_DEMO_FIXTURES_VERIFIED: ${{ vars.QA_DEMO_FIXTURES_VERIFIED }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -49,24 +42,25 @@ jobs:
         if: always()
         continue-on-error: true
         run: node --test tests/qa-p0-public.test.mjs
-      - name: Require isolated demo credentials for production-data tests
-        id: fixtures
-        if: always()
+      - name: P0 isolated demo identities, one-time invite and RBAC checks
+        id: integration
+        # Forked PRs never receive QA credentials; no pull_request_target.
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         continue-on-error: true
-        run: node scripts/qa/verify-fixtures.mjs
-      - name: P0 authenticated read-only isolation and permission tests
-        id: authenticated
-        if: always() && steps.fixtures.outcome == 'success'
-        continue-on-error: true
-        run: node --test tests/qa-p0-authenticated.test.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_QA_SECRET_KEY: ${{ secrets.SUPABASE_QA_SECRET_KEY }}
+        run: node scripts/qa/run-isolated-integration.mjs
       - name: Enforce all P0 checks
         if: always()
         run: |
-          echo "source=${{ steps.source.outcome }} public=${{ steps.public.outcome }} fixtures=${{ steps.fixtures.outcome }} authenticated=${{ steps.authenticated.outcome }}"
+          echo "source=${{ steps.source.outcome }} public=${{ steps.public.outcome }} integration=${{ steps.integration.outcome }}"
           test "${{ steps.source.outcome }}" = "success"
           test "${{ steps.public.outcome }}" = "success"
-          test "${{ steps.fixtures.outcome }}" = "success"
-          test "${{ steps.authenticated.outcome }}" = "success"
+          if [ "${{ github.event_name }}" != "pull_request" ] || [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            test "${{ steps.integration.outcome }}" = "success"
+          fi
       - name: Publish P0 summary
         if: always()
         run: |
