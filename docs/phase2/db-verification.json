@@ -1,0 +1,32 @@
+{
+  "verified_at": "2026-11-13T01:34:00+08:00",
+  "migration": "phase2_agent_performance_dashboard",
+  "transaction_tests": {
+    "leaderboard_refund_demo_privacy": {
+      "expected_order": [
+        "QA-A",
+        "QA-C",
+        "QA-B"
+      ],
+      "actual_order": [
+        "QA-A",
+        "QA-C",
+        "QA-B"
+      ],
+      "partial_refund_deducted": true,
+      "full_refund_excluded": true,
+      "demo_excluded": true,
+      "peer_private_keys_returned": false,
+      "rolled_back": true
+    },
+    "kuching_month_boundary": {
+      "before_midnight_local": "2026-10-31 23:30 Asia/Kuching",
+      "after_midnight_local": "2026-11-01 00:30 Asia/Kuching",
+      "october_revenue": 100,
+      "november_revenue": 200,
+      "october_leaderboard_revenue": 100,
+      "november_leaderboard_revenue": 200,
+      "rolled_back": true
+    }
+  }
+}
