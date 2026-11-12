@@ -21,7 +21,5 @@ jobs:
           cache-dependency-path: package.json
       - name: Install
         run: npm install --ignore-scripts
-      - name: Build Owner Railway Function
-        run: node apps/owner-mobile/build-railway-function.mjs
       - name: Typecheck and tests
         run: npm run check
