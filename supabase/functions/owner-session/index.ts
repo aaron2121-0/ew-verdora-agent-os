@@ -46,6 +46,27 @@ Deno.serve(async req=>{
   let b={};try{b=await req.json()}catch{}
   const action=b.action||"dashboard";
 
+  if(action==="create_owner_recovery_link"){
+    const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
+    if(authCheck.error)return reply({error:publicError(authCheck.error,"forbidden")},403);
+    const code=randomCode();
+    const codeHash=await sha256Hex(code);
+    const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
+    await admin.from("owner_auth_invites")
+      .delete()
+      .eq("user_id",uid)
+      .is("used_at",null);
+    const {error}=await admin.from("owner_auth_invites").insert({
+      user_id:uid,code_hash:codeHash,expires_at:expiresAt,created_by:uid
+    });
+    if(error){
+      console.error("OWNER_RECOVERY_CREATE_DB",error.code||"",error.details||"",error.hint||"");
+      return reply({error:"owner_recovery_create_failed"},400);
+    }
+    const recoveryUrl="https://owner-mobile-production.up.railway.app/#owner_invite="+encodeURIComponent(code);
+    return reply({ok:true,expires_at:expiresAt,recovery_url:recoveryUrl});
+  }
+
   if(action==="create_agent_invite"){
     const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
     if(authCheck.error)return reply({error:publicError(authCheck.error,"forbidden")},403);
