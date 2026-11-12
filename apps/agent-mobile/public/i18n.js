@@ -1,5 +1,6 @@
 export const I18N={
   en:{
+    aiDailyFocus:"Today's focus",aiDailyFollowup:"Review follow-ups",aiDailyViewTasks:"View today's plan",
     aiStatsTitle:"Your activity",
     themeLight:"Light",themeDark:"Dark",themeToggle:"Switch appearance",
     aiCoachTitle:"AI customer reply coach",aiCoachInput:"Paste what the customer said…",aiCoachAsk:"Help me reply",
@@ -443,6 +444,7 @@ export const I18N={
     commissionWaived:"Waived",
   },
   zh:{
+    aiDailyFocus:"今日重点",aiDailyFollowup:"查看该跟进的客户",aiDailyViewTasks:"查看今日任务",
     aiStatsTitle:"你的使用记录",
     themeLight:"浅色",themeDark:"深色",themeToggle:"切换外观",
     aiCoachTitle:"AI 客户回复教练",aiCoachInput:"把客户说的话贴在这里…",aiCoachAsk:"帮我想怎么回",
