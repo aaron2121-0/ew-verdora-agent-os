@@ -146,7 +146,7 @@ async function testOrder(browser){
   await page.waitForTimeout(220);
   const wa=await page.evaluate(()=>window.__wa);
   if(!wa.length||!wa[0].startsWith("https://wa.me/?text="))throw new Error("WhatsApp send missing");
-  const draft=await page.evaluate(()=>({scoped:localStorage.getItem("ew_phase1_order_draft_v2:u-test"),legacy:localStorage.getItem("ew_phase1_order_draft_v2:u-test")}));
+  const draft=await page.evaluate(()=>({scoped:localStorage.getItem("ew_phase1_order_draft_v2:u-test"),legacy:localStorage.getItem("ew_phase1_order_draft_v1")}));
   if(draft.scoped!==null||draft.legacy!==null)throw new Error("draft was not cleared after send");
   if(!bodies.some(x=>x.action==="accept_option"&&x.option==="recommended"))throw new Error("server quote option not accepted");
   await page.screenshot({path:path.join(out,"gif-04-after-send.png"),fullPage:false});
