@@ -520,7 +520,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
     const rows=getData()?.phase1?.recent_leads||[];
-    if(!rows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));host.append(page);return}
+    if(!rows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);host.append(page);return}
     const list=element("div",{className:"customer-list"});
     rows.forEach(lead=>{
       const card=element("button",{className:"customer-card",attrs:{type:"button"}});
