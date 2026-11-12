@@ -354,8 +354,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
       card.prepend(why);priorities.append(card);
     }
-    page.append(priorities);prioritizeCards(D,priorities,tr);
+    page.append(priorities);
     host.append(page);
+    prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
     celebrateIfNeeded();
   }
