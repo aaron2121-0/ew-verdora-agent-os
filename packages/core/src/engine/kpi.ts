@@ -46,14 +46,34 @@ export function performanceScore(f: KpiFacts, rules: Rules): KpiResult {
   return { score: Math.round(total * 10) / 10, components, ruleVersion: rules.version };
 }
 
+/* ---------- Outcome vs leading KPI: why was there no order? ---------- */
+
 export type Diagnosis = 'HEALTHY' | 'ACTIVITY_PROBLEM' | 'QUALIFICATION_PROBLEM' | 'CLOSING_PROBLEM';
-export interface FunnelFacts { conversations:number; qualifiedLeads:number; quotes:number; orders:number; }
-export interface DiagnosisResult { diagnosis:Diagnosis; remedy:'NONE'|'ACQUISITION_MISSION'|'requirement-discovery'|'objection-handling'; }
-export function diagnoseFunnel(f:FunnelFacts,rules:Rules):DiagnosisResult {
-  const m=rules.mission;
-  if(f.orders>=m.orderTarget&&m.orderTarget>0)return{diagnosis:'HEALTHY',remedy:'NONE'};
-  if(f.conversations<m.minConversations)return{diagnosis:'ACTIVITY_PROBLEM',remedy:'ACQUISITION_MISSION'};
-  if(f.quotes>=m.quotes)return{diagnosis:'CLOSING_PROBLEM',remedy:'objection-handling'};
-  if(f.qualifiedLeads<Math.ceil(f.conversations/2))return{diagnosis:'QUALIFICATION_PROBLEM',remedy:'requirement-discovery'};
-  return f.quotes>0?{diagnosis:'CLOSING_PROBLEM',remedy:'objection-handling'}:{diagnosis:'QUALIFICATION_PROBLEM',remedy:'requirement-discovery'};
+
+export interface FunnelFacts {
+  conversations: number;
+  qualifiedLeads: number;
+  quotes: number;
+  orders: number;
+}
+
+export interface DiagnosisResult {
+  diagnosis: Diagnosis;
+  /** Training module or mission the system assigns automatically. */
+  remedy: 'NONE' | 'ACQUISITION_MISSION' | 'requirement-discovery' | 'objection-handling';
+}
+
+/**
+ * Zero orders is never punished on its own. The funnel decides which
+ * problem the Agent has, and each problem gets a different remedy.
+ */
+export function diagnoseFunnel(f: FunnelFacts, rules: Rules): DiagnosisResult {
+  const m = rules.mission;
+  if (f.orders >= m.orderTarget && m.orderTarget > 0) return { diagnosis: 'HEALTHY', remedy: 'NONE' };
+  if (f.conversations < m.minConversations) return { diagnosis: 'ACTIVITY_PROBLEM', remedy: 'ACQUISITION_MISSION' };
+  if (f.quotes >= m.quotes) return { diagnosis: 'CLOSING_PROBLEM', remedy: 'objection-handling' };
+  if (f.qualifiedLeads < Math.ceil(f.conversations / 2)) {
+    return { diagnosis: 'QUALIFICATION_PROBLEM', remedy: 'requirement-discovery' };
+  }
+  return f.quotes > 0 ? { diagnosis: 'CLOSING_PROBLEM', remedy: 'objection-handling' } : { diagnosis: 'QUALIFICATION_PROBLEM', remedy: 'requirement-discovery' };
 }

@@ -25,6 +25,10 @@ export function commissionableRevenue(o: OrderAmounts, rules: Rules): Sen {
   return Math.max(0, base);
 }
 
+/**
+ * Recorded once, when a quote version is officially approved. Later tier
+ * changes, rule edits or procurement cost increases never alter it.
+ */
 export interface QuoteLock {
   readonly quoteId: string;
   readonly quoteVersion: number;
@@ -67,6 +71,7 @@ export interface LedgerEntry {
   readonly baseSen: Sen | null;
 }
 
+/** Commission for a completed order, at the rate locked on its quote. */
 export function commissionEntry(orderId: string, amounts: OrderAmounts, lock: QuoteLock, rules: Rules): LedgerEntry {
   const base = commissionableRevenue({ ...amounts, refundedFlowerSen: 0 }, rules);
   return {
@@ -81,6 +86,7 @@ export function commissionEntry(orderId: string, amounts: OrderAmounts, lock: Qu
   };
 }
 
+/** Reversal for a refund: the same locked rate applied to the refunded part. */
 export function refundReversalEntry(orderId: string, refundId: string, refundedFlowerSen: Sen, lock: QuoteLock): LedgerEntry {
   return {
     idempotencyKey: `commission:${orderId}:refund:${refundId}`,
@@ -94,17 +100,29 @@ export function refundReversalEntry(orderId: string, refundId: string, refundedF
   };
 }
 
+/**
+ * Append-only ledger. Posting the same idempotency key twice is a no-op, so
+ * a retried webhook or duplicated job can never pay twice. The database
+ * enforces the same rule with a unique constraint on `idempotency_key`.
+ */
 export class Ledger {
   private readonly entries = new Map<string, LedgerEntry>();
+
   post(entry: LedgerEntry): { posted: boolean } {
     if (this.entries.has(entry.idempotencyKey)) return { posted: false };
     this.entries.set(entry.idempotencyKey, Object.freeze({ ...entry }));
     return { posted: true };
   }
-  all(): readonly LedgerEntry[] { return [...this.entries.values()]; }
+
+  all(): readonly LedgerEntry[] {
+    return [...this.entries.values()];
+  }
+
   balance(agentId: string, type?: LedgerEntryType): Sen {
     let total = 0;
-    for (const e of this.entries.values()) if (e.agentId === agentId && (!type || e.type === type)) total += e.amountSen;
+    for (const e of this.entries.values()) {
+      if (e.agentId === agentId && (!type || e.type === type)) total += e.amountSen;
+    }
     return total;
   }
 }

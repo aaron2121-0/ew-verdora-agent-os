@@ -50,7 +50,9 @@ const bonusSchema = z.object({
   orders: z.number().int().min(1),
   windowDays: z.number().int().min(1),
   amountSen: sen,
+  /** Rules in one stack group never add up: only the highest reached pays. */
   stackGroup: z.string().nullable(),
+  /** Discretionary bonuses pause when Profit Guard leaves NORMAL mode. */
   discretionary: z.boolean(),
   requiresZeroUpheldComplaints: z.boolean(),
 });
@@ -63,6 +65,7 @@ export const rulesSchema = z
     certification: z.object({
       passScore: z.number().min(0).max(100),
       categoryMax: z.number().int().min(1),
+      /** A category at or below this score triggers its micro-training. */
       weakCategoryScore: z.number().min(0),
       categoryModules: z.record(z.enum(ROLEPLAY_CATEGORIES), z.string()),
     }),
@@ -79,8 +82,11 @@ export const rulesSchema = z
     }),
     tiers: z.array(tierSchema).length(TIER_CODES.length),
     tierPolicy: z.object({
+      /** Days an Agent keeps a tier after dropping below its requirements. */
       graceDays: z.number().int().min(0),
+      /** Days after a downgrade during which missions aim at re-qualifying. */
       recoveryDays: z.number().int().min(0),
+      /** Upheld complaints / completed orders must stay at or below this. */
       qualityMaxComplaintRateBps: bps,
     }),
     commission: z.object({
@@ -90,18 +96,22 @@ export const rulesSchema = z
     bonuses: z.array(bonusSchema),
     profitGuard: z.object({
       targetNetMarginBps: bps,
+      /** NORMAL requires target + band; between target and band is PROTECTION. */
       protectionBandBps: bps,
       paymentProcessingBps: bps,
       riskAllowanceBps: bps,
       refundAllowanceBps: bps,
       bonusAllocationBps: bps,
+      /** Minimum order contribution margin required to approve a quote. */
       minContributionMarginBps: modeNumbers,
     }),
     audit: z.object({
       windowDays: z.number().int().min(1),
+      /** Nth routine violation in the window → action. */
       warnAt: z.number().int().min(1),
       microTrainingAt: z.number().int().min(1),
       restrictAt: z.number().int().min(1),
+      /** Personal-payment instructions at or above this count go to the Owner. */
       personalPaymentEscalateAt: z.number().int().min(1),
       restrictionDays: z.number().int().min(1),
       violationPoints: z.record(z.string(), z.number().min(0)),
@@ -118,7 +128,9 @@ export const rulesSchema = z
       quotes: z.number().int().min(0),
       followUps: z.number().int().min(0),
       warmOutreach: z.number().int().min(0),
+      /** Below this many conversations in a day the problem is activity. */
       minConversations: z.number().int().min(0),
+      /** Minimum leads on a channel before its conversion rate is trusted. */
       channelMinSample: z.number().int().min(1),
     }),
   })
@@ -152,6 +164,7 @@ export function parseRules(input: unknown): Rules {
   return rulesSchema.parse(input);
 }
 
+/** Initial test values from the business brief. Owner-editable, versioned. */
 export const DEFAULT_RULES: Rules = parseRules({
   version: '2026.11.0',
   certification: {
