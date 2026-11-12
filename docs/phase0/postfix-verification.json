@@ -1,0 +1,46 @@
+{
+  "phase": "0",
+  "verified_at": "2026-11-13T00:26:00+08:00",
+  "source_head": "ad7ee6e2f8a8e1c619846ab3eea4d2041164da57",
+  "production": {
+    "owner_mobile_deployment": "27059d12-809a-442c-abf4-ac4ae08290eb",
+    "owner_mobile_status": "SUCCESS",
+    "agent_mobile_deployment": "45ddbcb6-3eac-4761-a28b-904e707bfba4",
+    "agent_mobile_status": "SUCCESS",
+    "staged_changes": false
+  },
+  "post_fix_checks": {
+    "split_files": true,
+    "no_agent_inner_html_assignment": true,
+    "no_inline_event_attributes": true,
+    "csp_present": true,
+    "no_unsafe_inline_scripts": true,
+    "i18n_en_zh_key_parity": true,
+    "language_persistence": true,
+    "required_lucide_icons_present": true,
+    "design_and_motion_tokens_present": true,
+    "reduced_motion_supported": true,
+    "shared_components_present": true,
+    "access_link_invite_email_flow_preserved": true,
+    "frontend_uses_publishable_key_only": true,
+    "owner_db_text_escaped": true,
+    "owner_errors_redacted_to_friendly_messages": true,
+    "owner_dates_and_expiry_use_Asia_Kuching": true
+  },
+  "unchanged_agent_qa_evidence": {
+    "lighthouse": {
+      "performance": 100,
+      "accessibility": 95,
+      "best_practices": 96,
+      "cls": 0.008794236111111112,
+      "fcp_ms": 784.428,
+      "lcp_ms": 978.419,
+      "total_blocking_time_ms": 0
+    },
+    "simulated_4g_interactive_ms": 386,
+    "motion_p95_ms_360": 16.8,
+    "motion_p95_ms_430": 16.7,
+    "xss_payload": "<img src=x onerror=alert(1)>",
+    "note": "Agent UI source did not change after commit 77c7dcd94a891832ea60b4319d248397cf875835; only Owner hardening/tests/notices changed."
+  }
+}
