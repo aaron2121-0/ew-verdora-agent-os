@@ -57,7 +57,7 @@ async function setup(page){
 }
 
 async function login(page,email,code){
-  await page.goto(AGENT+"/#invite="+encodeURIComponent(code)+"&email="+encodeURIComponent(email),{waitUntil:"networkidle"});
+  await page.goto(AGENT+"/?draft_test="+encodeURIComponent(code)+"#invite="+encodeURIComponent(code)+"&email="+encodeURIComponent(email),{waitUntil:"networkidle"});
   await page.locator("#app").waitFor({state:"visible"});
 }
 
