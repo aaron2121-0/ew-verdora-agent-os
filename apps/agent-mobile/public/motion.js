@@ -8,15 +8,29 @@ export function motionBudget(){
 export function typeText(node,value,{duration=18,skip=false}={}){
  const text=String(value??"");node.textContent="";
  if(skip||reduced()||!text){node.textContent=text;return Promise.resolve()}
- let index=0,raf=0,stopped=false,last=0;
- const promise=new Promise(resolve=>{
-  const tick=t=>{if(stopped){resolve();return}if(t-last>=duration){index=Math.min(text.length,index+Math.max(1,Math.ceil((t-last)/duration)));node.textContent=text.slice(0,index);last=t}
-   if(index<text.length)raf=requestAnimationFrame(tick);else resolve()};
-  raf=requestAnimationFrame(tick);
- });
- const finish=()=>{stopped=true;cancelAnimationFrame(raf);node.textContent=text};
- node.addEventListener("click",finish,{once:true});
- return promise.finally(()=>node.removeEventListener("click",finish));
+ // Segment by displayed grapheme, not UTF-16 code units: names and emoji stay intact.
+ const units=typeof Intl.Segmenter==="function"
+  ?[...new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(text)].map(part=>part.segment)
+  :Array.from(text);
+ let index=0,raf=0,last=0,settled=false,resolvePromise;
+ const promise=new Promise(resolve=>{resolvePromise=resolve});
+ const complete=()=>{
+  if(settled)return;settled=true;cancelAnimationFrame(raf);
+  node.textContent=text;node.removeEventListener("click",complete);resolvePromise();
+ };
+ const tick=t=>{
+  if(settled)return;
+  if(!last)last=t;
+  if(t-last>=duration){
+   index=Math.min(units.length,index+Math.max(1,Math.floor((t-last)/duration)));
+   node.textContent=units.slice(0,index).join("");last=t;
+  }
+  if(index<units.length)raf=requestAnimationFrame(tick);
+  else complete();
+ };
+ node.addEventListener("click",complete,{once:true});
+ raf=requestAnimationFrame(tick);
+ return promise;
 }
 export function flipReorder(container,mutate){
  if(!container){mutate();return}
