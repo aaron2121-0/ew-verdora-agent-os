@@ -69,10 +69,175 @@ function stressAgent100(seed=992026){
     note:"Outcomes are probabilistic; the system controls activity/training, not customer purchase decisions."
   };
 }
+
+
+const authAutomationState={
+  lastHealthRun:null,
+  healthOk:false,
+  checks:{},
+  e2e:{
+    attempted:false,
+    completed:false,
+    owner:false,
+    agent:false,
+    ownerReplayBlocked:false,
+    agentReplayBlocked:false,
+    error:null,
+    completedAt:null
+  }
+};
+
+async function requestWithTimeout(url,options={},timeoutMs=12000){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{return await fetch(url,{...options,signal:controller.signal})}
+  finally{clearTimeout(timer)}
+}
+async function readJsonSafe(r){
+  try{return await r.json()}catch{return null}
+}
+async function runAuthHealth(){
+  const supabase=Bun.env.SUPABASE_URL||"";
+  const key=Bun.env.SUPABASE_PUBLISHABLE_KEY||"";
+  const ownerUrl="https://owner-mobile-production.up.railway.app";
+  const agentUrl="https://agent-mobile-production.up.railway.app";
+  const checks={};
+  try{
+    const oh=await requestWithTimeout(ownerUrl+"/health");
+    const oj=await readJsonSafe(oh);
+    checks.ownerMobile=oh.ok&&oj?.ok===true;
+  }catch{checks.ownerMobile=false}
+  try{
+    const ah=await requestWithTimeout(agentUrl+"/health");
+    const aj=await readJsonSafe(ah);
+    checks.agentMobile=ah.ok&&aj?.ok===true;
+  }catch{checks.agentMobile=false}
+
+  if(supabase&&key){
+    try{
+      const r=await requestWithTimeout(supabase+"/functions/v1/owner-auth",{
+        method:"POST",
+        headers:{"content-type":"application/json","apikey":key,"origin":ownerUrl},
+        body:JSON.stringify({action:"invite_session",code:"invalid"})
+      });
+      checks.ownerAuthBoundary=r.status===400;
+    }catch{checks.ownerAuthBoundary=false}
+    try{
+      const r=await requestWithTimeout(supabase+"/functions/v1/agent-auth",{
+        method:"POST",
+        headers:{"content-type":"application/json","apikey":key,"origin":agentUrl},
+        body:JSON.stringify({action:"invite_session",email:"nobody@example.com",code:"invalid"})
+      });
+      checks.agentAuthBoundary=r.status===400;
+    }catch{checks.agentAuthBoundary=false}
+    try{
+      const r=await requestWithTimeout(supabase+"/functions/v1/owner-session",{
+        method:"POST",
+        headers:{"content-type":"application/json","apikey":key},
+        body:JSON.stringify({action:"dashboard"})
+      });
+      checks.ownerSessionRejectsAnon=r.status===401||r.status===403;
+    }catch{checks.ownerSessionRejectsAnon=false}
+    try{
+      const r=await requestWithTimeout(supabase+"/functions/v1/agent-session",{
+        method:"POST",
+        headers:{"content-type":"application/json","apikey":key},
+        body:JSON.stringify({action:"dashboard"})
+      });
+      checks.agentSessionRejectsAnon=r.status===401||r.status===403;
+    }catch{checks.agentSessionRejectsAnon=false}
+  }else{
+    checks.ownerAuthBoundary=false;
+    checks.agentAuthBoundary=false;
+    checks.ownerSessionRejectsAnon=false;
+    checks.agentSessionRejectsAnon=false;
+  }
+  authAutomationState.checks=checks;
+  authAutomationState.lastHealthRun=new Date().toISOString();
+  authAutomationState.healthOk=Object.values(checks).every(Boolean);
+  return authAutomationState.healthOk;
+}
+
+async function runOneTimeAuthE2E(){
+  if(authAutomationState.e2e.attempted)return;
+  const ownerCode=Bun.env.AUTH_E2E_OWNER_CODE||"";
+  const agentCode=Bun.env.AUTH_E2E_AGENT_CODE||"";
+  const agentEmail=Bun.env.AUTH_E2E_AGENT_EMAIL||"";
+  if(!ownerCode||!agentCode||!agentEmail)return;
+
+  authAutomationState.e2e.attempted=true;
+  const supabase=Bun.env.SUPABASE_URL||"";
+  const key=Bun.env.SUPABASE_PUBLISHABLE_KEY||"";
+  const ownerUrl="https://owner-mobile-production.up.railway.app";
+  const agentUrl="https://agent-mobile-production.up.railway.app";
+  try{
+    const ownerAuth=await requestWithTimeout(supabase+"/functions/v1/owner-auth",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":key,"origin":ownerUrl},
+      body:JSON.stringify({action:"invite_session",code:ownerCode})
+    },20000);
+    const ownerBody=await readJsonSafe(ownerAuth);
+    if(!ownerAuth.ok||!ownerBody?.access_token)throw new Error("owner_auth_"+ownerAuth.status);
+    const ownerDash=await requestWithTimeout(supabase+"/functions/v1/owner-session",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":key,"authorization":"Bearer "+ownerBody.access_token},
+      body:JSON.stringify({action:"dashboard"})
+    },20000);
+    authAutomationState.e2e.owner=ownerDash.ok;
+    const ownerReplay=await requestWithTimeout(supabase+"/functions/v1/owner-auth",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":key,"origin":ownerUrl},
+      body:JSON.stringify({action:"invite_session",code:ownerCode})
+    },20000);
+    authAutomationState.e2e.ownerReplayBlocked=ownerReplay.status===400||ownerReplay.status===403;
+
+    const agentAuth=await requestWithTimeout(supabase+"/functions/v1/agent-auth",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":key,"origin":agentUrl},
+      body:JSON.stringify({action:"invite_session",email:agentEmail,code:agentCode})
+    },20000);
+    const agentBody=await readJsonSafe(agentAuth);
+    if(!agentAuth.ok||!agentBody?.access_token)throw new Error("agent_auth_"+agentAuth.status);
+    const agentDash=await requestWithTimeout(supabase+"/functions/v1/agent-session",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":key,"authorization":"Bearer "+agentBody.access_token},
+      body:JSON.stringify({action:"dashboard"})
+    },20000);
+    authAutomationState.e2e.agent=agentDash.ok;
+    const agentReplay=await requestWithTimeout(supabase+"/functions/v1/agent-auth",{
+      method:"POST",
+      headers:{"content-type":"application/json","apikey":key,"origin":agentUrl},
+      body:JSON.stringify({action:"invite_session",email:agentEmail,code:agentCode})
+    },20000);
+    authAutomationState.e2e.agentReplayBlocked=agentReplay.status===400||agentReplay.status===403;
+
+    authAutomationState.e2e.completed=
+      authAutomationState.e2e.owner&&
+      authAutomationState.e2e.agent&&
+      authAutomationState.e2e.ownerReplayBlocked&&
+      authAutomationState.e2e.agentReplayBlocked;
+  }catch(e){
+    authAutomationState.e2e.error=String(e?.message||e||"auth_e2e_failed");
+  }
+  authAutomationState.e2e.completedAt=new Date().toISOString();
+}
+
 export default {
   async fetch(req){
     const u=new URL(req.url);
-    if(u.pathname==="/api/health")return json({ok:true,service:"EW VERDORA Agent OS Core",version:"0.5.3",database:"supabase-live"});
+    if(u.pathname==="/api/health"){
+      await runAuthHealth();
+      await runOneTimeAuthE2E();
+      const requireE2E=Boolean(Bun.env.AUTH_E2E_OWNER_CODE&&Bun.env.AUTH_E2E_AGENT_CODE&&Bun.env.AUTH_E2E_AGENT_EMAIL);
+      const overall=authAutomationState.healthOk&&(!requireE2E||authAutomationState.e2e.completed);
+      return json({ok:overall,service:"EW VERDORA Agent OS Core",version:"0.6.2",database:"supabase-live",authAutomation:authAutomationState.healthOk,e2e:authAutomationState.e2e.completed},overall?200:503);
+    }
+    if(u.pathname==="/api/auth-health"){
+      const stale=!authAutomationState.lastHealthRun||(Date.now()-new Date(authAutomationState.lastHealthRun).getTime()>5*60*1000);
+      if(stale)await runAuthHealth();
+      if(!authAutomationState.e2e.attempted)await runOneTimeAuthE2E();
+      return json(authAutomationState,authAutomationState.healthOk?200:503);
+    }
     if(u.pathname==="/api/rules")return json({tiers,targetCompanyNetMargin:0.50,agentManagement:"system-first",aiAuthority:["training","roleplay","sales-coach","content","diagnosis","audit-detection"],ruleAuthority:["commission","tier","bonus","price-floor","profit-guard","permissions","financial-payout"]});
     if(u.pathname==="/api/stress-100")return json(stress());
 if(u.pathname==="/api/review-manifest")return json({
@@ -120,7 +285,11 @@ if(u.pathname==="/api/review-manifest")return json({
     "Agent session dashboard quote-request runtime bug fixed in v11",
     "Owner/Agent auth bridge implemented without paid services",
     "One-time Agent Access Link auth",
-    "Legacy Owner bootstrap endpoint retired"
+    "Legacy Owner bootstrap endpoint retired",
+    "Owner/Agent one-time auth bridges completed and replay-protected",
+    "CRITICAL owner NULL-role SECURITY DEFINER bypass fixed across all owner functions",
+    "Railway /api/health now gates deployment on live auth boundaries and one-time E2E when test inputs are present",
+    "Email magic-link UI disabled; secure one-time links are canonical login path"
   ],
   live:{
     supabaseProject:"EW VERDORA Agent OS",
@@ -167,18 +336,24 @@ if(u.pathname==="/api/review-manifest")return json({
     ownerPrelogin100:"PASS",
     authBridgeLive100:"PASS",
     agentInviteAuthE2E:"PASS",
-    agentRedirectStrategy:"Magic Link returns to allowed Owner Mobile domain; authenticated non-Owner sessions are client-routed to Agent Mobile through URL fragment and immediately restored/cleared",
-    emailDeliveryFallback:"Supabase email 429 over_email_send_rate_limit confirmed; Owner-issued one-time Agent Access Links provide zero-email fallback",
+    ownerRecoveryAuthE2E:"PASS",
+    replayProtection:"PASS — both Owner and Agent one-time links succeed once and replay returns 400",
+    ownerNullRoleBypass:"FIXED — all six Owner SECURITY DEFINER guards are NULL-safe and client EXECUTE revoked",
+    agentRedirectStrategy:"Owner-issued one-time Agent Access Link uses hash-only DB storage, 24h expiry, atomic one-time consume and direct session bridge; no email redirect required",
+    ownerRedirectStrategy:"Owner Recovery Link uses hash-only DB storage, 24h expiry, atomic one-time consume and direct session bridge; no email redirect required",
+    emailDeliveryFallback:"Supabase email 429 and localhost redirect were confirmed. Email Magic Link UI is hidden; one-time secure links are the canonical no-email login path",
     legacyBootstrap:"RETIRED",
-    ownerSessionVersion:8,
-    agentSessionVersion:11
+    ownerSessionVersion:12,
+    agentSessionVersion:12,
+    agentAuthVersion:4,
+    ownerAuthVersion:1
   },
   costPolicy:"NO_EXTRA_PAID_SERVICES; external paid AI hard-disabled; fallback/manual only",
   canonicalLocalHead:"818efa43c69638cfad398d9abcc70f308ce2baf6",
   githubRepository:"aaron2121-0/ew-verdora-agent-os",
   githubBranch:"main",
-  githubOwnerSessionSyncCommit:"75da40f4dcf4729191dae75e9086854a809ed517",
-  githubStatus:"Canonical source is now in GitHub: aaron2121-0/ew-verdora-agent-os (main); canonical snapshot restored and owner-session synced to live Supabase v6",
+  githubOwnerSessionSyncCommit:"pending-current-live-sync",
+  githubStatus:"Canonical source is in GitHub aaron2121-0/ew-verdora-agent-os (main). Current auth bridge/security live sync is being committed from verified Supabase/Railway source.",
   claudeInstructions:[
     "Do not rebuild frozen modules.",
     "Review current Supabase migrations/functions and Railway live services.",
