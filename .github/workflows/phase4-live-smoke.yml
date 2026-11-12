@@ -12,9 +12,9 @@ permissions:
 jobs:
   live-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Bootstrap isolated QA agents
+      - name: Production Phase 4 acceptance
         shell: bash
         run: |
           set -euo pipefail
@@ -22,7 +22,10 @@ jobs:
           const {createHash}=require("node:crypto");
           const url="https://vuibesuahnhlafsfraeo.supabase.co";
           const pub="sb_publishable_1Z2QQaYdZdeF5svF1bJPHA_zjXVa14j";
-          const emails=["qa-phase4-a-33690a4e@example.com","qa-phase4-b-33690a4e@example.com"];
+          const qa=[
+            {email:"qa-phase4-a-33690a4e@example.com",own:"QA-P4-A",other:"QA-P4-B"},
+            {email:"qa-phase4-b-33690a4e@example.com",own:"QA-P4-B",other:"QA-P4-A"}
+          ];
 
           async function invoke(name,body,token){
             const headers={"apikey":pub,"Content-Type":"application/json"};
@@ -30,23 +33,61 @@ jobs:
             const res=await fetch(url+"/functions/v1/"+name,{method:"POST",headers,body:JSON.stringify(body)});
             const text=await res.text();
             let data={}; try{data=text?JSON.parse(text):{};}catch{}
-            if(!res.ok) throw new Error(name+"_"+res.status+"_"+String(data.error||"failed"));
-            return data;
+            return {status:res.status,data};
           }
+          function ok(v,m){if(!v) throw new Error(m);}
 
           (async()=>{
-            const out=[];
-            for(let i=0;i<emails.length;i++){
-              const email=emails[i];
-              const code=createHash("sha256").update(email).digest("hex");
-              const auth=await invoke("agent-auth",{action:"invite_session",email,code});
-              if(!auth.access_token||!auth.user_id) throw new Error("invite_session_missing_token");
-              console.log("::add-mask::"+auth.access_token);
-              if(auth.refresh_token) console.log("::add-mask::"+auth.refresh_token);
-              const reg=await invoke("agent-session",{action:"register",display_name:"QA Phase4 "+(i?"B":"A"),language:"en"},auth.access_token);
-              if(!reg.agent_id) throw new Error("register_missing_agent");
-              out.push({email,user_id:auth.user_id,agent_id:reg.agent_id});
+            for(const x of qa){
+              const code=createHash("sha256").update(x.email+"|run2").digest("hex");
+              const a=await invoke("agent-auth",{action:"invite_session",email:x.email,code});
+              ok(a.status===200 && a.data?.access_token,"session_failed_"+x.own);
+              x.token=a.data.access_token;
+              console.log("::add-mask::"+x.token);
+              if(a.data.refresh_token) console.log("::add-mask::"+a.data.refresh_token);
             }
-            console.log("QA_BOOTSTRAP "+JSON.stringify(out));
-          })().catch(e=>{console.error("PHASE4_BOOTSTRAP_FAIL",e.message);process.exitCode=1;});
+
+            for(const x of qa){
+              const p=await invoke("agent-session",{action:"phase1_overview"},x.token);
+              ok(p.status===200 && p.data?.phase1,"phase1_failed_"+x.own);
+              const rows=p.data.phase1.recent_leads||[];
+              const own=rows.find(r=>r.customer_label===x.own);
+              ok(own,"own_lead_missing_"+x.own);
+              ok(Number.isFinite(Number(own.lead_score)),"lead_score_missing_"+x.own);
+              ok(typeof own.next_best_action==="string" && own.next_best_action.length>0,"next_best_action_missing_"+x.own);
+              ok(!rows.some(r=>r.customer_label===x.other),"cross_agent_leak_"+x.own);
+            }
+            console.log("PASS lead_score_next_best_action_self_only");
+
+            const post=await invoke("agent-ai",{
+              action:"platform_post",platform:"whatsapp_status",kit_code:"ANNIVERSARY",angle:"anniversary ordering tips"
+            },qa[0].token);
+            ok(post.status===200 && post.data?.ok===true,"platform_post_failed");
+            ok(post.data.provider==="fallback","platform_post_not_fallback");
+            ok(typeof post.data?.content?.copy==="string" && post.data.content.copy.length>0,"platform_post_fallback_empty");
+            console.log("PASS platform_post_no_key_fallback");
+
+            for(let i=0;i<3;i++){
+              const p=await invoke("agent-ai",{action:"profile_setup",platform:"instagram"},qa[0].token);
+              ok(p.status===200 && p.data?.ok===true,"profile_setup_allowed_"+i);
+            }
+            const over=await invoke("agent-ai",{action:"profile_setup",platform:"instagram"},qa[0].token);
+            ok(over.status===429 && over.data?.error==="daily_limit","daily_limit_not_returned");
+            console.log("PASS daily_limit");
+
+            const chat=await invoke("agent-ai",{
+              action:"chat",message:"Help me follow up politely after a customer asked for time to think."
+            },qa[1].token);
+            ok(chat.status===200 && chat.data?.ok===true && typeof chat.data?.reply==="string" && chat.data.reply.length>0,"chat_regression");
+            console.log("PASS ai_chat");
+
+            const greeting=await invoke("agent-ai",{action:"daily_greeting"},qa[1].token);
+            ok(greeting.status===200 && greeting.data?.ok===true && greeting.data?.greeting,"daily_greeting_regression");
+            console.log("PASS daily_greeting");
+
+            console.log('PHASE4_ACCEPTANCE '+JSON.stringify({
+              result:"PASS",
+              checks:["lead_score_next_best_action_self_only","platform_post_no_key_fallback","daily_limit","ai_chat","daily_greeting"]
+            }));
+          })().catch(e=>{console.error("PHASE4_ACCEPTANCE_FAIL",e.message);process.exitCode=1;});
           NODE
