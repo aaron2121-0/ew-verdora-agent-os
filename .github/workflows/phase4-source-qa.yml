@@ -13,6 +13,8 @@ on:
       - "apps/agent-mobile/public/i18n.js"
       - "apps/agent-mobile/tests/phase4-security.test.mjs"
       - ".github/workflows/phase4-source-qa.yml"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
