@@ -34,9 +34,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-      - name: Install pinned dependencies
-        run: npm ci --ignore-scripts
+      - name: Install dependencies (repository has no lockfile)
+        run: npm install --ignore-scripts
       - name: Existing core regression
         run: npm run check
       - name: Reuse Phase 0–3 source tests once
