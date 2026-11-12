@@ -478,11 +478,18 @@ function setupHandlers(){
 }
 
 async function waitForSupabase(){
-  const start=Date.now();
-  while(!window.supabase){
-    if(Date.now()-start>7000)throw new Error("supabase_sdk_unavailable");
-    await new Promise(r=>setTimeout(r,20));
-  }
+  if(window.supabase)return;
+  await new Promise((resolve,reject)=>{
+    const script=document.createElement("script");
+    script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.async=true;
+    script.crossOrigin="anonymous";
+    const timer=setTimeout(()=>{script.remove();reject(new Error("supabase_sdk_unavailable"))},7000);
+    script.addEventListener("load",()=>{clearTimeout(timer);resolve()},{once:true});
+    script.addEventListener("error",()=>{clearTimeout(timer);reject(new Error("supabase_sdk_unavailable"))},{once:true});
+    document.head.appendChild(script);
+  });
+  if(!window.supabase)throw new Error("supabase_sdk_unavailable");
 }
 
 async function bootstrap(){
