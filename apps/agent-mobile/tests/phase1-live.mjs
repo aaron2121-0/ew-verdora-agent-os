@@ -103,8 +103,11 @@ async function testNavAndToday(browser,width,height){
   const labels=await page.locator("#nav .nav-label").allTextContents();
   for(const expected of ["Today","Customers","New Order","Training","Performance"])if(!labels.includes(expected))throw new Error("missing nav "+expected);
   const findMs=Date.now()-started;if(findMs>10000)throw new Error("primary navigation exceeded 10s");
+  await page.waitForFunction(()=>{
+    const text=document.querySelector(".money-card")?.textContent||"";
+    return text.includes("RM 32")&&text.includes("RM 184")&&text.includes("RM 620");
+  },null,{timeout:2500});
   const money=await page.locator(".money-card").textContent();
-  if(!money.includes("RM 32")||!money.includes("RM 184")||!money.includes("RM 620"))throw new Error("money card missing actual values");
   if(!money.includes("9 orders left")||!money.includes("4 score points left"))throw new Error("tier progress missing real requirements");
   const injected=await page.evaluate(p=>({text:document.body.textContent.includes(p),evil:[...document.images].some(i=>i.getAttribute("src")==="x")}),payload);
   if(!injected.text||injected.evil||dialog)throw new Error("XSS payload executed or disappeared");
