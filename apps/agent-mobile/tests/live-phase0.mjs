@@ -150,6 +150,8 @@ async function testAgent(browser,width,height){
   await page.locator("#quoteBtn").click();
   await page.waitForFunction(()=>document.querySelector("#quoteOut")?.textContent?.includes("AMBER"));
   if(!bodies.some(b=>b.action==="create")||!bodies.some(b=>b.action==="analyze"))throw new Error("Quote create/analyze path was not exercised");
+  await page.locator("#closeQuote").click();
+  await page.locator("#quoteSheet").waitFor({state:"hidden"});
 
   // Motion frame timing: section transition uses only transform/opacity; fail on sustained jank.
   const motion=await page.evaluate(async()=>{
