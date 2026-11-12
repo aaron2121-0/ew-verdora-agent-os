@@ -1,4 +1,4 @@
-name: Owner pre-login live 100x
+name: Auth bridge live 100x
 
 on:
   push:
@@ -14,11 +14,12 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: 100x live Owner UI + auth boundary regression
+      - name: 100x live Owner + Agent auth bridge regression
         shell: bash
         run: |
           set -euo pipefail
           OWNER="https://owner-mobile-production.up.railway.app"
+          AGENT="https://agent-mobile-production.up.railway.app"
           CFG="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/config")"
           SUPABASE_URL="$(printf '%s' "$CFG" | jq -r '.url')"
           KEY="$(printf '%s' "$CFG" | jq -r '.key')"
@@ -28,36 +29,49 @@ jobs:
           test "$KEY" != "null"
 
           request_owner_session() {
-            local status
+            local status="000"
             for attempt in 1 2 3 4 5; do
-              status="$(curl -sS -o /tmp/out -w '%{http_code}'                 -X POST "$SUPABASE_URL/functions/v1/owner-session"                 -H "Content-Type: application/json"                 -H "apikey: $KEY"                 --data '{"action":"dashboard"}')" || status="000"
-
+              status="$(curl -sS -o /tmp/out -w '%{http_code}' \
+                -X POST "$SUPABASE_URL/functions/v1/owner-session" \
+                -H "Content-Type: application/json" \
+                -H "apikey: $KEY" \
+                --data '{"action":"dashboard"}')" || status="000"
               if [ "$status" = "401" ] || [ "$status" = "403" ]; then
                 printf '%s' "$status"
                 return 0
               fi
-
-              if [ "$status" = "429" ] || [ "$status" = "500" ] || [ "$status" = "502" ] || [ "$status" = "503" ] || [ "$status" = "504" ] || [ "$status" = "000" ]; then
-                sleep "$attempt"
-                continue
-              fi
-
-              printf '%s' "$status"
-              return 0
+              case "$status" in
+                429|500|502|503|504|000) sleep "$attempt" ;;
+                *) printf '%s' "$status"; return 0 ;;
+              esac
             done
-
             printf '%s' "$status"
           }
 
           for i in $(seq 1 100); do
-            HEALTH="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/health")"
-            printf '%s' "$HEALTH" | jq -e '.ok == true' >/dev/null
+            OWNER_HEALTH="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/health")"
+            AGENT_HEALTH="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$AGENT/health")"
+            printf '%s' "$OWNER_HEALTH" | jq -e '.ok == true' >/dev/null
+            printf '%s' "$AGENT_HEALTH" | jq -e '.ok == true' >/dev/null
 
-            JS="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/owner.js")"
-            printf '%s' "$JS" | grep -F 'shouldCreateUser:false' >/dev/null
-            printf '%s' "$JS" | grep -F 'https://owner-mobile-production.up.railway.app' >/dev/null
-            if printf '%s' "$JS" | grep -F 'emailRedirectTo:location.origin' >/dev/null; then
-              echo "round $i: legacy redirect code still present"
+            OJS="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/owner.js")"
+            AJS="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$AGENT/app.js")"
+
+            printf '%s' "$OJS" | grep -F 'shouldCreateUser:false' >/dev/null
+            printf '%s' "$OJS" | grep -F 'agent-mobile-production.up.railway.app/#' >/dev/null
+            printf '%s' "$OJS" | grep -F 'owner_required|forbidden' >/dev/null
+
+            printf '%s' "$AJS" | grep -F 'shouldCreateUser:true' >/dev/null
+            printf '%s' "$AJS" | grep -F 'emailRedirectTo:"https://owner-mobile-production.up.railway.app"' >/dev/null
+            printf '%s' "$AJS" | grep -F 'sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken})' >/dev/null
+            printf '%s' "$AJS" | grep -F 'history.replaceState({},document.title,location.pathname||"/")' >/dev/null
+
+            if printf '%s' "$OJS" | grep -F 'emailRedirectTo:location.origin' >/dev/null; then
+              echo "round $i: legacy Owner redirect code still present"
+              exit 1
+            fi
+            if printf '%s' "$OJS" | grep -F 'BOOTSTRAP_SECRET' >/dev/null; then
+              echo "round $i: retired bootstrap secret still present"
               exit 1
             fi
 
@@ -67,6 +81,7 @@ jobs:
               cat /tmp/out || true
               exit 1
             fi
+            sleep 0.15
           done
 
-          echo "OWNER_PRELOGIN_LIVE_100_PASSED"
+          echo "AUTH_BRIDGE_LIVE_100_PASSED"
