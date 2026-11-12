@@ -33,7 +33,7 @@ const server=createServer(async(req,res)=>{
  let pathname=decodeURIComponent(u.pathname);if(pathname==="/")pathname="/index.html";
  if(pathname==="/vendor/supabase-2.119.0.js"){res.writeHead(200,{"content-type":"text/javascript"});res.end(sdkMock);return}
  if(pathname.includes("..")){res.writeHead(404);res.end();return}
- try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\\bgzip\\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
+ try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\bgzip\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
  catch{res.writeHead(404);res.end("Not found")}
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
