@@ -98,3 +98,14 @@ textarea{min-height:106px;resize:vertical}input:focus,textarea:focus{border-colo
 .training3-result{border-radius:21px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}.training3-result.passed{background:linear-gradient(145deg,#eaf7ef,#fffaf0);border:1px solid #cce6d6;color:#176b49}.training3-result.failed{background:#fff4f2;border:1px solid #efd0ca;color:#9b4035}.training3-result>span{font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;opacity:.72}.training3-result>strong{font-size:2rem;font-weight:950}.training3-result p{font-size:.62rem;line-height:1.45;color:var(--text-650);max-width:310px}.training3-result-view>.btn{margin-top:12px}.training3-loading{margin-top:14px;border-radius:16px;padding:28px;text-align:center;background:#fff;color:var(--text-500);font-size:.65rem}
 @media(max-width:380px){.training3-hero{padding:12px}.training3-streak{min-width:50px}.training3-question-card{padding:12px}.training3-option{min-height:49px;padding:8px}.training3-card{padding:11px}}
 @media(prefers-reduced-motion:reduce){.training3-option,.training3-timer-ring{transition:none}}
+
+/* Roleplay coaching result: readable on narrow mobile screens. */
+.roleplay-practice-result{display:block;white-space:normal;line-height:1.55;padding:16px;overflow-wrap:anywhere}
+.roleplay-practice-result h3{font-size:.83rem;color:var(--verdora-900);margin:14px 0 7px}
+.roleplay-practice-result h3:first-child{margin-top:0;font-size:1.1rem}
+.roleplay-practice-result p,.roleplay-practice-result li{font-size:.73rem;line-height:1.6}
+.roleplay-practice-result ul{padding-left:19px;margin:5px 0 12px}
+.roleplay-dimensions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:12px 0}
+.roleplay-dimensions>div{background:#f4f7f4;border-radius:10px;padding:9px;font-size:.64rem;font-weight:700;color:var(--verdora-900)}
+.roleplay-practice-result .btn{margin-top:16px}
+@media(max-width:360px){.roleplay-dimensions{grid-template-columns:1fr}}
