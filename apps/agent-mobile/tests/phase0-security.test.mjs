@@ -62,12 +62,12 @@ test("Agent JS payload stays below 150KB gzip",()=>{
 test("Owner source has CSP and escapes DB text before innerHTML",()=>{
   const owner=read(path.join(repoRoot,"apps/owner-mobile/index.ts"));
   assert.match(owner,/Content-Security-Policy/);
-  assert.match(owner,/const esc=/);
+  assert.match(owner,/const escapeHtml=/);
   assert.match(owner,/safeImageUrl/);
-  assert.match(owner,/esc\(e\.summary\)/);
-  assert.match(owner,/esc\(q\.design_commitment\)/);
-  assert.match(owner,/esc\(q\.status\)/);
-  assert.match(owner,/esc\(q\.id\)/);
+  assert.match(owner,/escapeHtml\(e\.summary\)/);
+  assert.match(owner,/escapeHtml\(q\.design_commitment\)/);
+  assert.match(owner,/escapeHtml\(q\.status\)/);
+  assert.match(owner,/escapeHtml\(q\.id\)/);
   assert.equal(/src='"\+q\.image_url/.test(owner),false);
   assert.match(owner,/Asia\/Kuching/);
   assert.match(owner,/kuchingDate\(\)/);
