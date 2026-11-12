@@ -7,6 +7,16 @@ const cors={
   "Content-Type":"application/json"
 };
 const reply=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:cors});
+
+async function sha256Hex(v:string){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function randomCode(){
+  const b=new Uint8Array(32);crypto.getRandomValues(b);
+  return [...b].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+
 function publicError(error,fallback="operation_failed"){
   const m=String(error?.message||"").toLowerCase();
   if(m.includes("forbidden")) return "forbidden";
@@ -36,6 +46,26 @@ Deno.serve(async req=>{
   let b={};try{b=await req.json()}catch{}
   const action=b.action||"dashboard";
 
+  if(action==="create_agent_invite"){
+    const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
+    if(authCheck.error)return reply({error:publicError(authCheck.error,"forbidden")},403);
+    const email=String(b.email||"").trim().toLowerCase();
+    const at=email.indexOf("@"),dot=email.lastIndexOf(".");
+    if(at<=0||dot<=at+1||dot>=email.length-1||email.includes(" "))return reply({error:"invalid_email"},400);
+    const code=randomCode();
+    const codeHash=await sha256Hex(code);
+    const expiresAt=new Date(Date.now()+24*60*60*1000).toISOString();
+    await admin.from("agent_auth_invites")
+      .delete()
+      .eq("email",email)
+      .is("used_at",null);
+    const {error}=await admin.from("agent_auth_invites").insert({
+      email,code_hash:codeHash,expires_at:expiresAt,created_by:uid
+    });
+    if(error){console.error("INVITE_CREATE_DB",error.code||"",error.details||"",error.hint||"");return reply({error:"invite_create_failed"},400);}
+    const inviteUrl="https://agent-mobile-production.up.railway.app/#invite="+encodeURIComponent(code)+"&email="+encodeURIComponent(email);
+    return reply({ok:true,email,expires_at:expiresAt,invite_url:inviteUrl});
+  }
   if(action==="dashboard"){
     const {data,error}=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
     if(error)return reply({error:publicError(error)},403);
