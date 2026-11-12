@@ -1,0 +1,164 @@
+name: Phase 4 Live Smoke
+
+on:
+  push:
+    branches: [phase4-backend]
+    paths:
+      - ".github/workflows/phase4-live-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_QA_SECRET: ${{ secrets.SUPABASE_QA_SECRET }}
+    steps:
+      - name: Production Phase 4 smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { randomBytes, createHash } = require("node:crypto");
+
+          const url=(process.env.SUPABASE_URL||"").replace(/\/$/,"");
+          const pub=process.env.SUPABASE_PUBLISHABLE_KEY||"";
+          const secret=process.env.SUPABASE_QA_SECRET||"";
+          if(!url || !pub || !secret) throw new Error("missing_qa_secrets");
+
+          const adminHeaders={
+            "apikey":secret,
+            "Authorization":"Bearer "+secret,
+            "Content-Type":"application/json"
+          };
+          const fnHeaders=(token)=>({
+            "apikey":pub,
+            "Authorization":"Bearer "+token,
+            "Content-Type":"application/json"
+          });
+
+          async function readJson(res){
+            const text=await res.text();
+            try{return text?JSON.parse(text):{};}catch{return {raw:text.slice(0,500)};}
+          }
+          async function rest(path,{method="GET",body,prefer}={}){
+            const headers={...adminHeaders};
+            if(prefer) headers.Prefer=prefer;
+            const res=await fetch(url+"/rest/v1/"+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
+            const data=await readJson(res);
+            if(!res.ok) throw new Error("rest_"+method+"_"+res.status+"_"+path.split("?")[0]);
+            return data;
+          }
+          async function fn(name,body,token){
+            const headers={"apikey":pub,"Content-Type":"application/json"};
+            if(token) headers.Authorization="Bearer "+token;
+            const res=await fetch(url+"/functions/v1/"+name,{method:"POST",headers,body:JSON.stringify(body)});
+            const data=await readJson(res);
+            return {status:res.status,data};
+          }
+          function ok(cond,msg){ if(!cond) throw new Error(msg); }
+
+          const qa=[];
+          async function createQa(label){
+            const stamp=Date.now()+"-"+label+"-"+randomBytes(3).toString("hex");
+            const email="qa-phase4-"+stamp+"@example.com";
+            const code=randomBytes(32).toString("hex");
+            const codeHash=createHash("sha256").update(code).digest("hex");
+            const expires=new Date(Date.now()+60*60*1000).toISOString();
+
+            await rest("agent_auth_invites",{method:"POST",body:{email,code_hash:codeHash,expires_at:expires},prefer:"return=minimal"});
+            const auth=await fn("agent-auth",{action:"invite_session",email,code},null);
+            ok(auth.status===200 && auth.data?.access_token && auth.data?.user_id,"invite_session_failed_"+label);
+            console.log("::add-mask::"+auth.data.access_token);
+            if(auth.data.refresh_token) console.log("::add-mask::"+auth.data.refresh_token);
+
+            const reg=await fn("agent-session",{action:"register",display_name:"QA Phase4 "+label,language:"en"},auth.data.access_token);
+            ok(reg.status===200 && reg.data?.agent_id,"register_failed_"+label);
+            await rest("agents?id=eq."+encodeURIComponent(reg.data.agent_id),{method:"PATCH",body:{is_demo:true,status:"active"},prefer:"return=minimal"});
+
+            const item={label,email,user_id:auth.data.user_id,agent_id:reg.data.agent_id,token:auth.data.access_token};
+            qa.push(item);
+            return item;
+          }
+
+          async function cleanup(){
+            for(const x of [...qa].reverse()){
+              try{ await rest("leads?agent_id=eq."+encodeURIComponent(x.agent_id),{method:"DELETE",prefer:"return=minimal"}); }catch{}
+              try{ await rest("agents?id=eq."+encodeURIComponent(x.agent_id),{method:"DELETE",prefer:"return=minimal"}); }catch{}
+              try{ await rest("agent_auth_invites?email=eq."+encodeURIComponent(x.email),{method:"DELETE",prefer:"return=minimal"}); }catch{}
+              try{
+                const res=await fetch(url+"/auth/v1/admin/users/"+encodeURIComponent(x.user_id),{method:"DELETE",headers:adminHeaders});
+                if(!res.ok && res.status!==404) throw new Error("auth_cleanup_"+res.status);
+              }catch{}
+            }
+          }
+
+          (async()=>{
+            try{
+              const a=await createQa("A");
+              const b=await createQa("B");
+              const tomorrow=new Date(Date.now()+8*3600*1000+86400000).toISOString().slice(0,10);
+
+              const leadA=(await rest("leads",{method:"POST",body:{
+                agent_id:a.agent_id,source:"whatsapp",customer_label:"QA-A-ONLY",
+                occasion:"anniversary",budget:500,delivery_date:tomorrow,status:"qualified"
+              },prefer:"return=representation"}))[0];
+              const leadB=(await rest("leads",{method:"POST",body:{
+                agent_id:b.agent_id,source:"instagram",customer_label:"QA-B-ONLY",
+                occasion:"birthday",budget:350,delivery_date:tomorrow,status:"new"
+              },prefer:"return=representation"}))[0];
+              ok(leadA?.id && leadB?.id,"fixture_leads_failed");
+
+              const pa=await fn("agent-session",{action:"phase1_overview"},a.token);
+              ok(pa.status===200 && pa.data?.phase1,"phase1_a_failed");
+              const rowsA=pa.data.phase1.recent_leads||[];
+              const ownA=rowsA.find(x=>x.id===leadA.id);
+              ok(ownA && Number.isFinite(Number(ownA.lead_score)) && typeof ownA.next_best_action==="string" && ownA.next_best_action.length>0,"lead_intelligence_missing_a");
+              ok(!rowsA.some(x=>x.id===leadB.id),"cross_agent_lead_visible_to_a");
+
+              const pb=await fn("agent-session",{action:"phase1_overview"},b.token);
+              ok(pb.status===200 && pb.data?.phase1,"phase1_b_failed");
+              const rowsB=pb.data.phase1.recent_leads||[];
+              const ownB=rowsB.find(x=>x.id===leadB.id);
+              ok(ownB && Number.isFinite(Number(ownB.lead_score)) && typeof ownB.next_best_action==="string" && ownB.next_best_action.length>0,"lead_intelligence_missing_b");
+              ok(!rowsB.some(x=>x.id===leadA.id),"cross_agent_lead_visible_to_b");
+              console.log("PASS lead_intelligence_self_only");
+
+              const post=await fn("agent-ai",{action:"platform_post",platform:"whatsapp_status",kit_code:"ANNIVERSARY",angle:"anniversary ordering tips"},a.token);
+              ok(post.status===200 && post.data?.ok===true,"platform_post_failed");
+              ok(post.data.provider==="fallback","platform_post_expected_fallback_without_key");
+              ok(typeof post.data?.content?.copy==="string" && post.data.content.copy.length>0,"platform_post_fallback_empty");
+              console.log("PASS platform_post_no_key_fallback");
+
+              for(let i=0;i<3;i++){
+                const p=await fn("agent-ai",{action:"profile_setup",platform:"instagram"},a.token);
+                ok(p.status===200 && p.data?.ok===true,"profile_setup_allowed_"+i);
+              }
+              const over=await fn("agent-ai",{action:"profile_setup",platform:"instagram"},a.token);
+              ok(over.status===429 && over.data?.error==="daily_limit","daily_limit_not_enforced");
+              console.log("PASS daily_limit");
+
+              const chat=await fn("agent-ai",{action:"chat",message:"Help me follow up politely after a customer asked for time to think."},b.token);
+              ok(chat.status===200 && chat.data?.ok===true && typeof chat.data?.reply==="string" && chat.data.reply.length>0,"chat_regression");
+              console.log("PASS ai_chat");
+
+              const greeting=await fn("agent-ai",{action:"daily_greeting"},b.token);
+              ok(greeting.status===200 && greeting.data?.ok===true && greeting.data?.greeting,"daily_greeting_regression");
+              console.log("PASS daily_greeting");
+
+              console.log(JSON.stringify({
+                result:"PASS",
+                checks:["lead_intelligence_self_only","platform_post_no_key_fallback","daily_limit","ai_chat","daily_greeting"]
+              }));
+            } finally {
+              await cleanup();
+            }
+          })().catch(err=>{
+            console.error("PHASE4_SMOKE_FAIL",err?.message||String(err));
+            process.exitCode=1;
+          });
+          NODE
