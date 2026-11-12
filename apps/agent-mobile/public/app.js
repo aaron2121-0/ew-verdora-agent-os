@@ -20,7 +20,11 @@ function friendlyError(code){
   if(c.includes("reference")&&c.includes("missing"))return tr("errorReferenceRequired");
   if(c.includes("upload"))return tr("errorUpload");
   if(c.includes("network"))return tr("errorOfflineDraft");
-  if(c.includes("rate limit")||c.includes("over_email"))return tr("emailRateLimited");
+  if(c.includes("exam_prerequisites_incomplete"))return tr("examPrerequisitesError");
+  if(c.includes("question_bank_not_ready")||c.includes("exam_bank_not_ready"))return tr("trainingBankNotReady");
+  if(c.includes("duplicate_answer")||c.includes("question_not_current"))return tr("answerAlreadySubmitted");
+  if(c.includes("questions_remaining"))return tr("trainingQuestionsRemaining");
+    if(c.includes("rate limit")||c.includes("over_email"))return tr("emailRateLimited");
   return tr("errorRequestFailed");
 }
 
@@ -87,6 +91,7 @@ async function refresh(){
           agent:body=>fn("agent-session",body),
           quote:body=>fn("quote-intake",body),
           ai:body=>fn("agent-ai",body),
+          training:body=>fn("agent-training",body),
           upload:async(created,file)=>{
             const uploaded=await sb.storage.from(created.bucket).uploadToSignedUrl(created.path,created.upload_token,file,{contentType:file.type||"image/jpeg"});
             if(uploaded.error)throw new Error("upload_failed");
@@ -165,6 +170,7 @@ function setupHandlers(){
   $("logout").addEventListener("click",async()=>{
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);
+    UI?.training?.destroy?.();
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
   });
   const role=setupBottomSheet($("roleSheet"));
