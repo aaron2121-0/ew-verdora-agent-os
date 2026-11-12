@@ -1,0 +1,90 @@
+name: Phase 0 Live QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/agent-mobile/**"
+      - "apps/owner-mobile/**"
+      - ".github/workflows/phase0-live-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    env:
+      AGENT_URL: https://agent-mobile-production.up.railway.app
+      OWNER_URL: https://owner-mobile-production.up.railway.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Wait for Railway health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in "$AGENT_URL/health" "$OWNER_URL/health"; do
+            for i in $(seq 1 20); do
+              if curl -fsS "$url" >/dev/null; then break; fi
+              if [ "$i" -eq 20 ]; then echo "Health failed: $url"; exit 1; fi
+              sleep 3
+            done
+          done
+
+      - name: Verify live CSP and split assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -D /tmp/agent_headers "$AGENT_URL/" -o /tmp/agent.html
+          grep -qi '^content-security-policy:' /tmp/agent_headers
+          grep -qi "object-src 'none'" /tmp/agent_headers
+          grep -qi "frame-ancestors 'none'" /tmp/agent_headers
+          for asset in styles.css app.js i18n.js icons.js components.js; do
+            curl -fsS "$AGENT_URL/$asset" >/dev/null
+          done
+          curl -fsS -D /tmp/owner_headers "$OWNER_URL/" -o /tmp/owner.html
+          grep -qi '^content-security-policy:' /tmp/owner_headers
+
+      - name: Install open-source browser QA tools
+        run: |
+          npm install --no-save playwright lighthouse
+          npx playwright install --with-deps chromium
+
+      - name: Run 360/430 bilingual browser E2E and XSS checks
+        run: node apps/agent-mobile/tests/live-phase0.mjs
+
+      - name: Run Lighthouse mobile
+        shell: bash
+        run: |
+          mkdir -p docs/phase0
+          npx lighthouse "$AGENT_URL"             --config-path=apps/agent-mobile/tests/lighthouse.config.cjs             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --output=json             --output-path=docs/phase0/lighthouse.json             --quiet
+          node apps/agent-mobile/tests/check-lighthouse.mjs
+
+      - name: Build short Phase 0 GIF
+        shell: bash
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -y -framerate 1 -pattern_type glob -i 'docs/phase0/gif-*.png'             -vf "fps=8,scale=430:-1:flags=lanczos"             -loop 0 docs/phase0/phase0-agent-foundation.gif >/tmp/ffmpeg.log 2>&1
+
+      - name: Commit Phase 0 QA evidence
+        shell: bash
+        run: |
+          rm -f docs/phase0/gif-*.png
+          git config user.name "EW VERDORA QA"
+          git config user.email "qa@users.noreply.github.com"
+          git add docs/phase0
+          if git diff --cached --quiet; then
+            echo "No QA evidence changes"
+            exit 0
+          fi
+          git commit -m "Phase 0 QA evidence"
+          git push
