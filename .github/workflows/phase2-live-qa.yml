@@ -1,15 +1,6 @@
 name: Phase 2 Live QA
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/agent-mobile/public/**"
-      - "apps/agent-mobile/tests/phase2-*.mjs"
-      - "apps/agent-mobile/tests/draft-user-isolation.mjs"
-      - "supabase/functions/agent-session/**"
-      - "supabase/migrations/20261113_phase2_agent_performance_dashboard.sql"
-      - ".github/workflows/phase2-live-qa.yml"
   workflow_dispatch:
 
 permissions:
