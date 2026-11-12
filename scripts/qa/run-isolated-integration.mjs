@@ -109,6 +109,41 @@ try{
    assert.doesNotMatch(JSON.stringify(r.data),/"(?:correct_index|question_id|option_order)":/);
   }));
  }
+ tests.push(test('Demo daily MCQ: one formal attempt, no pre-answer explanation, replay rejected',async()=>{
+  const start=await http('/functions/v1/agent-training',{token:b.token,method:'POST',data:{action:'today',start:true}});
+  assert.equal(start.status,200,'Demo daily question bank not ready: '+start.status);
+  const before=JSON.stringify(start.data);
+  assert.doesNotMatch(before,/"(?:correct_index|option_order|question_id|explanation_en|explanation_zh)":/);
+  const attemptRows=await expectHttp('/rest/v1/training_daily_attempts?select=id&agent_id=eq.'+b.agentId,{admin:true});
+  assert.equal(attemptRows.length,1,'Daily attempt must start exactly once');
+  const answer=await http('/functions/v1/agent-training',{token:b.token,method:'POST',
+    data:{action:'answer',position:1,selected_index:0}});
+  assert.equal(answer.status,200,'First demo training answer');
+  assert.doesNotMatch(JSON.stringify(answer.data),/"(?:correct_index|option_order|question_id)":/);
+  const duplicate=await http('/functions/v1/agent-training',{token:b.token,method:'POST',
+    data:{action:'answer',position:1,selected_index:0}});
+  assert.equal(duplicate.status,409,'Duplicate MCQ answer must be rejected');
+  const again=await http('/functions/v1/agent-training',{token:b.token,method:'POST',
+    data:{action:'today',start:true}});
+  assert.equal(again.status,200,'Restart must resume existing attempt');
+  const secondRows=await expectHttp('/rest/v1/training_daily_attempts?select=id&agent_id=eq.'+b.agentId,{admin:true});
+  assert.equal(secondRows.length,1,'Starting twice created multiple formal attempts');
+ }));
+ tests.push(test('Demo MCQ expired deadline counts as wrong',async()=>{
+  const attempts=await expectHttp('/rest/v1/training_daily_attempts?select=id&agent_id=eq.'+b.agentId,{admin:true});
+  assert.equal(attempts.length,1);
+  const items=await expectHttp('/rest/v1/training_daily_items?select=id,position,served_at&attempt_id=eq.'+attempts[0].id+'&position=eq.2',{admin:true});
+  assert.equal(items.length,1,'Second training item missing');
+  assert.ok(items[0].served_at,'Second item not served');
+  const patch=await http('/rest/v1/training_daily_items?id=eq.'+items[0].id,
+    {admin:true,method:'PATCH',data:{deadline_at:new Date(Date.now()-60000).toISOString()}});
+  assert.equal(patch.status,204);
+  const answer=await http('/functions/v1/agent-training',{token:b.token,method:'POST',
+   data:{action:'answer',position:2,selected_index:0}});
+  assert.equal(answer.status,200);
+  assert.equal(answer.data?.answer?.timed_out,true,'Timed-out question not marked timed_out');
+  assert.equal(answer.data?.answer?.correct,false,'Timed-out question counted correct');
+ }));
  const lead=await expectHttp('/rest/v1/leads?select=id',{admin:true,method:'POST',
   prefer:'return=representation',data:{agent_id:b.agentId,source:'referral',
    customer_label:marker+'-fixture',status:'new'}},[201]);
