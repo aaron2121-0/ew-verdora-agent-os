@@ -147,6 +147,7 @@ function setupAppearance(){
   apply();matchMedia("(prefers-color-scheme: light)").addEventListener?.("change",()=>{if(!localStorage.getItem("ew_theme"))apply()});
   $("themeToggle")?.addEventListener("click",()=>{localStorage.setItem("ew_theme",document.documentElement.dataset.theme==="dark"?"light":"dark");apply()});
   $("aiProfileOpen")?.addEventListener("click",()=>aiProfile?.open());
+  document.addEventListener("ew-open-ai",()=>aiChat?.open());
 }
 
 function setupHandlers(){
