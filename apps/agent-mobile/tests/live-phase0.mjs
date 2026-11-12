@@ -67,6 +67,31 @@ async function assertNoOverflow(page,width,label){
   if(metrics.blank>0)throw new Error(`${label}: ${metrics.blank} untranslated/blank i18n nodes`);
 }
 
+async function testFirstInteractive(browser){
+  const context=await browser.newContext({viewport:{width:360,height:800}});
+  const page=await context.newPage();
+  const client=await context.newCDPSession(page);
+  await client.send("Network.enable");
+  await client.send("Network.emulateNetworkConditions",{
+    offline:false,
+    latency:40,
+    downloadThroughput:4*1024*1024/8,
+    uploadThroughput:750*1024/8,
+    connectionType:"cellular4g"
+  });
+  const started=Date.now();
+  await page.goto(AGENT,{waitUntil:"domcontentloaded",timeout:30000});
+  await page.locator("#lang").waitFor({state:"visible"});
+  await page.waitForFunction(()=>document.querySelector("#lang")?.textContent?.trim().length>0);
+  const before=await page.locator("#lang").textContent();
+  await page.locator("#lang").click();
+  await page.waitForFunction(prev=>document.querySelector("#lang")?.textContent!==prev,before);
+  const interactiveMs=Date.now()-started;
+  fs.writeFileSync(path.join(out,"interactive-4g.json"),JSON.stringify({interactiveMs,viewport:360,network:"simulated-4g"},null,2));
+  if(interactiveMs>2500)throw new Error(`First interactive time ${interactiveMs}ms exceeds 2500ms`);
+  await context.close();
+}
+
 async function testAgent(browser,width,height){
   const context=await browser.newContext({viewport:{width,height}});
   const page=await context.newPage();
@@ -102,9 +127,10 @@ async function testAgent(browser,width,height){
   await assertNoOverflow(page,width,`agent-${width}-zh`);
 
   if(width===430){
+    // We are in zh after the bilingual layout assertion above. Toggle back to EN for the first two GIF frames.
+    await page.locator("#lang").click();
     await page.locator('#nav button[data-tab="home"]').click();
     await page.screenshot({path:path.join(out,"gif-01-home-en.png"),fullPage:false});
-    await page.locator("#lang").click();
     await page.locator('#nav button[data-tab="leads"]').click();
     await page.screenshot({path:path.join(out,"gif-02-leads-en.png"),fullPage:false});
     await page.locator("#lang").click();
@@ -152,6 +178,7 @@ async function testOwner(browser){
 
 const browser=await chromium.launch({headless:true});
 try{
+  await testFirstInteractive(browser);
   await testAgent(browser,360,800);
   await testAgent(browser,430,932);
   await testOwner(browser);
