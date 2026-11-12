@@ -31,7 +31,7 @@ test('P0: no unsafe DOM HTML sinks in either application (file:line)',()=>{
   const owner=read('apps/owner-mobile/index.ts').split('\\n');
   const phaseB=process.env.QA_OWNER_PHASE_B_COMPLETE==='true' || owner.some(x=>x.includes('QA_OWNER_PHASE_B_COMPLETE'));
   const exceptions=new Set(phaseB?[]:['apps/owner-mobile/index.ts:33 innerHTML','apps/owner-mobile/index.ts:34 innerHTML']);
-  const escaped=owner[32]?.includes('escapeHtml(')&&owner[33]?.includes('.innerHTML=')&&owner.slice(34,39).join(' ').includes('const esc=escapeHtml');
+  const escaped=owner[32]?.includes('escapeHtml(')&&owner[33]?.includes('escapeHtml(')&&owner[32]?.includes('.innerHTML=')&&owner[33]?.includes('.innerHTML=');
   assert.ok(phaseB||escaped,'Owner Phase A exception must retain escaping at precise lines 33–34');
   const disallowed=hits.filter(h=>!exceptions.has(h));
   assert.deepEqual(disallowed,[],'Unsafe HTML sinks (Owner Phase B expires exception): '+disallowed.join('; '));
