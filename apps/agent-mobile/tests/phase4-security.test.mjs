@@ -45,8 +45,10 @@ test("Lead intelligence functions are service-role-only security definers",()=>{
   assert.match(migration,/grant execute on function public\.agent_lead_intelligence_internal\(uuid,integer\) to service_role/i);
   for(const field of ["lead_score","lead_score_reason","next_best_action","best_followup_time"]){
     assert.match(migration,new RegExp("'"+field+"'"));
-    assert.match(session,new RegExp(field));
   }
+  assert.match(session,/agent_lead_intelligence_internal/);
+  assert.match(session,/mergeLeadIntelligence/);
+  assert.match(session,/enrichPhase1/);
   assert.match(migration,/r\.next_followup_at<=now\(\) then now\(\)/i);
 });
 
