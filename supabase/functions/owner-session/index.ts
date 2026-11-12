@@ -160,6 +160,8 @@ Deno.serve(async req=>{
     const decision=String(b.decision||"approve");
     if(!["approve","request_info","reject"].includes(decision))
       return reply({error:"invalid_decision"},400);
+    if(decision!=="approve" && Deno.env.get("OWNER_QUOTE_STATUS_ACTIONS_ENABLED")!=="true")
+      return reply({error:"feature_not_enabled"},409);
     const {data,error}=await admin.rpc("owner_review_quote_internal",{
       p_user_id:uid,p_request_id:String(b.request_id||""),
       p_decision:decision,p_size:b.size||null,p_density:b.density||null,
