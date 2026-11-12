@@ -1,0 +1,62 @@
+name: QA P0 Regression
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-p0-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-regression:
+    name: qa-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      QA_AGENT_URL: https://agent-mobile-production.up.railway.app
+      QA_OWNER_URL: https://owner-mobile-production.up.railway.app
+      QA_SUPABASE_URL: https://vuibesuahnhlafsfraeo.supabase.co
+      QA_AGENT_A_TOKEN: ${{ secrets.QA_AGENT_A_TOKEN }}
+      QA_AGENT_B_TOKEN: ${{ secrets.QA_AGENT_B_TOKEN }}
+      QA_OWNER_TOKEN: ${{ secrets.QA_OWNER_TOKEN }}
+      QA_NO_ROLE_TOKEN: ${{ secrets.QA_NO_ROLE_TOKEN }}
+      QA_AGENT_A_ID: ${{ secrets.QA_AGENT_A_ID }}
+      QA_AGENT_B_ID: ${{ secrets.QA_AGENT_B_ID }}
+      QA_DEMO_FIXTURES_VERIFIED: ${{ vars.QA_DEMO_FIXTURES_VERIFIED }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Existing core regression
+        run: npm run check
+      - name: Reuse Phase 0–3 source tests once
+        run: node --test apps/agent-mobile/tests/phase0-security.test.mjs apps/agent-mobile/tests/phase1-security.test.mjs apps/agent-mobile/tests/phase2-security.test.mjs apps/agent-mobile/tests/phase3-security.test.mjs apps/agent-mobile/tests/phase3-seed-import.test.mjs
+      - name: P0 security and contract tests
+        run: node --test tests/qa-p0-source.test.mjs tests/qa-p0-future.test.mjs
+      - name: P0 public read-only smoke tests
+        run: node --test tests/qa-p0-public.test.mjs
+      - name: Require isolated demo credentials for production-data tests
+        run: node scripts/qa/verify-fixtures.mjs
+      - name: P0 authenticated read-only isolation and permission tests
+        run: node --test tests/qa-p0-authenticated.test.mjs
+      - name: Publish P0 summary
+        if: always()
+        run: |
+          mkdir -p qa-results
+          printf 'P0 commit: %s\nRun: %s\nResult: %s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "${{ job.status }}" > qa-results/summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-p0-${{ github.run_id }}
+          path: qa-results/
+          retention-days: 14
