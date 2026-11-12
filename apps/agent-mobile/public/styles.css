@@ -224,3 +224,5 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 @media(prefers-reduced-motion:reduce){.ai-output-card.ai-live{animation:none!important}}
 
 .ai-profile-stat{margin:8px 0 14px}.ai-profile-progress{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}.ai-profile-progress-fill{height:100%;border-radius:inherit;background:var(--ai-gradient);transition:width var(--dur-page) var(--ease-enter)}
+
+.ai-chat-gemini{border-left:2px solid #3FB6A8;padding-left:10px}.ai-chat-template{border-left:2px solid var(--line);padding-left:10px}
