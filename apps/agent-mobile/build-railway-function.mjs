@@ -1,12 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
+import subsetFont from "subset-font";
 import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
 const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","ai-ui.js","ai-chat.js"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
+const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
+const fontFile=(packageName,filename)=>{
+ const found=fontModuleRoots.map(base=>path.join(base,packageName,"files",filename)).find(p=>fs.existsSync(p));
+ if(!found)throw new Error("Missing font asset: "+packageName+"/"+filename);
+ return found;
+};
+const inter=fs.readFileSync(fontFile("@fontsource-variable/inter","inter-latin-wght-normal.woff2"));
+const notoSource=fs.readFileSync(fontFile("@fontsource/noto-sans-sc","noto-sans-sc-chinese-simplified-400-normal.woff2"));
+const fixedText=Object.entries(files).filter(([name])=>name.endsWith(".js")||name.endsWith(".html")).map(([,value])=>value).join("\\n");
+const glyphs=[...new Set((fixedText.match(/[\\u3400-\\u9FFF\\uF900-\\uFAFF]/gu)||[]))].join("");
+const noto=await subsetFont(notoSource,glyphs,{targetFormat:"woff2"});
+const ranges=[...glyphs].map(ch=>"U+"+ch.codePointAt(0).toString(16).toUpperCase()).join(",");
+if(inter.length+noto.length>350*1024)throw new Error("Font asset budget exceeded: "+(inter.length+noto.length));
+files["styles.css"]+=`\\n@font-face{font-family:Inter;src:url("/fonts/inter-latin.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}\\n@font-face{font-family:"Noto Sans SC";src:url("/fonts/noto-app-subset.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap;unicode-range:${ranges}}\\n`;
 const sdkCandidates=[path.join(root,"node_modules","@supabase","supabase-js","dist","umd","supabase.js"),path.join(root,"..","..","node_modules","@supabase","supabase-js","dist","umd","supabase.js")];
 const sdkPath=sdkCandidates.find(p=>fs.existsSync(p));
 if(!sdkPath)throw new Error("Pinned Supabase SDK 2.119.0 missing: run npm install before building");
@@ -36,6 +51,10 @@ for(const name of [...names.slice(1),"vendor/supabase-2.119.0.js"]){
   types["/"+name]=name.endsWith(".css")?"text/css; charset=utf-8":"text/javascript; charset=utf-8";
 }
 
+encoded["/fonts/inter-latin.woff2"]=zlib.gzipSync(inter,{level:9}).toString("base64");
+encoded["/fonts/noto-app-subset.woff2"]=zlib.gzipSync(noto,{level:9}).toString("base64");
+types["/fonts/inter-latin.woff2"]="font/woff2";
+types["/fonts/noto-app-subset.woff2"]="font/woff2";
 const output=`const ASSETS=${JSON.stringify(encoded)};
 const TYPES=${JSON.stringify(types)};
 const CSP=${JSON.stringify(CSP)};
@@ -64,4 +83,4 @@ fs.writeFileSync(path.join(outDir,"railway-function.ts"),output);
 const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const jsBytes=jsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 if(jsBytes>150*1024)throw new Error(`JS gzip budget exceeded: ${jsBytes} bytes`);
-console.log(`Generated ${output.length} bytes from ${Object.keys(files).length} assets; JS gzip ${jsBytes} bytes`);
+console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; JS gzip ${jsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
