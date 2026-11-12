@@ -2,6 +2,8 @@ name: Agent UI Motion Validation
 on:
   push:
     branches: [ui-motion]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
