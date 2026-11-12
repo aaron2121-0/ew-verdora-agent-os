@@ -23,7 +23,7 @@ const HTML = [
 
 const APP = String.raw`
 let sb,session=null,D=null,lang=localStorage.getItem("ew_lang")||"en",activeLead=null,activeRequest=null,scenario="",activeModule="QUALIFY";
-const T={en:{login:"Agent Login",loginD:"Enter your email to receive a secure sign-in link.",send:"Send sign-in link",register:"Create Agent Profile",registerD:"No manager approval. Training is assigned automatically.",start:"Start training",today:"TODAY",orders:"Orders",leads:"Qualified Leads",quotes:"Quotes",follow:"Follow-ups",training:"Required Training",practice:"AI Practice",coach:"AI Sales Coach",ask:"Ask AI Coach",newLead:"New Lead",save:"Save Lead",recent:"Recent Leads",kits:"Selling Kit",channels:"Channel Strategy",wallet:"Wallet",tierL:"Tier",score:"Score",comm:"Commission History",home:"Home",leadsTab:"Leads",kitsTab:"Selling Kit",role:"AI Roleplay",submit:"Submit",quote:"Reference Quote",analyze:"Upload & Analyze"},zh:{login:"代理登录",loginD:"输入 Email，系统会发送安全登录链接。",send:"发送登录链接",register:"建立代理账号",registerD:"不需要经理审核，系统会自动分配培训。",start:"开始培训",today:"今天",orders:"订单",leads:"有效 Leads",quotes:"报价",follow:"跟进",training:"必修培训",practice:"AI 练习",coach:"AI 销售教练",ask:"问 AI Coach",newLead:"新 Lead",save:"保存 Lead",recent:"最近 Leads",kits:"Selling Kit",channels:"渠道策略",wallet:"佣金钱包",tierL:"等级",score:"评分",comm:"佣金记录",home:"首页",leadsTab:"Leads",kitsTab:"Selling Kit",role:"AI 情境训练",submit:"提交",quote:"参考图报价",analyze:"上传并分析"}};
+const T={en:{login:"Agent Login",loginD:"Use an Owner-issued access link for instant sign-in. Email sign-in is available when the mail service is not rate-limited.",send:"Send sign-in link",register:"Create Agent Profile",registerD:"No manager approval. Training is assigned automatically.",start:"Start training",today:"TODAY",orders:"Orders",leads:"Qualified Leads",quotes:"Quotes",follow:"Follow-ups",training:"Required Training",practice:"AI Practice",coach:"AI Sales Coach",ask:"Ask AI Coach",newLead:"New Lead",save:"Save Lead",recent:"Recent Leads",kits:"Selling Kit",channels:"Channel Strategy",wallet:"Wallet",tierL:"Tier",score:"Score",comm:"Commission History",home:"Home",leadsTab:"Leads",kitsTab:"Selling Kit",role:"AI Roleplay",submit:"Submit",quote:"Reference Quote",analyze:"Upload & Analyze"},zh:{login:"代理登录",loginD:"优先使用 Owner 发出的一次性登录链接，可直接登录。邮件通道未限流时也可使用 Email 登录。",send:"发送登录链接",register:"建立代理账号",registerD:"不需要经理审核，系统会自动分配培训。",start:"开始培训",today:"今天",orders:"订单",leads:"有效 Leads",quotes:"报价",follow:"跟进",training:"必修培训",practice:"AI 练习",coach:"AI 销售教练",ask:"问 AI Coach",newLead:"新 Lead",save:"保存 Lead",recent:"最近 Leads",kits:"Selling Kit",channels:"渠道策略",wallet:"佣金钱包",tierL:"等级",score:"评分",comm:"佣金记录",home:"首页",leadsTab:"Leads",kitsTab:"Selling Kit",role:"AI 情境训练",submit:"提交",quote:"参考图报价",analyze:"上传并分析"}};
 const $=id=>document.getElementById(id);
 function applyLang(){document.querySelectorAll("[data-t]").forEach(e=>{let k=e.dataset.t;if(T[lang][k])e.textContent=T[lang][k]});$("lang").textContent=lang==="en"?"中文":"EN";localStorage.setItem("ew_lang",lang);if(D)render()}
 $("lang").onclick=()=>{lang=lang==="en"?"zh":"en";applyLang()};
@@ -99,14 +99,38 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{document.quer
   window.CFG=c;
   sb=window.supabase.createClient(c.url,c.key);
   const hp=new URLSearchParams((location.hash||"").replace(/^#/,""));
-  const accessToken=hp.get("access_token");
-  const refreshToken=hp.get("refresh_token");
-  if(accessToken&&refreshToken){
-    const {error}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
-    history.replaceState({},document.title,location.pathname||"/");
-    if(error){
-      $("loginMsg").textContent=error.message||"Secure sign-in session could not be restored.";
-      view("login");
+  const inviteCode=hp.get("invite");
+  const inviteEmail=hp.get("email");
+  if(inviteCode&&inviteEmail){
+    view("login");
+    $("email").value=inviteEmail;
+    $("loginMsg").textContent=lang==="zh"?"正在使用一次性安全链接登录...":"Signing in with one-time secure access...";
+    try{
+      const r=await fetch(c.url+"/functions/v1/agent-auth",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","apikey":c.key},
+        body:JSON.stringify({action:"invite_session",email:inviteEmail,code:inviteCode})
+      });
+      const j=await r.json();
+      if(!r.ok)throw Error(j.error||"Access link failed");
+      const {error}=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});
+      if(error)throw error;
+      history.replaceState({},document.title,location.pathname||"/");
+      $("loginMsg").textContent="";
+    }catch(e){
+      history.replaceState({},document.title,location.pathname||"/");
+      $("loginMsg").textContent=(lang==="zh"?"登录链接无效或已使用。":"Access link is invalid, expired, or already used.");
+    }
+  }else{
+    const accessToken=hp.get("access_token");
+    const refreshToken=hp.get("refresh_token");
+    if(accessToken&&refreshToken){
+      const {error}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+      history.replaceState({},document.title,location.pathname||"/");
+      if(error){
+        $("loginMsg").textContent=error.message||"Secure sign-in session could not be restored.";
+        view("login");
+      }
     }
   }
   sb.auth.onAuthStateChange(async(_e,s)=>{
@@ -127,7 +151,7 @@ export default {
     const u=new URL(req.url);
     if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:{"cache-control":"no-store"}});
     if(u.pathname==="/app.js")return new Response(APP,{headers:{"content-type":"application/javascript; charset=utf-8","cache-control":"no-store"}});
-    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.1.4"});
+    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.1.5"});
     return new Response(HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
   }
 };
