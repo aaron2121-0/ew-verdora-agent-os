@@ -37,7 +37,7 @@ jobs:
         run: |
           git config user.name "EW VERDORA Build"
           git config user.email "build@users.noreply.github.com"
-          git add apps/agent-mobile/dist/railway-function.ts
+          git add -f apps/agent-mobile/dist/railway-function.ts
           if git diff --cached --quiet; then
             echo "Bundle unchanged"
             exit 0
