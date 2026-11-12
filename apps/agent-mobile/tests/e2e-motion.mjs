@@ -80,6 +80,7 @@ try{
   const cls=lh.lhr.audits["cumulative-layout-shift"]?.numericValue??null;
   const report={scores,cls,requested:{performance:90,accessibility:95,"best-practices":95,cls:0.05},mockedBackend:true};
   await fs.writeFile(path.join(screenshots,"lighthouse-mobile.json"),JSON.stringify(report,null,2));
+  await fs.writeFile(path.join(screenshots,"lighthouse-details.json"),JSON.stringify(lh.lhr,null,2));
   console.log("LIGHTHOUSE_MOBILE "+JSON.stringify(report));
  }finally{await lhChrome.kill()}
  console.log("PASS: 360/430 EN/ZH light/dark, mocked AI chat, profile, invite");
