@@ -67,12 +67,14 @@ const output=`const ASSETS=${JSON.stringify(encoded)};
 const TYPES=${JSON.stringify(types)};
 const CSP=${JSON.stringify(CSP)};
 const decoded=new Map();
-function bodyFor(path){
-  if(decoded.has(path))return decoded.get(path);
+function bodyFor(path,compressed=false){
+  const key=path+(compressed?"|gzip":"|plain");
+  if(decoded.has(key))return decoded.get(key);
   const raw=ASSETS[path];
   if(raw===undefined)return null;
-  const value=Bun.gunzipSync(Buffer.from(raw,"base64"));
-  decoded.set(path,value);
+  const packed=Buffer.from(raw,"base64");
+  const value=compressed?packed:Bun.gunzipSync(packed);
+  decoded.set(key,value);
   return value;
 }
 function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","Permissions-Policy":"camera=(), microphone=(), geolocation=()","Cross-Origin-Opener-Policy":"same-origin",...extra}}
@@ -80,9 +82,10 @@ export default {fetch(req){
   const u=new URL(req.url);
   if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
   if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.6.0-motion",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
-  const body=bodyFor(u.pathname);
+  const compressed=/\\bgzip\\b/.test(req.headers.get("accept-encoding")||"");
+  const body=bodyFor(u.pathname,compressed);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
-  return new Response(body,{headers:headers({"content-type":TYPES[u.pathname]||"application/octet-stream","cache-control":u.pathname==="/"||u.pathname==="/index.html"?"no-store":"public, max-age=300"})});
+  return new Response(body,{headers:headers({"content-type":TYPES[u.pathname]||"application/octet-stream","cache-control":u.pathname==="/"||u.pathname==="/index.html"?"no-store":"public, max-age=300","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})})});
 }};`;
 
 const outDir=path.join(root,"dist");
