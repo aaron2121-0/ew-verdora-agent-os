@@ -28,7 +28,7 @@ test('P0: no unsafe DOM HTML sinks in either application (file:line)',()=>{
     appFiles.filter(p=>/\.(?:html|js|mjs|ts)$/.test(p)));
   // Temporary exact-line exception, approved for Owner Phase A only.
   // Expiry: Owner Phase B or explicit QA_OWNER_PHASE_B_COMPLETE=true.
-  const owner=read('apps/owner-mobile/index.ts').split('\\n');
+  const owner=read('apps/owner-mobile/index.ts').split('\n');
   const phaseB=process.env.QA_OWNER_PHASE_B_COMPLETE==='true' || owner.some(x=>x.includes('QA_OWNER_PHASE_B_COMPLETE'));
   const exceptions=new Set(phaseB?[]:['apps/owner-mobile/index.ts:33 innerHTML','apps/owner-mobile/index.ts:34 innerHTML']);
   const escaped=owner[32]?.includes('escapeHtml(')&&owner[33]?.includes('escapeHtml(')&&owner[32]?.includes('.innerHTML=')&&owner[33]?.includes('.innerHTML=');
