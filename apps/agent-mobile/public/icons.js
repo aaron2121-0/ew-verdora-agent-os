@@ -2,6 +2,8 @@ const NS="http://www.w3.org/2000/svg";
 const PATHS={
   arrowLeft:["M19 12H5","m12 19-7-7 7-7"],
   arrowRight:["M5 12h14","m12 5 7 7-7 7"],
+  arrowDown:["M12 5v14","m19 12-7 7-7-7"],
+  minus:["M5 12h14"],
   check:["m5 12 4 4L19 6"],
   refreshCw:["M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5","M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"],
   user:["M20 21a8 8 0 0 0-16 0","M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"],
