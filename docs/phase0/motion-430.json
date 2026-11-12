@@ -1,7 +1,7 @@
 {
   "viewport": 430,
-  "frames": 35,
+  "frames": 34,
   "p95FrameMs": 16.700000000000728,
-  "maxFrameMs": 16.700000000000728,
+  "maxFrameMs": 16.800000000000182,
   "thresholdMs": 34
 }
