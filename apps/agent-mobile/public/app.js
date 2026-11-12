@@ -2,6 +2,7 @@ import {getStoredLanguage,setStoredLanguage,translate} from "./i18n.js";
 import {createIcon} from "./icons.js";
 import {setupBottomSheet,setButtonLoading,toast,vibrate} from "./components.js";
 import {createPhase1UI} from "./phase1.js";
+import {clearOrderDraft,prepareOrderDraftForUser} from "./draft.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
@@ -80,6 +81,7 @@ async function refresh(){
       UI=createPhase1UI({
         getData:()=>D,
         getLang:()=>lang,
+        getUserId:()=>session?.user?.id||"",
         tr,
         api:{
           agent:body=>fn("agent-session",body),
@@ -161,6 +163,8 @@ function setupHandlers(){
     finally{setButtonLoading($("scoreRole"),false,tr("submit"))}
   });
   $("logout").addEventListener("click",async()=>{
+    const uid=session?.user?.id||"";
+    if(uid)await clearOrderDraft(uid);
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
   });
   const role=setupBottomSheet($("roleSheet"));
@@ -216,13 +220,13 @@ async function bootstrap(){
 
     sb.auth.onAuthStateChange(async(_event,next)=>{
       session=next;
-      if(session){try{await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
+      if(session){try{await prepareOrderDraftForUser(session.user?.id||"");await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
       else view("login");
     });
 
     const current=await sb.auth.getSession();
     session=current.data.session;
-    if(session){try{await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
+    if(session){try{await prepareOrderDraftForUser(session.user?.id||"");await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
     else view("login");
   }catch{
     view("login");$("loginMsg").textContent=tr("genericError");
