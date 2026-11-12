@@ -63,8 +63,33 @@ jobs:
       - name: Run Lighthouse mobile
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p docs/phase0
-          npx lighthouse "$AGENT_URL"             --config-path=apps/agent-mobile/tests/lighthouse.config.cjs             --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage"             --output=json             --output-path=docs/phase0/lighthouse.json             --quiet
+          CHROME_PATH="$(node -e "const {chromium}=require('playwright');process.stdout.write(chromium.executablePath())")"
+          "$CHROME_PATH" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --remote-debugging-address=127.0.0.1 \
+            --remote-debugging-port=9222 \
+            about:blank >/tmp/phase0-chrome.log 2>&1 &
+          CHROME_PID=$!
+          trap 'kill "$CHROME_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9222/json/version >/dev/null; then break; fi
+            if [ "$i" -eq 30 ]; then
+              cat /tmp/phase0-chrome.log
+              exit 1
+            fi
+            sleep 1
+          done
+          npx lighthouse "$AGENT_URL" \
+            --config-path=apps/agent-mobile/tests/lighthouse.config.cjs \
+            --port=9222 \
+            --output=json \
+            --output-path=docs/phase0/lighthouse.json \
+            --quiet
           node apps/agent-mobile/tests/check-lighthouse.mjs
 
       - name: Build short Phase 0 GIF
