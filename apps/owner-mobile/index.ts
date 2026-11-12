@@ -35,13 +35,13 @@ async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboa
 let qq=qj.queue||[];
 $("quoteCount").textContent=qq.length+" pending";
 $("quoteQueue").innerHTML=qq.length?qq.map(q=>{
-  const esc=escapeHtml, id=esc(q.id);
+  const esc=escapeHtml, id=escapeHtml(q.id);
   const label=esc(q.customer_label||"Customer"), agent=esc(q.agent_name||q.agent_code||q.agent_id||"Agent");
   const dims=[["size","small,medium,large,xl,structure",q.size_band||"medium"],["density","light,medium,full,very_full",q.density_band||"medium"],["premium","low,medium,high,very_high",q.premium_intensity||"medium"],["complexity","low,medium,high,special",q.complexity_band||"medium"]];
   const choices=dims.map(([k,options,selected])=>"<label class='muted'>"+esc(k)+"<select class='q-"+k+"' data-id='"+id+"'>"+options.split(",").map(v=>"<option value='"+esc(v)+"' "+(v===selected?"selected":"")+">"+esc(v)+"</option>").join("")+"</select></label>").join("");
   const image=safeImageUrl(q.image_url);
-  return "<div class='item'><b>RM "+Number(q.customer_budget||0).toFixed(0)+" · "+esc(q.design_commitment)+"</b>"
-  +"<div class='muted'>"+agent+" · "+label+" · "+esc(q.status)+"</div>"
+  return "<div class='item'><b>RM "+Number(q.customer_budget||0).toFixed(0)+" · "+escapeHtml(q.design_commitment)+"</b>"
+  +"<div class='muted'>"+agent+" · "+label+" · "+escapeHtml(q.status)+"</div>"
   +"<div class='muted'>AI: "+esc(q.analysis_provider||"—")+" · Confidence: "+esc(q.confidence==null?"—":Math.round(Number(q.confidence)*100)+"%")+" · Reason: "+esc(q.review_reason||"—")+"</div>"
   +(image?"<img src='"+esc(image)+"' alt='Quote reference' style='width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:8px'>":"")
   +"<div class='form' style='margin-top:9px'>"+choices+"<textarea class='q-note' data-id='"+id+"' placeholder='备注 / Note (optional)' maxlength='500'></textarea>"
