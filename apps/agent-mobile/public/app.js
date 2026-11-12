@@ -46,6 +46,8 @@ function applyI18n(){
   }
   UI?.onLanguageChange();
   refreshAIOrb(tr);
+  const themeBtn=$("themeToggle");
+  if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
 
 function view(name){
