@@ -83,11 +83,11 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   function segmentsForLead(lead){
     if(Array.isArray(lead?.customer_segments))return lead.customer_segments;
-    const out=[],status=String(lead?.status||"");
-    if(status==="new")out.push("new");
-    if(status==="follow_up"||lead?.next_followup_at)out.push("follow_up");
-    if(status==="quoted"||lead?.quote_id||["approved","sent","accepted"].includes(String(lead?.quote_status||"")))out.push("quoted");
-    return out;
+    const status=String(lead?.status||"");
+    if(status==="quoted"||lead?.quote_id||["approved","sent","accepted"].includes(String(lead?.quote_status||"")))return ["quoted"];
+    if(status==="follow_up"||lead?.next_followup_at)return ["follow_up"];
+    if(["new","qualified"].includes(status))return ["new"];
+    return [];
   }
   function lossReasonLabel(value){
     const key={
