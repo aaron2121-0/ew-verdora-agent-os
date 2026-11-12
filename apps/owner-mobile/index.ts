@@ -8,6 +8,7 @@ const HTML=[
 '<div class="card"><div class="grid"><div><div class="muted">Active Agents</div><div id="active" class="metric"></div></div><div><div class="muted">Dormant</div><div id="dormant" class="metric"></div></div><div><div class="muted">Commission Liability</div><div id="comm" class="metric"></div></div><div><div class="muted">Bonus Liability</div><div id="bonus" class="metric"></div></div></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">Zero-paid mode: review reference image, classify it, and set a conservative safe production cost. The system handles customer pricing and margin guard.</div><div id="quoteQueue"></div></div>',
+'<div class="card"><div class="title">Agent Access Link</div><div class="muted">Create a one-time login link valid for 24 hours. Use this when email delivery is delayed or rate-limited.</div><div class="form" style="margin-top:11px"><input id="inviteEmail" type="email" placeholder="agent@email.com"><button id="inviteBtn" class="btn primary">Create one-time Agent link</button><div id="inviteOut" class="muted"></div><button id="copyInvite" class="btn hidden">Copy link</button></div></div>',
 '<div class="card"><div class="title">Add OPEX</div><div class="form" style="margin-top:11px"><input id="date" type="date"><input id="category" placeholder="Category"><input id="amount" type="number" step="0.01" placeholder="Amount RM"><input id="note" placeholder="Note"><button id="opexBtn" class="btn primary">Save OPEX & Recalculate</button><div id="opexMsg" class="muted"></div></div></div></div>',
 '<script src="/owner.js"></script></main></body></html>'
 ].join("\n");
@@ -63,6 +64,31 @@ $("loginBtn").onclick=async()=>{
   }
 };
 $("logout").onclick=async()=>{await sb.auth.signOut();session=null;show("login")};
+let latestInvite="";
+$("inviteBtn").onclick=async()=>{
+  const email=$("inviteEmail").value.trim();
+  $("inviteOut").textContent="";
+  $("copyInvite").classList.add("hidden");
+  if(!email){$("inviteOut").textContent="Enter the agent email.";return}
+  try{
+    $("inviteBtn").disabled=true;
+    $("inviteBtn").textContent="Creating...";
+    const j=await call({action:"create_agent_invite",email});
+    latestInvite=j.invite_url||"";
+    $("inviteOut").textContent="Ready · valid until "+new Date(j.expires_at).toLocaleString();
+    if(latestInvite)$("copyInvite").classList.remove("hidden");
+  }catch(e){
+    $("inviteOut").textContent=e.message||"Unable to create link.";
+  }finally{
+    $("inviteBtn").disabled=false;
+    $("inviteBtn").textContent="Create one-time Agent link";
+  }
+};
+$("copyInvite").onclick=async()=>{
+  if(!latestInvite)return;
+  try{await navigator.clipboard.writeText(latestInvite);$("inviteOut").textContent="Copied ✓ · send this link to the agent via WhatsApp."}
+  catch{$("inviteOut").textContent=latestInvite}
+};
 $("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||new Date().toISOString().slice(0,10),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=e.message}};
 (async()=>{
 CFG=await fetch("/config").then(r=>r.json());
@@ -92,7 +118,7 @@ export default {
     const u=new URL(req.url);
     if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:{"cache-control":"no-store"}});
     if(u.pathname==="/owner.js")return new Response(JS,{headers:{"content-type":"application/javascript; charset=utf-8","cache-control":"no-store"}});
-    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Owner Mobile",version:"0.1.7"});
+    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Owner Mobile",version:"0.1.8"});
     return new Response(HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
   }
 };
