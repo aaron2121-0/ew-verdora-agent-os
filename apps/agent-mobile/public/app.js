@@ -3,11 +3,14 @@ import {createIcon} from "./icons.js";
 import {setupBottomSheet,setButtonLoading,toast,vibrate} from "./components.js";
 import {createPhase1UI} from "./phase1.js";
 import {clearOrderDraft,prepareOrderDraftForUser} from "./draft.js";
+import {initMotion} from "./motion.js";
+import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile} from "./ai-ui.js";
+import {createAIChat} from "./ai-chat.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
 let scenario="",activeModule="";
-let refreshBusy=null;
+let refreshBusy=null,aiChat=null,aiProfile=null;
 const $=id=>document.getElementById(id);
 const tr=(key,vars={})=>translate(lang,key,vars);
 
@@ -42,6 +45,7 @@ function applyI18n(){
     langBtn.append(createIcon("languages",{size:18}),document.createTextNode(tr("languageName")));
   }
   UI?.onLanguageChange();
+  refreshAIOrb(tr);
 }
 
 function view(name){
@@ -104,6 +108,12 @@ async function refresh(){
       });
       await UI.init();
     }else UI.renderAll();
+    if(!aiChat){
+      const aiCall=body=>fn("agent-ai",body);
+      aiChat=createAIChat({api:aiCall,tr,getData:()=>D,getLang:()=>lang});
+      aiProfile=createAIProfile({api:aiCall,tr,getLang:()=>lang});
+      initAIOrb({onClick:()=>aiChat?.open(),tr,getData:()=>D});
+    }
     return result;
   })();
   try{return await refreshBusy}finally{refreshBusy=null}
@@ -122,6 +132,15 @@ async function openPractice(code){
     scenario=j.scenario||"";
     $("scenario").textContent=scenario;
   }catch(e){$("scenario").textContent=friendlyError(e.message)}
+}
+
+function setupAppearance(){
+  const stored=localStorage.getItem("ew_theme");
+  const apply=()=>{const theme=localStorage.getItem("ew_theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=theme;const b=$("themeToggle");if(b)b.textContent=theme==="dark"?"☀":"☾"};
+  if(stored&&stored!=="light"&&stored!=="dark")localStorage.removeItem("ew_theme");
+  apply();matchMedia("(prefers-color-scheme: light)").addEventListener?.("change",()=>{if(!localStorage.getItem("ew_theme"))apply()});
+  $("themeToggle")?.addEventListener("click",()=>{localStorage.setItem("ew_theme",document.documentElement.dataset.theme==="dark"?"light":"dark");apply()});
+  $("aiProfileOpen")?.addEventListener("click",()=>aiProfile?.open());
 }
 
 function setupHandlers(){
@@ -191,6 +210,7 @@ function setupHandlers(){
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);
     UI?.training?.destroy?.();
+    aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
   });
   const role=setupBottomSheet($("roleSheet"));
@@ -206,7 +226,7 @@ async function waitForSupabase(){
   if(window.supabase)return;
   await new Promise((resolve,reject)=>{
     const script=document.createElement("script");
-    script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.src="/vendor/supabase-2.119.0.js";
     script.async=true;script.crossOrigin="anonymous";
     const timer=setTimeout(()=>{script.remove();reject(new Error("supabase_sdk_unavailable"))},7000);
     script.addEventListener("load",()=>{clearTimeout(timer);resolve()},{once:true});
@@ -217,6 +237,8 @@ async function waitForSupabase(){
 }
 
 async function bootstrap(){
+  initMotion();
+  setupAppearance();
   applyI18n();
   setupHandlers();
   try{
