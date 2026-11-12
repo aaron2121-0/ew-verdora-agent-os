@@ -436,8 +436,6 @@ function setupHandlers(){
     finally{setButtonLoading($("scoreRole"),false,tr("submit"))}
   });
 
-  $("closeRole").addEventListener("click",()=>$("roleSheet").classList.add("hidden"));
-  $("closeQuote").addEventListener("click",()=>$("quoteSheet").classList.add("hidden"));
   $("budgetQuoteBtn").addEventListener("click",()=>acceptQuote("budget"));
   $("recommendedQuoteBtn").addEventListener("click",()=>acceptQuote("recommended"));
 
@@ -473,8 +471,10 @@ function setupHandlers(){
     document.querySelectorAll(".section").forEach(section=>section.classList.toggle("active",section.dataset.page===button.dataset.tab));
   }));
 
-  setupBottomSheet($("roleSheet"));
-  setupBottomSheet($("quoteSheet"));
+  const roleController=setupBottomSheet($("roleSheet"));
+  const quoteController=setupBottomSheet($("quoteSheet"));
+  $("closeRole").addEventListener("click",()=>roleController?.close());
+  $("closeQuote").addEventListener("click",()=>quoteController?.close());
 }
 
 async function waitForSupabase(){
