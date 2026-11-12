@@ -83,7 +83,15 @@ export function createAIProfile({api,tr,getLang}){
  let focusBefore=null;
  const dismiss=()=>{dialog.classList.add("hidden");backdrop.classList.add("hidden");focusBefore?.focus?.()};
  close.addEventListener("click",dismiss);backdrop.addEventListener("click",dismiss);
- dialog.addEventListener("keydown",e=>{if(e.key==="Escape")dismiss()});
+ dialog.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){dismiss();return}
+  if(e.key==="Tab"){
+   const nodes=[...dialog.querySelectorAll("button:not([disabled]),textarea")].filter(n=>n.offsetParent!==null);
+   if(!nodes.length)return;const i=nodes.indexOf(document.activeElement);
+   if(e.shiftKey&&i===0){e.preventDefault();nodes.at(-1).focus()}
+   if(!e.shiftKey&&i===nodes.length-1){e.preventDefault();nodes[0].focus()}
+  }
+ });
  const element=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text||"";if(cls)n.className=cls;return n};
  async function open(){
   focusBefore=document.activeElement;dialog.classList.remove("hidden");backdrop.classList.remove("hidden");content.replaceChildren(element("p",tr("loading")));close.focus();
