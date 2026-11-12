@@ -1,0 +1,9 @@
+{
+  "performance": 99,
+  "accessibility": 95,
+  "bestPractices": 96,
+  "cls": 0.008794236111111112,
+  "firstContentfulPaintMs": 897.294,
+  "largestContentfulPaintMs": 1983.9769999999999,
+  "totalBlockingTimeMs": 0
+}
