@@ -1,0 +1,6 @@
+{
+  "name": "EW VERDORA – Gemini CLI workspace",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm install -g @google/gemini-cli && echo 'Ready: run `gemini` to start. Supabase CLI: npx supabase <command>'",
+  "customizations": { "codespaces": { "openFiles": ["GEMINI.md", "docs/gemini/AI_PLUS_TASK.md"] } }
+}
