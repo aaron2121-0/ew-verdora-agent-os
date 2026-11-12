@@ -1,5 +1,6 @@
 export const I18N={
   en:{
+    aiEmptyCustomerAction:"Ask AI to write an IG post",
     aiDailyFocus:"Today's focus",aiDailyFollowup:"Review follow-ups",aiDailyViewTasks:"View today's plan",
     aiStatsTitle:"Your activity",
     themeLight:"Light",themeDark:"Dark",themeToggle:"Switch appearance",
@@ -444,6 +445,7 @@ export const I18N={
     commissionWaived:"Waived",
   },
   zh:{
+    aiEmptyCustomerAction:"要不要让 AI 帮你写 IG 贴文？",
     aiDailyFocus:"今日重点",aiDailyFollowup:"查看该跟进的客户",aiDailyViewTasks:"查看今日任务",
     aiStatsTitle:"你的使用记录",
     themeLight:"浅色",themeDark:"深色",themeToggle:"切换外观",
