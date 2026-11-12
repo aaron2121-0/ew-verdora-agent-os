@@ -18,7 +18,7 @@ const deleted={auth_users:[],agents:[],agent_auth_invites:[],leads:[],lead_event
 const results=[];const errors=[];
 const timeout=15000;
 function headers(admin=false,token=''){
- return {apikey:admin?secret:pub,authorization:'Bearer '+(admin?secret:token),'content-type':'application/json'};
+ return {apikey:admin?secret:pub,...(token&&!admin?{authorization:'Bearer '+token}:{}),'content-type':'application/json'};
 }
 async function http(uri,{admin=false,token='',method='GET',data,prefer}={}){
  const res=await fetch(url+uri,{method,headers:{...headers(admin,token),...(prefer?{prefer}:{})},
