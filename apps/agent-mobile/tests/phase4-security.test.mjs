@@ -93,6 +93,8 @@ test("platform_post enforces platform-specific safety and does not pass approved
   }
   assert.match(ai,/containsMarketingPolicyViolation/);
   assert.match(ai,/stripPriceData/);
+  assert.match(ai,/containsMarketingPolicyViolation\(rawAngle\)/);
+  assert.match(ai,/containsSensitiveOutput\(rawAngle\)/);
   const start=ai.indexOf('if(action==="platform_post")');
   const end=ai.indexOf('if(action==="weekly_plan")',start);
   const block=ai.slice(start,end);
