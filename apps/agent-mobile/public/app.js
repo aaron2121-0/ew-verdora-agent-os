@@ -55,6 +55,7 @@ function view(name){
   $("nav").classList.toggle("hidden",name!=="app");
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
+  $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
 }
 
 async function fn(path,body){
