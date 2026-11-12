@@ -20,6 +20,9 @@ function friendlyError(code){
   if(c.includes("invalid_session")||c.includes("authentication_required")||c.includes("jwt"))return tr("errorSession");
   if(c.includes("selling_access_locked")||c.includes("quote_access_locked"))return tr("errorQuoteLocked");
   if(c.includes("lead_not_found"))return tr("errorLeadNotFound");
+  if(c.includes("invalid_loss_reason"))return tr("errorInvalidLossReason");
+  if(c.includes("lead_cannot_be_lost"))return tr("errorLeadCannotBeLost");
+  if(c.includes("lead_not_lost"))return tr("errorLeadNotLost");
   if(c.includes("invalid_budget"))return tr("errorInvalidBudget");
   if(c.includes("reference")&&c.includes("missing"))return tr("errorReferenceRequired");
   if(c.includes("upload"))return tr("errorUpload");
