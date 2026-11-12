@@ -137,7 +137,7 @@ async function openPractice(code){
 
 function setupAppearance(){
   const stored=localStorage.getItem("ew_theme");
-  const apply=()=>{const theme=localStorage.getItem("ew_theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=theme;const b=$("themeToggle");if(b)b.textContent=theme==="dark"?"☀":"☾"};
+  const apply=()=>{const theme=localStorage.getItem("ew_theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=theme;const b=$("themeToggle");if(b){b.textContent=theme==="dark"?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");b.setAttribute("aria-label",tr("themeToggle"))}};
   if(stored&&stored!=="light"&&stored!=="dark")localStorage.removeItem("ew_theme");
   apply();matchMedia("(prefers-color-scheme: light)").addEventListener?.("change",()=>{if(!localStorage.getItem("ew_theme"))apply()});
   $("themeToggle")?.addEventListener("click",()=>{localStorage.setItem("ew_theme",document.documentElement.dataset.theme==="dark"?"light":"dark");apply()});
