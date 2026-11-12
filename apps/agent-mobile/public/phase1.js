@@ -61,6 +61,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let generatedKit=null;
   let generatedKitCode=null;
   let lastAllDone=false;
+  let customerSegment="all";
 
   const order=createOrderWizard({
     getData,getLang,getUserId,tr,api,
@@ -77,6 +78,36 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   function langText(value){
     const key=categoryKey(value);
     return key?tr(key):String(value||"—");
+  }
+
+
+  function segmentsForLead(lead){
+    if(Array.isArray(lead?.customer_segments))return lead.customer_segments;
+    const out=[],status=String(lead?.status||"");
+    if(status==="new")out.push("new");
+    if(status==="follow_up"||lead?.next_followup_at)out.push("follow_up");
+    if(status==="quoted"||lead?.quote_id||["approved","sent","accepted"].includes(String(lead?.quote_status||"")))out.push("quoted");
+    return out;
+  }
+  function lossReasonLabel(value){
+    const key={
+      too_expensive:"lossTooExpensive",think_about_it:"lossThinkAboutIt",no_reply:"lossNoReply",
+      chose_other:"lossChoseOther",other:"lossOther"
+    }[String(value||"")];
+    return key?tr(key):String(value||"—");
+  }
+  function nextBestActionLabel(value){
+    const key={
+      qualify_lead:"nbaQualify",request_quote:"nbaRequestQuote",follow_up:"nbaFollowUp",
+      follow_up_quote:"nbaFollowUpQuote",schedule_quote_followup:"nbaScheduleQuoteFollowUp",
+      lost_review:"nbaLostReview",none:"nbaNone"
+    }[String(value||"")];
+    return key?tr(key):String(value||"—");
+  }
+  function intelligenceReason(lead){
+    const reason=lead?.lead_score_reason;
+    if(!reason||typeof reason!=="object")return "";
+    return String(getLang()==="zh"?reason.zh||"":reason.en||"");
   }
 
   function isLocked(){
@@ -488,11 +519,34 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
-    const rows=getData()?.phase1?.recent_leads||[];
-    if(!rows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));host.append(page);return}
+    const allRows=getData()?.phase1?.recent_leads||[];
+    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));host.append(page);return}
+
+    const filters=element("div",{className:"follow-actions",attrs:{"data-phase4-hook":"customer-segments"}});
+    [
+      ["all","segmentAll"],["new","segmentNew"],["follow_up","segmentFollowUp"],["quoted","segmentQuoted"]
+    ].forEach(([segment,key])=>{
+      const count=segment==="all"?allRows.length:allRows.filter(x=>segmentsForLead(x).includes(segment)).length;
+      const btn=element("button",{
+        className:"btn btn-secondary btn-small",
+        text:tr(key)+" · "+count,
+        attrs:{type:"button","data-customer-segment":segment,"aria-pressed":String(customerSegment===segment)}
+      });
+      btn.disabled=customerSegment===segment;
+      btn.addEventListener("click",()=>{customerSegment=segment;renderCustomers()});
+      filters.append(btn);
+    });
+    page.append(filters);
+
+    const rows=customerSegment==="all"?allRows:allRows.filter(x=>segmentsForLead(x).includes(customerSegment));
+    if(!rows.length){
+      page.append(emptyState({icon:"users",title:tr("noCustomersInSegment")}));
+      host.append(page);return;
+    }
+
     const list=element("div",{className:"customer-list"});
     rows.forEach(lead=>{
-      const card=element("button",{className:"customer-card",attrs:{type:"button"}});
+      const card=element("button",{className:"customer-card",attrs:{type:"button","data-lead-id":String(lead.id||"")}});
       const top=element("div",{className:"customer-card-top"});
       const who=element("div");
       who.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:langText(lead.occasion||lead.sales_category)+" · "+sourceLabel(lead.source,tr)}));
@@ -535,13 +589,56 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     body.append(element("h2",{className:"sheet-title",text:lead.customer_label||tr("customerDetails")}),
       element("p",{className:"sheet-subtitle",text:tr("customerDetails")}));
     const meta=element("div",{className:"detail-grid"});
-    [[tr("customerSourceLabel"),sourceLabel(lead.source,tr)],
-     [tr("customerOccasionLabel"),langText(lead.occasion||lead.sales_category)],
-     [tr("customerBudgetLabel"),money(lead.budget)],
-     [tr("currentStatus"),customerStageLabel(lead)]].forEach(([k,v])=>{
-       const x=element("div");x.append(element("span",{text:k}),element("strong",{text:v}));meta.append(x);
-     });
+    const metaRows=[
+      [tr("customerSourceLabel"),sourceLabel(lead.source,tr)],
+      [tr("customerOccasionLabel"),langText(lead.occasion||lead.sales_category)],
+      [tr("customerBudgetLabel"),money(lead.budget)],
+      [tr("currentStatus"),customerStageLabel(lead)]
+    ];
+    if(lead.loss_reason)metaRows.push([tr("lossReason"),lossReasonLabel(lead.loss_reason)]);
+    metaRows.forEach(([k,v])=>{
+      const x=element("div");x.append(element("span",{text:k}),element("strong",{text:v}));meta.append(x);
+    });
     body.append(meta,element("h3",{className:"detail-section-title",text:tr("statusProgress")}),renderPipeline(lead));
+
+    if(lead.lead_score!=null||lead.next_best_action||lead.best_followup_time){
+      const smart=element("div",{className:"detail-grid",attrs:{"data-phase4-hook":"lead-intelligence"}});
+      const rows=[];
+      if(lead.lead_score!=null)rows.push([tr("leadScore"),String(Math.round(Number(lead.lead_score)))+"/100"]);
+      const reason=intelligenceReason(lead);if(reason)rows.push([tr("leadScoreReason"),reason]);
+      if(lead.next_best_action)rows.push([tr("nextBestAction"),nextBestActionLabel(lead.next_best_action)]);
+      if(lead.best_followup_time)rows.push([tr("bestFollowupTime"),formatKuchingDateTime(lead.best_followup_time,getLang())]);
+      rows.forEach(([k,v])=>{const x=element("div");x.append(element("span",{text:k}),element("strong",{text:v}));smart.append(x)});
+      body.append(element("h3",{className:"detail-section-title",text:tr("smartCustomerGuide")}),smart);
+    }
+
+    if(!["won","archived"].includes(String(lead.status||""))){
+      const loss=element("div",{attrs:{"data-phase4-hook":"loss-reason"}});
+      loss.append(element("h3",{className:"detail-section-title",text:tr("markLost")}));
+      const select=element("select",{attrs:{"aria-label":tr("lossReason")}});
+      [
+        ["too_expensive","lossTooExpensive"],["think_about_it","lossThinkAboutIt"],["no_reply","lossNoReply"],
+        ["chose_other","lossChoseOther"],["other","lossOther"]
+      ].forEach(([value,key])=>{
+        const opt=element("option",{text:tr(key),attrs:{value}});
+        if(value===lead.loss_reason)opt.selected=true;
+        select.append(opt);
+      });
+      const save=element("button",{className:"btn btn-secondary btn-wide",text:tr("saveLossReason"),attrs:{type:"button"}});
+      save.addEventListener("click",async()=>{
+        if(isLocked()){showLock();return}
+        setButtonLoading(save,true,tr("loading"));
+        try{
+          await api.agent({action:"set_lead_loss",lead_id:lead.id,loss_reason:select.value});
+          toast(tr("lossReasonSaved"),{tone:"success"});
+          sheet.classList.add("hidden");
+          await onRefresh();
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+        finally{setButtonLoading(save,false,tr("saveLossReason"))}
+      });
+      loss.append(select,save);body.append(loss);
+    }
+
     sheet.classList.remove("hidden");
   }
 
