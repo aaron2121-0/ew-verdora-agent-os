@@ -201,6 +201,7 @@ export function setupBottomSheet(sheet,{onClose=null}={}){
   };
   sheet.addEventListener("click",e=>{if(e.target===sheet)close()});
   body.addEventListener("pointerdown",e=>{
+    if(e.target instanceof Element && e.target.closest("button,a,input,select,textarea"))return;
     if(body.scrollTop>0||e.clientY>body.getBoundingClientRect().top+72)return;
     startY=e.clientY;dy=0;body.setPointerCapture?.(e.pointerId);
   });
