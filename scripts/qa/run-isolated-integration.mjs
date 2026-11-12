@@ -117,8 +117,14 @@ try{
   'training_exam_answers','training_exam_attempts','commissions','ai_chat_messages','agent_ai_profile']){
   tests.push(test('Agent A cannot read Agent B '+table,async()=>{
    const r=await http('/rest/v1/'+table+'?select=*&agent_id=eq.'+b.agentId,{token:a.token});
-   assert.equal(r.status,200,'RLS query '+table+' returned '+r.status);
-   assert.deepEqual(r.data,[],'RLS leaked Agent B '+table);
+   // The policy-less RLS tables intentionally have zero direct grants.
+   if(['ai_chat_messages','agent_ai_profile'].includes(table)){
+     assert.ok([401,403,404].includes(r.status)||(r.status===200&&Array.isArray(r.data)&&r.data.length===0),
+      'Protected table '+table+' exposed B records or unexpected status '+r.status);
+   }else{
+     assert.equal(r.status,200,'RLS query '+table+' returned '+r.status);
+     assert.deepEqual(r.data,[],'RLS leaked Agent B '+table);
+   }
   }));
  }
  for(const status of ['trainee','restricted','recovery','dormant','suspended']){
