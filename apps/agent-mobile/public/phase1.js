@@ -1,3 +1,4 @@
+import {createAICard,prioritizeCards,aiStart,aiEnd} from "./ai-ui.js";
 import {clear,element,emptyState,countTo,stagger,toast,vibrate,setupBottomSheet,setButtonLoading,progress} from "./components.js";
 import {createIcon} from "./icons.js";
 import {greetingPeriod,kuchingDateKey,formatKuchingDateTime} from "./date.js";
@@ -60,6 +61,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let detailController=null;
   let generatedKit=null;
   let generatedKitCode=null;
+  let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let lastAllDone=false;
 
   const order=createOrderWizard({
@@ -342,6 +344,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     moneyCard.append(tierWrap);
     page.append(moneyCard);
 
+    const daily=document.createElement("div");daily.id="aiDailyBrief";daily.dataset.priorityCard="brief";page.append(daily);
+    if(aiGreeting){const g=aiGreeting.greeting||{};const out=createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr});daily.append(out.card)}
+    else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
     page.append(renderTodayTasks());
     page.append(renderDueFollowups());
@@ -349,6 +354,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     host.append(page);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
     celebrateIfNeeded();
+  }
+
+  async function loadDailyGreeting(){
+    if(aiGreetingLoading||aiGreeting)return;
+    aiGreetingLoading=true;aiStart();
+    try{aiGreeting=await api.ai({action:"daily_greeting"});const host=document.getElementById("aiDailyBrief");if(host){host.replaceChildren();const g=aiGreeting.greeting||{};host.append(createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr}).card)}}
+    catch{document.getElementById("aiDailyBrief")?.replaceChildren(element("p",{className:"ai-chat-thinking",text:tr("aiDailyUnavailable")}))}
+    finally{aiGreetingLoading=false;aiEnd()}
   }
 
   function renderQuickActions(){
@@ -583,14 +596,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         setButtonLoading(gen,true,tr("loading"));
         try{
           const j=await api.ai({action:"daily_content",kit_code:k.code,channel:chosen});
-          generatedKit=j.content||{};generatedKitCode=k.code;
+          generatedKit=j.content||{};generatedKitCode=k.code;generatedProvider=j.provider||"template";
           renderSelling();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
         finally{setButtonLoading(gen,false,tr("generateTodayCopy"))}
       });
       card.append(gen);
       if(generatedKit&&generatedKitCode===k.code){
-        const out=element("div",{className:"generated-copy"});
+        const out=element("div",{className:"generated-copy "+(generatedProvider==="gemini"?"ai-output-card ai-live":"ai-output-card ai-template")});
         const body=[
           tr("generatedFor",{channel:chosen}),
           generatedKit.post_copy||"",
@@ -610,7 +623,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
           window.open("https://wa.me/?text="+encodeURIComponent(body),"_blank","noopener,noreferrer");
           markLocalTask("kit",true);vibrate(10);
         });
-        actions.append(copyBtn,wa);out.append(actions);card.append(out);
+        const feedback=(signal)=>{api.ai({action:"feedback",ai_action:"daily_content",output_ref:null,signal}).catch(()=>{})};
+        const up=iconButton("check",tr("aiHelpful"),"btn btn-secondary btn-small");up.addEventListener("click",()=>feedback("thumbs_up"));
+        const down=element("button",{className:"btn btn-secondary btn-small",text:tr("aiNotHelpful")});down.type="button";down.addEventListener("click",()=>feedback("thumbs_down"));
+        copyBtn.addEventListener("click",()=>feedback("copied"));
+        wa.addEventListener("click",()=>feedback("sent_whatsapp"));
+        actions.append(copyBtn,wa,up,down);out.append(actions);card.append(out);
       }
       list.append(card);
     });
