@@ -1003,3 +1003,16 @@ grant execute on function public.agent_training_exam_answer_internal(uuid,uuid,s
 grant execute on function public.agent_training_exam_finish_internal(uuid,uuid) to service_role;
 grant execute on function public.refresh_agent_certification_internal(uuid) to service_role;
 
+
+
+-- Phase 3 hardening: private helpers are never client-callable.
+revoke all on function private.training_option_order(text,uuid) from public,anon,authenticated;
+revoke all on function private.training_select_daily_questions(uuid,date) from public,anon,authenticated;
+revoke all on function private.training_skill_snapshot(uuid) from public,anon,authenticated;
+revoke all on function private.training_daily_record_answer(uuid,uuid,smallint,smallint,timestamptz,date) from public,anon,authenticated;
+revoke all on function private.training_exam_record_answer(uuid,uuid,smallint,smallint,timestamptz) from public,anon,authenticated;
+grant execute on function private.training_option_order(text,uuid) to service_role;
+grant execute on function private.training_select_daily_questions(uuid,date) to service_role;
+grant execute on function private.training_skill_snapshot(uuid) to service_role;
+grant execute on function private.training_daily_record_answer(uuid,uuid,smallint,smallint,timestamptz,date) to service_role;
+grant execute on function private.training_exam_record_answer(uuid,uuid,smallint,smallint,timestamptz) to service_role;
