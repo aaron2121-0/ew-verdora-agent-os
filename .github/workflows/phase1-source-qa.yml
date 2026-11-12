@@ -27,8 +27,8 @@ jobs:
           for file in apps/agent-mobile/public/*.js apps/agent-mobile/tests/phase1-*.mjs; do
             node --check "$file"
           done
-      - name: Run Phase 1 source/security tests
-        run: node --test apps/agent-mobile/tests/phase1-security.test.mjs
+      - name: Run Phase 1 + Phase 2 source/security tests
+        run: node --test apps/agent-mobile/tests/phase1-security.test.mjs apps/agent-mobile/tests/phase2-security.test.mjs
       - name: Reject inline event attributes
         run: |
           if grep -RniE ' on[a-z]+=' apps/agent-mobile/public/index.html; then
@@ -37,7 +37,8 @@ jobs:
           fi
       - name: Reject unsafe HTML sinks
         run: |
-          if grep -RniE '\.innerHTML[[:space:]]*=|insertAdjacentHTML'             apps/agent-mobile/public/app.js             apps/agent-mobile/public/phase1.js             apps/agent-mobile/public/order.js; then
+          if grep -RniE '\.innerHTML[[:space:]]*=|insertAdjacentHTML'             apps/agent-mobile/public/app.js             apps/agent-mobile/public/phase1.js             apps/agent-mobile/public/order.js \
+            apps/agent-mobile/public/performance.js; then
             echo "Unsafe HTML sink found"
             exit 1
           fi
