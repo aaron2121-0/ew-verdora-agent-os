@@ -154,8 +154,10 @@ async function run(browser,width,height,full=false){
       await page.getByRole("button",{name:"Finish today’s training"}).click();
     }
   }
+  await page.locator(".training3-result").waitFor({state:"visible"});
+  if(!(await page.locator(".training3-result").textContent()).includes("100%"))throw new Error("daily result missing");
+  await page.getByRole("button",{name:"Back to training"}).click();
   await page.locator(".training3-daily-done").waitFor({state:"visible"});
-  if(!(await page.locator("#trainingPage").textContent()).includes("100"))throw new Error("daily result missing");
   if(full)await page.screenshot({path:path.join(out,"gif-02-daily-done.png"),fullPage:false});
 
   // Exam fail at 80% must visibly preserve status semantics.
