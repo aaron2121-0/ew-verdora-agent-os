@@ -11,7 +11,7 @@ const here=path.dirname(fileURLToPath(import.meta.url));
 const root=path.resolve(here,"..");
 const repoRoot=path.resolve(root,"../..");
 const read=p=>fs.readFileSync(p,"utf8");
-const publicFiles=["app.js","phase1.js","order.js","date.js","draft.js","performance.js","components.js","icons.js","i18n.js"];
+const publicFiles=["app.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","components.js","icons.js","i18n.js"];
 const source=Object.fromEntries(publicFiles.map(n=>[n,read(path.join(root,"public",n))]));
 
 test("Phase 1 bilingual dictionaries have exact parity",()=>{
@@ -32,7 +32,7 @@ test("All Phase 1 DOM i18n keys exist",()=>{
 });
 
 test("Phase 1 untrusted rendering has no innerHTML sinks",()=>{
-  for(const name of ["app.js","phase1.js","order.js","performance.js"]){
+  for(const name of ["app.js","phase1.js","order.js","performance.js","training.js"]){
     assert.equal(/\.innerHTML\s*=/.test(source[name]),false,name+" innerHTML");
     assert.equal(/insertAdjacentHTML/.test(source[name]),false,name+" insertAdjacentHTML");
   }
