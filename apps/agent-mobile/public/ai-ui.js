@@ -22,7 +22,7 @@ export function contextTips(data={},now=Date.now(),tr=k=>k){
 function canShowTipNow(profile,now){
  const hours=profile?.active_hours;
  if(!hours||typeof hours!=="object"||!hours.start||!hours.end)return true;
- const parse=v=>{const m=String(v).match(/^(\\d{1,2}):([0-5]\\d)$/);return m?Number(m[1])+Number(m[2])/60:null};
+ const parse=v=>{const m=String(v).match(/^(\d{1,2}):([0-5]\d)$/);return m?Number(m[1])+Number(m[2])/60:null};
  const from=parse(hours.start),to=parse(hours.end);if(from===null||to===null)return true;
  const h=kuchingHour(now);return from<=to?h>=from&&h<to:h>=from||h<to;
 }
