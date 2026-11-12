@@ -55,7 +55,13 @@ async function setupAgent(page,requestBodies){
       if(body.action==="register")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,agent_code:"AG-NEW"})});
       return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true})});
     }
-    if(req.url().includes("/agent-ai"))return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({suggestion:"Safe coach response",provider:"fallback",scenario:"Customer asks a question",score:{score:85,feedback:"Good"},pass:true})});
+    if(req.url().includes("/agent-ai")){
+      if(body.action==="coach")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({suggestion:"Safe coach response",provider:"fallback"})});
+      if(body.action==="roleplay_generate")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({scenario:"Customer asks a question"})});
+      if(body.action==="roleplay_score")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({score:{score:85,feedback:"Good"},pass:true,training:{passed:true}})});
+      if(body.action==="daily_content")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({provider:"fallback",content:{post_copy:"Safe daily content",outreach_copy:"Safe DM",followup_copy:"Safe follow-up",actions:["Post once"]}})});
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true})});
+    }
     if(req.url().includes("/quote-intake")){
       if(body.action==="create")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({bucket:"agent-references",path:"test.webp",upload_token:"upload",request_id:"qr-new"})});
       if(body.action==="analyze")return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({quote_request:{classification:"AMBER",customer_note_en:"Safe quote note",customer_note_zh:"安全报价说明",recommended_price:220}})});
