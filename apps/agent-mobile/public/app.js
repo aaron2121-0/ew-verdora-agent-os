@@ -16,6 +16,7 @@ const tr=(key,vars={})=>translate(lang,key,vars);
 
 function friendlyError(code){
   const c=String(code||"").toLowerCase();
+  if(c.includes("daily_limit"))return tr("aiLimit");
   if(c.includes("invalid_session")||c.includes("authentication_required")||c.includes("jwt"))return tr("errorSession");
   if(c.includes("selling_access_locked")||c.includes("quote_access_locked"))return tr("errorQuoteLocked");
   if(c.includes("lead_not_found"))return tr("errorLeadNotFound");
