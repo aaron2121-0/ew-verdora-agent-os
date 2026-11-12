@@ -226,3 +226,21 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 .ai-profile-stat{margin:8px 0 14px}.ai-profile-progress{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}.ai-profile-progress-fill{height:100%;border-radius:inherit;background:var(--ai-gradient);transition:width var(--dur-page) var(--ease-enter)}
 
 .ai-chat-gemini{border-left:2px solid #3FB6A8;padding-left:10px}.ai-chat-template{border-left:2px solid var(--line);padding-left:10px}
+
+/* Integration QA: reserve async AI brief space and meet mobile text/contrast floors. */
+#aiDailyBrief{min-height:166px;contain:layout}
+#aiDailyBrief>.ai-output-card{margin:0;min-height:150px}
+.quick-tile strong,.quick-tile small,.quick-status,.task-copy strong,.task-copy small,
+.task-go,.task-count,.money-label,.money-rate,.tier-progress-top,.btn-small,
+.empty-state,.badge,.nav-item,.nav-label,.sub,.follow-person small,
+.follow-meta,.follow-actions .btn,.campaign-banner small,.campaign-banner span{
+ font-size:12px;
+}
+.task-row.done{opacity:1}
+.task-row.done .task-copy strong,.task-row.done .task-copy small{color:#46564E}
+.task-row.done .task-go{color:#205A40}
+.badge-success{color:#14543B;background:#E9F6EF}
+.nav-item{color:#4C5953}
+:root[data-theme="dark"] .task-row.done .task-copy strong,
+:root[data-theme="dark"] .task-row.done .task-copy small{color:#46564E}
+@media(max-width:380px){.nav-label{font-size:12px}.top-actions .btn{font-size:12px}}
