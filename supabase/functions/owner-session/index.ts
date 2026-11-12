@@ -48,7 +48,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
   if(action==="create_owner_recovery_link"){
