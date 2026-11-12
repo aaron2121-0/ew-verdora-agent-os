@@ -348,9 +348,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(aiGreeting){const g=aiGreeting.greeting||{};const out=createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr});daily.append(out.card)}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    page.append(renderTodayTasks());
-    page.append(renderDueFollowups());
-    page.append(renderCampaigns());
+    const priorities=element("div",{className:"ai-priority-list"});
+    for(const [name,card] of [["training",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
+      card.dataset.priorityCard=name;
+      const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
+      card.prepend(why);priorities.append(card);
+    }
+    page.append(priorities);prioritizeCards(D,priorities,tr);
     host.append(page);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
     celebrateIfNeeded();
@@ -514,6 +518,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       const foot=element("div",{className:"customer-card-foot"});
       foot.append(element("span",{text:tr("customerBudgetLabel")}),element("strong",{text:money(lead.budget)}));
       card.append(top,pipeline,foot);
+      if(lead.lead_score!==undefined&&lead.lead_score!==null){
+        const score=Math.max(0,Math.min(100,Number(lead.lead_score)||0));
+        const level=score>=70?"aiChanceHigh":score>=40?"aiChanceMedium":"aiChanceLow";
+        card.append(element("span",{className:"badge",text:tr(level)}));
+        if(lead.lead_score_reason)card.append(element("p",{className:"ai-priority-why",text:String(lead.lead_score_reason)}));
+      }
+      if(lead.best_followup_time)card.append(element("p",{className:"ai-priority-why",text:tr("aiBestFollowup")+": "+String(lead.best_followup_time)}));
+      if(lead.next_best_action)card.append(element("p",{className:"ai-priority-why",text:tr("aiNextAction")+": "+String(lead.next_best_action)}));
       card.addEventListener("click",()=>openLeadDetail(lead));
       list.append(card);
     });
