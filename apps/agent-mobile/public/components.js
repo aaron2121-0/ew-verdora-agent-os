@@ -44,7 +44,11 @@ export function setButtonLoading(button,loading,label){
   if(!button)return;
   button.disabled=Boolean(loading);
   button.classList.toggle("is-loading",Boolean(loading));
-  if(label!==undefined)button.textContent=String(label);
+  if(label!==undefined){
+    const labelNode=button.querySelector(":scope > span:last-child");
+    if(labelNode)labelNode.textContent=String(label);
+    else button.textContent=String(label);
+  }
 }
 
 export function badge(text,tone="default"){
