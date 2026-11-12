@@ -51,7 +51,7 @@ function categoryKey(value){
   }[value]||null;
 }
 
-export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
+export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let active="today";
   let previousNavIndex=0;
   let lockController=null;
@@ -61,7 +61,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
   let lastAllDone=false;
 
   const order=createOrderWizard({
-    getData,getLang,tr,api,
+    getData,getLang,getUserId,tr,api,
     onNavigate:navigate,
     onLocked:showLock,
     onSent:()=>{markLocalTask("kit",true);renderNavBadges()}
