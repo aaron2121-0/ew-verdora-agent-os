@@ -81,6 +81,25 @@ Deno.serve(async (req) => {
     return reply({ ok: true, phase1: data });
   }
 
+  if (action === "sales_dashboard") {
+    const rawMonth = String(body.month || "");
+    const month = /^\d{4}-\d{2}$/.test(rawMonth) ? rawMonth + "-01" : kuchingToday().slice(0,7) + "-01";
+    const [dashboardRes, leaderboardRes] = await Promise.all([
+      admin.rpc("agent_sales_dashboard_internal", { p_agent_id: agent.id, p_month: month }),
+      admin.rpc("agent_leaderboard_internal", { p_agent_id: agent.id, p_month: month })
+    ]);
+    const error = dashboardRes.error || leaderboardRes.error;
+    if (error) return reply({ error: safeErr(error) }, 400);
+    return reply({
+      ok: true,
+      cache_ttl_seconds: 300,
+      sales_dashboard: {
+        ...(dashboardRes.data || {}),
+        leaderboard: leaderboardRes.data || { top: [], me: null, team_count: 0 }
+      }
+    });
+  }
+
   if (action === "mission") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
     const { data, error } = await admin.rpc("get_or_create_daily_mission_internal", { p_agent_id: agent.id, p_date: date });
