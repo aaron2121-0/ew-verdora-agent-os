@@ -3,6 +3,7 @@ import {createIcon} from "./icons.js";
 import {greetingPeriod,kuchingDateKey,formatKuchingDateTime} from "./date.js";
 import {createOrderWizard} from "./order.js";
 import {createPerformanceDashboard} from "./performance.js";
+import {createTrainingUI} from "./training.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -71,6 +72,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   const performance=createPerformanceDashboard({
     getUserId,getLang,tr,api
   });
+  const training=createTrainingUI({getData,getLang,tr,api});
 
   function langText(value){
     const key=categoryKey(value);
@@ -544,35 +546,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   }
 
   function renderTraining(){
-    const host=document.getElementById("trainingPage");if(!host)return;
-    clear(host);
-    const page=element("div",{className:"page-shell"});
-    page.append(screenHeader(tr("trainingTitle"),tr("trainingSubtitle")));
-    const rows=getData()?.training||[];
-    const summary=element("div",{className:"training-summary"});
-    const icon=element("span",{className:"training-summary-icon"});icon.append(createIcon("graduationCap",{size:24}));
-    summary.append(icon,element("div",{className:"training-summary-copy"}));
-    summary.lastChild.append(element("strong",{text:getData()?.phase1?.training_pending?tr("trainingPendingBadge"):tr("completedBadge")}),
-      element("span",{text:tr("taskTrainingDesc")}));
-    page.append(summary);
-    const list=element("div",{className:"training-list"});
-    if(!rows.length)list.append(emptyState({icon:"graduationCap",title:tr("noTraining")}));
-    rows.forEach(x=>{
-      const mod=x.training_modules||{},row=element("article",{className:"training-row"});
-      const left=element("div");
-      left.append(element("strong",{text:getLang()==="zh"?mod.title_zh:mod.title_en}),
-        element("small",{text:trainingStatusLabel(x.status,tr)+" · "+Number(x.best_score||0)+"/100"}));
-      row.append(left);
-      if(x.status==="passed"||x.status==="waived"){
-        row.append(element("span",{className:"badge badge-success",text:tr("passed")}));
-      }else{
-        const b=iconButton("graduationCap",tr("practice"),"btn btn-secondary btn-small");
-        b.addEventListener("click",()=>api.openPractice(mod.code));
-        row.append(b);
-      }
-      list.append(row);
-    });
-    page.append(list);host.append(page);
+    const host=document.getElementById("trainingPage");
+    if(!host)return;
+    training.open(host);
   }
 
   function renderPerformance(){
@@ -653,7 +629,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   function renderAll(){
     setupNav();
-    renderToday();renderCustomers();renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
+    renderToday();renderCustomers();if(active==="training")renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
     renderNavBadges();
   }
 
@@ -661,10 +637,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     renderAll();
     order.onLanguageChange();
     performance.onLanguageChange();
+    training.onLanguageChange();
   }
 
   function onForeground(){
     performance.onForeground();
+    training.onForeground();
   }
 
   async function init(){
@@ -675,5 +653,5 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     navigate("today");
   }
 
-  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance};
+  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training};
 }
