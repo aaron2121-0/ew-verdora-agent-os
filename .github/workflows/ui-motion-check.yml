@@ -25,7 +25,7 @@ jobs:
       - name: Install headless browser test runner
         run: |
           npm install --no-save --no-audit --no-fund playwright@1.56.1
-          npx playwright install --with-deps chromium
+          echo "CHROME_PATH=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" >> "$GITHUB_ENV"
       - name: Run mocked browser E2E and capture responsive screenshots
         run: node apps/agent-mobile/tests/e2e-motion.mjs
       - name: Upload browser screenshots
