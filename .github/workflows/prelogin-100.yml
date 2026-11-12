@@ -1,0 +1,49 @@
+name: Owner pre-login live 100x
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prelogin-100.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 100x live Owner UI + auth boundary regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER="https://owner-mobile-production.up.railway.app"
+          CFG="$(curl -fsS "$OWNER/config")"
+          SUPABASE_URL="$(printf '%s' "$CFG" | jq -r '.url')"
+          KEY="$(printf '%s' "$CFG" | jq -r '.key')"
+          test -n "$SUPABASE_URL"
+          test -n "$KEY"
+          test "$SUPABASE_URL" != "null"
+          test "$KEY" != "null"
+
+          for i in $(seq 1 100); do
+            HEALTH="$(curl -fsS "$OWNER/health")"
+            printf '%s' "$HEALTH" | jq -e '.ok == true' >/dev/null
+
+            JS="$(curl -fsS "$OWNER/owner.js")"
+            printf '%s' "$JS" | grep -F 'shouldCreateUser:false' >/dev/null
+            printf '%s' "$JS" | grep -F 'https://owner-mobile-production.up.railway.app' >/dev/null
+            if printf '%s' "$JS" | grep -F 'emailRedirectTo:location.origin' >/dev/null; then
+              echo "round $i: legacy redirect code still present"
+              exit 1
+            fi
+
+            STATUS="$(curl -sS -o /tmp/out -w '%{http_code}'               -X POST "$SUPABASE_URL/functions/v1/owner-session"               -H "Content-Type: application/json"               -H "apikey: $KEY"               --data '{"action":"dashboard"}')"
+            if [ "$STATUS" != "401" ] && [ "$STATUS" != "403" ]; then
+              echo "round $i: unauthenticated owner-session unexpectedly returned $STATUS"
+              cat /tmp/out
+              exit 1
+            fi
+          done
+
+          echo "OWNER_PRELOGIN_LIVE_100_PASSED"
