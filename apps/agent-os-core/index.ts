@@ -164,8 +164,11 @@ if(u.pathname==="/api/review-manifest")return json({
     ownerE2E:"PASS",
     agentRegistrationDashboardE2E:"PASS",
     ownerPrelogin100:"PASS",
+    authBridgeLive100:"PASS",
     agentRedirectStrategy:"Magic Link returns to allowed Owner Mobile domain; authenticated non-Owner sessions are client-routed to Agent Mobile through URL fragment and immediately restored/cleared",
-    legacyBootstrap:"RETIRED"
+    legacyBootstrap:"RETIRED",
+    ownerSessionVersion:8,
+    agentSessionVersion:11
   },
   costPolicy:"NO_EXTRA_PAID_SERVICES; external paid AI hard-disabled; fallback/manual only",
   canonicalLocalHead:"818efa43c69638cfad398d9abcc70f308ce2baf6",
