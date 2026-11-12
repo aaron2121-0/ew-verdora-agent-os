@@ -91,6 +91,21 @@ export function createAIProfile({api,tr,getLang}){
     content.append(wrap);
    }
    content.append(element("h3",tr("aiWritingStyle")),element("p",typeof p.writing_style==="string"?p.writing_style:JSON.stringify(p.writing_style||{})));
+   if(p.stats&&typeof p.stats==="object"){
+    content.append(element("h3",tr("aiStatsTitle")));
+    for(const [name,raw] of Object.entries(p.stats).slice(0,8)){
+     const numeric=typeof raw==="number"&&Number.isFinite(raw);
+     const row=element("div","","ai-profile-stat");
+     const title=element("div","","ai-profile-row");
+     title.append(element("span",name.replaceAll("_"," ")),element("strong",numeric?String(raw):String(raw??"—")));
+     row.append(title);
+     if(numeric&&raw>=0&&raw<=100){
+      const track=element("div","","ai-profile-progress");
+      const fill=element("div","","ai-profile-progress-fill");fill.style.width=String(raw)+"%";
+      track.append(fill);row.append(track);
+     }content.append(row);
+    }
+   }
    content.append(element("label",tr("aiNotesLabel")));
    const notes=document.createElement("textarea");notes.maxLength=500;notes.value=p.agent_notes||"";notes.setAttribute("aria-label",tr("aiNotesLabel"));
    const status=element("p","");status.setAttribute("role","status");
