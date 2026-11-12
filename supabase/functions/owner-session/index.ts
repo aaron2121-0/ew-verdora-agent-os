@@ -69,7 +69,8 @@ Deno.serve(async req=>{
       return reply({error:"owner_recovery_create_failed"},400);
     }
     const recoveryUrl="https://owner-mobile-production.up.railway.app/#owner_invite="+encodeURIComponent(code);
-    await admin.rpc("owner_audit_action_internal",{p_user_id:uid,p_action:"owner_recovery_created",p_entity_type:"owner_auth_invite",p_entity_id:uid,p_after:{expires_at:expiresAt}});
+    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{p_user_id:uid,p_action:"owner_recovery_created",p_entity_type:"owner_auth_invite",p_entity_id:uid,p_after:{expires_at:expiresAt}});
+    if(auditError)return reply({error:"audit_failed"},500);
     return reply({ok:true,expires_at:expiresAt,recovery_url:recoveryUrl});
   }
 
@@ -91,7 +92,8 @@ Deno.serve(async req=>{
     });
     if(error){console.error("INVITE_CREATE_DB",error.code||"",error.details||"",error.hint||"");return reply({error:"invite_create_failed"},400);}
     const inviteUrl="https://agent-mobile-production.up.railway.app/#invite="+encodeURIComponent(code)+"&email="+encodeURIComponent(email);
-    await admin.rpc("owner_audit_action_internal",{p_user_id:uid,p_action:"agent_invite_created",p_entity_type:"agent_auth_invite",p_entity_id:email,p_after:{email,expires_at:expiresAt}});
+    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{p_user_id:uid,p_action:"agent_invite_created",p_entity_type:"agent_auth_invite",p_entity_id:email,p_after:{email,expires_at:expiresAt}});
+    if(auditError)return reply({error:"audit_failed"},500);
     return reply({ok:true,email,expires_at:expiresAt,invite_url:inviteUrl});
   }
   if(action==="dashboard"){
