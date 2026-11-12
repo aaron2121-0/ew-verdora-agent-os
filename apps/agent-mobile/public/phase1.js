@@ -27,6 +27,22 @@ function statusTone(status){
 function tierKey(tier){
   return {starter:"tierStarter",active:"tierActive",pro:"tierPro",elite:"tierElite"}[tier]||"tierStarter";
 }
+function sourceLabel(value,tr){
+  const key={
+    instagram:"sourceInstagram",facebook:"sourceFacebook",threads:"sourceThreads",
+    xiaohongshu:"sourceXiaohongshu",whatsapp:"sourceWhatsapp",personal_network:"sourcePersonal",
+    corporate_outreach:"sourceCorporate",referral:"sourceReferral",previous_customer:"sourcePrevious",other:"sourceOther"
+  }[String(value||"").toLowerCase()];
+  return key?tr(key):String(value||"—");
+}
+function trainingStatusLabel(value,tr){
+  const key={assigned:"trainingAssigned",in_progress:"trainingInProgress",failed:"trainingFailed",waived:"trainingWaived",passed:"passed"}[String(value||"").toLowerCase()];
+  return key?tr(key):String(value||"—");
+}
+function commissionStatusLabel(value,tr){
+  const key={pending:"commissionPending",earned:"commissionEarned",payable:"commissionPayable",held:"commissionHeld",paid:"commissionPaid",reversed:"commissionReversed"}[String(value||"").toLowerCase()];
+  return key?tr(key):String(value||"—");
+}
 function categoryKey(value){
   return {
     birthday:"categoryBirthday",anniversary:"categoryAnniversary",condolence:"categoryCondolence",
@@ -404,7 +420,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
       const who=element("div",{className:"follow-person"});
       const avatar=element("span",{className:"follow-avatar"});avatar.append(createIcon("user",{size:18}));
       const name=element("div");
-      name.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:formatKuchingDateTime(lead.next_followup_at,getLang())+" · "+String(lead.source||"").toUpperCase()}));
+      name.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:formatKuchingDateTime(lead.next_followup_at,getLang())+" · "+sourceLabel(lead.source,tr)}));
       who.append(avatar,name);
       top.append(who,element("span",{className:"badge badge-danger",text:tr("dueBadge",{count:1})}));
       const meta=element("div",{className:"follow-meta"});
@@ -472,7 +488,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
       const card=element("button",{className:"customer-card",attrs:{type:"button"}});
       const top=element("div",{className:"customer-card-top"});
       const who=element("div");
-      who.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:langText(lead.occasion||lead.sales_category)+" · "+String(lead.source||"").toUpperCase()}));
+      who.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:langText(lead.occasion||lead.sales_category)+" · "+sourceLabel(lead.source,tr)}));
       top.append(who,element("span",{className:"badge",text:customerStageLabel(lead)}));
       const pipeline=renderPipeline(lead,{compact:true});
       const foot=element("div",{className:"customer-card-foot"});
@@ -489,7 +505,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
     const ps=String(lead.payment_status||"");
     if(os==="completed")return 4;
     if(["producing","qc_pending","qc_pass","delivering"].includes(os))return 3;
-    if(ps==="paid"||["paid","confirmed"].includes(os)&&ps==="paid")return 2;
+    if(ps==="paid"||os==="paid")return 2;
     if(lead.quote_id||["approved","sent","accepted"].includes(String(lead.quote_status||"")))return 1;
     return 0;
   }
@@ -512,7 +528,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
     body.append(element("h2",{className:"sheet-title",text:lead.customer_label||tr("customerDetails")}),
       element("p",{className:"sheet-subtitle",text:tr("customerDetails")}));
     const meta=element("div",{className:"detail-grid"});
-    [[tr("customerSourceLabel"),String(lead.source||"—").toUpperCase()],
+    [[tr("customerSourceLabel"),sourceLabel(lead.source,tr)],
      [tr("customerOccasionLabel"),langText(lead.occasion||lead.sales_category)],
      [tr("customerBudgetLabel"),money(lead.budget)],
      [tr("currentStatus"),customerStageLabel(lead)]].forEach(([k,v])=>{
@@ -540,7 +556,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
       const mod=x.training_modules||{},row=element("article",{className:"training-row"});
       const left=element("div");
       left.append(element("strong",{text:getLang()==="zh"?mod.title_zh:mod.title_en}),
-        element("small",{text:statusLabel(x.status)+" · "+Number(x.best_score||0)+"/100"}));
+        element("small",{text:trainingStatusLabel(x.status,tr)+" · "+Number(x.best_score||0)+"/100"}));
       row.append(left);
       if(x.status==="passed"||x.status==="waived"){
         row.append(element("span",{className:"badge badge-success",text:tr("passed")}));
@@ -572,7 +588,7 @@ export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
     if(!rows.length)section.append(emptyState({icon:"wallet",title:tr("noCommissions")}));
     rows.slice(0,10).forEach(c=>{
       const row=element("div",{className:"commission-row"});
-      row.append(element("strong",{text:money(c.amount)}),element("span",{text:String(c.status||"").toUpperCase()}));
+      row.append(element("strong",{text:money(c.amount)}),element("span",{text:commissionStatusLabel(c.status,tr)}));
       section.append(row);
     });
     page.append(section);host.append(page);
