@@ -1,0 +1,76 @@
+# Phase 4 backend-only gate
+name: Phase 4 Source QA
+
+on:
+  push:
+    branches: [phase4-backend]
+    paths:
+      - "supabase/functions/agent-ai/**"
+      - "supabase/functions/agent-session/**"
+      - "supabase/migrations/20261112184154_phase4_customer_intelligence_ai.sql"
+      - "apps/agent-mobile/public/phase1.js"
+      - "apps/agent-mobile/public/app.js"
+      - "apps/agent-mobile/public/i18n.js"
+      - "apps/agent-mobile/tests/phase4-security.test.mjs"
+      - ".github/workflows/phase4-source-qa.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enforce Phase 4 file boundary
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          changed="$(git diff --name-only origin/main...HEAD)"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -E '(^|/)(styles\.css|motion\.js|ai-ui\.js|ai-chat\.js)$'; then
+            echo "Phase 4 backend branch touched a UI-motion-owned file."
+            exit 1
+          fi
+
+      - name: Check native frontend syntax
+        run: |
+          node --check apps/agent-mobile/public/phase1.js
+          node --check apps/agent-mobile/public/app.js
+          node --check apps/agent-mobile/public/i18n.js
+
+      - name: Check Edge Function syntax
+        run: |
+          cp supabase/functions/agent-ai/index.ts /tmp/phase4-agent-ai.mjs
+          cp supabase/functions/agent-session/index.ts /tmp/phase4-agent-session.mjs
+          node --check /tmp/phase4-agent-ai.mjs
+          node --check /tmp/phase4-agent-session.mjs
+
+      - name: Run Phase 4 security/source tests
+        run: node --test apps/agent-mobile/tests/phase4-security.test.mjs
+
+      - name: Re-run prior source/security gates
+        run: |
+          node --test \
+            apps/agent-mobile/tests/phase1-security.test.mjs \
+            apps/agent-mobile/tests/phase2-security.test.mjs \
+            apps/agent-mobile/tests/phase3-security.test.mjs \
+            apps/agent-mobile/tests/phase3-seed-import.test.mjs
+
+      - name: Reject unsafe frontend sinks
+        run: |
+          if grep -nE '\.innerHTML[[:space:]]*=|insertAdjacentHTML|outerHTML[[:space:]]*=' \
+            apps/agent-mobile/public/phase1.js apps/agent-mobile/public/app.js; then
+            echo "Unsafe HTML sink detected"
+            exit 1
+          fi

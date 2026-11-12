@@ -44,7 +44,12 @@ Deno.serve(async req=>{
   if(ue||!u.user)return reply({error:"invalid_session"},401);
   const uid=u.user.id;
   let b={};try{b=await req.json()}catch{}
-  const action=b.action||"dashboard";
+  const action=String(b.action||"dashboard");
+  // Every action is authenticated AND role-authorized before dispatch.
+  const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
+  if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex"]);
+  if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
   if(action==="create_owner_recovery_link"){
     const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
@@ -64,6 +69,8 @@ Deno.serve(async req=>{
       return reply({error:"owner_recovery_create_failed"},400);
     }
     const recoveryUrl="https://owner-mobile-production.up.railway.app/#owner_invite="+encodeURIComponent(code);
+    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{p_user_id:uid,p_action:"owner_recovery_created",p_entity_type:"owner_auth_invite",p_entity_id:uid,p_after:{expires_at:expiresAt}});
+    if(auditError)return reply({error:"audit_failed"},500);
     return reply({ok:true,expires_at:expiresAt,recovery_url:recoveryUrl});
   }
 
@@ -85,13 +92,15 @@ Deno.serve(async req=>{
     });
     if(error){console.error("INVITE_CREATE_DB",error.code||"",error.details||"",error.hint||"");return reply({error:"invite_create_failed"},400);}
     const inviteUrl="https://agent-mobile-production.up.railway.app/#invite="+encodeURIComponent(code)+"&email="+encodeURIComponent(email);
+    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{p_user_id:uid,p_action:"agent_invite_created",p_entity_type:"agent_auth_invite",p_entity_id:email,p_after:{email,expires_at:expiresAt}});
+    if(auditError)return reply({error:"audit_failed"},500);
     return reply({ok:true,email,expires_at:expiresAt,invite_url:inviteUrl});
   }
   if(action==="dashboard"){
     const {data,error}=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
     if(error)return reply({error:publicError(error)},403);
     const {data:exceptions}=await admin.rpc("owner_list_exceptions_internal",{p_user_id:uid,p_limit:20});
-    return reply({ok:true,dashboard:data,exceptions:exceptions||[]});
+    return reply({ok:true,role,dashboard:data,exceptions:exceptions||[]});
   }
   if(action==="exceptions"){
     const {data,error}=await admin.rpc("owner_list_exceptions_internal",{p_user_id:uid,p_limit:Number(b.limit||50)});
@@ -116,12 +125,13 @@ Deno.serve(async req=>{
     await admin.rpc("refresh_profit_snapshot_internal",{});
     return reply({ok:true,opex_id:data});
   }
-  if(action==="update_setting"){
-    const {data,error}=await admin.rpc("owner_update_setting_internal",{
-      p_user_id:uid,p_key:String(b.key||""),p_value:b.value||{}
+  if(action==="update_setting"||action==="patch_setting"){
+    const path=String(b.path||"");
+    const {data,error}=await admin.rpc("owner_patch_setting_internal",{
+      p_user_id:uid,p_path:path,p_value:b.value
     });
     if(error)return reply({error:publicError(error)},400);
-    return reply({ok:true,value:data});
+    return reply({ok:true,setting:data});
   }
   if(action==="refresh_profit"){
     const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
@@ -131,13 +141,9 @@ Deno.serve(async req=>{
     return reply({ok:true,profit:data});
   }
   if(action==="quote_queue"){
-    const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
-    if(authCheck.error)return reply({error:publicError(authCheck.error,"forbidden")},403);
-    const {data:rows,error}=await admin.from("quote_requests")
-      .select("id,agent_id,lead_id,reference_object_path,customer_budget,design_commitment,needed_at,status,classification,created_at")
-      .in("status",["manual_review","analysis_pending"])
-      .order("created_at",{ascending:true})
-      .limit(30);
+    const {data:rows,error}=await admin.rpc("owner_quote_queue_internal",{
+      p_user_id:uid,p_limit:Math.min(100,Math.max(1,Number(b.limit)||40))
+    });
     if(error)return reply({error:publicError(error)},400);
     const queue=[];
     for(const row of rows||[]){
@@ -151,39 +157,22 @@ Deno.serve(async req=>{
     return reply({ok:true,queue});
   }
   if(action==="review_quote"){
-    const size=String(b.size||"");
-    const density=String(b.density||"");
-    const premium=String(b.premium||"");
-    const complexity=String(b.complexity||"");
-    const safeCost=Number(b.safe_cost);
-    if(!Number.isFinite(safeCost)||safeCost<0)return reply({error:"invalid_safe_cost"},400);
-
-    const baseline=await admin.rpc("owner_set_reference_baseline_internal",{
-      p_user_id:uid,p_size:size,p_density:density,p_premium:premium,p_complexity:complexity,
-      p_safe_cost:safeCost,p_note:b.note?String(b.note).slice(0,500):"manual quote review"
+    const decision=String(b.decision||"approve");
+    if(!["approve","request_info","reject"].includes(decision))
+      return reply({error:"invalid_decision"},400);
+    if(decision!=="approve" && Deno.env.get("OWNER_QUOTE_STATUS_ACTIONS_ENABLED")!=="true")
+      return reply({error:"feature_not_enabled"},409);
+    const {data,error}=await admin.rpc("owner_review_quote_internal",{
+      p_user_id:uid,p_request_id:String(b.request_id||""),
+      p_decision:decision,p_size:b.size||null,p_density:b.density||null,
+      p_premium:b.premium||null,p_complexity:b.complexity||null,
+      p_flexibility:String(b.flexibility||"moderate"),p_note:b.note?String(b.note).slice(0,500):null
     });
-    if(baseline.error)return reply({error:publicError(baseline.error)},403);
-
-    const finalized=await admin.rpc("finalize_quote_request_internal",{
-      p_request_id:String(b.request_id||""),
-      p_size:size,p_density:density,p_premium:premium,p_complexity:complexity,
-      p_flexibility:String(b.flexibility||"moderate"),
-      p_features:{manual_review:true},
-      p_provider:"owner_manual",
-      p_model:"none",
-      p_raw:{manual_review:true,safe_cost:safeCost}
-    });
-    if(finalized.error)return reply({error:publicError(finalized.error)},400);
-    const row=finalized.data;
-    return reply({ok:true,quote_request:{
-      id:row.id,status:row.status,classification:row.classification,
-      budget_version_price:row.budget_version_price,
-      budget_version_commitment:row.budget_version_commitment,
-      recommended_price:row.recommended_price,
-      customer_note_en:row.customer_note_en,customer_note_zh:row.customer_note_zh
-    }});
+    if(error)return reply({error:publicError(error)},400);
+    return reply({ok:true,quote_request:data});
   }
   if(action==="set_reference_baseline"){
+    if(b.confirm_global!==true)return reply({error:"confirmation_required"},400);
     const {data,error}=await admin.rpc("owner_set_reference_baseline_internal",{
       p_user_id:uid,
       p_size:String(b.size||""),

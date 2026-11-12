@@ -1,0 +1,106 @@
+{
+  "phase": "phase4_backend_predeploy",
+  "deployment_status": "NOT_DEPLOYED",
+  "branch": "phase4-backend",
+  "based_on_main": "bcdcc76aee6cb4ff195b4eb4a1cc8c7d74e45603",
+  "migration_dry_run": {
+    "rolled_back": true,
+    "loss_reason_constraint": [
+      "too_expensive",
+      "think_about_it",
+      "no_reply",
+      "chose_other",
+      "other"
+    ],
+    "quota_limits": {
+      "platform_post": 15,
+      "weekly_plan": 2,
+      "profile_setup": 3,
+      "lost_review": 20
+    },
+    "lead_intelligence_examples": [
+      {
+        "case": "qualified lead",
+        "score": 52,
+        "next_best_action": "request_quote",
+        "best_followup_time_present": true
+      },
+      {
+        "case": "quoted overdue lead",
+        "score": 95,
+        "next_best_action": "follow_up_quote",
+        "overdue_best_followup_becomes_now": true
+      }
+    ],
+    "permissions": {
+      "intelligence_authenticated_execute": false,
+      "intelligence_anon_execute": false,
+      "intelligence_service_role_execute": true,
+      "owner_churn_authenticated_execute": false,
+      "owner_anomaly_authenticated_execute": false
+    },
+    "owner_synthetic_checks": {
+      "high_churn_risk_detected": true,
+      "followup_backlog_anomaly_detected": true,
+      "lost_without_reason_anomaly_detected": true
+    },
+    "invalid_loss_reason_rejected": true
+  },
+  "ai": {
+    "base_live_version_verified": "agent-ai v11 exact source match before edits",
+    "new_actions": [
+      "platform_post",
+      "weekly_plan",
+      "profile_setup",
+      "lost_review"
+    ],
+    "weekly_plan_cache": "private.ai_weekly_plan_cache(agent_id,week_start)",
+    "output_guards": [
+      "no prices",
+      "no fake reviews",
+      "no fake scarcity",
+      "no personal payment"
+    ],
+    "profile_personalization": "agent_ai_profile"
+  },
+  "customer_logic": {
+    "segments_priority": [
+      "quoted",
+      "follow_up",
+      "new"
+    ],
+    "qualified_maps_to": "new",
+    "closed_leads_visible_in": "all",
+    "loss_write_idempotent": true,
+    "smart_fields": [
+      "lead_score",
+      "lead_score_reason",
+      "next_best_action",
+      "best_followup_time"
+    ]
+  },
+  "ui_boundary": {
+    "forbidden_files_touched": false,
+    "forbidden_files": [
+      "styles.css",
+      "motion.js",
+      "ai-ui.js",
+      "ai-chat.js"
+    ],
+    "allowed_minimal_hooks": [
+      "phase1.js",
+      "i18n.js",
+      "app.js"
+    ]
+  },
+  "source_qa": {
+    "run_id": 43283996319,
+    "conclusion": "success",
+    "phase4_tests": "pass",
+    "prior_phase_security_regression": "pass",
+    "frontend_syntax": "pass",
+    "edge_syntax": "pass",
+    "unsafe_sink_check": "pass",
+    "file_boundary": "pass"
+  }
+}
