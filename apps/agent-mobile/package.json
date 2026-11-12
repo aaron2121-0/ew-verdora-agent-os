@@ -6,5 +6,8 @@
     "start": "bun run server.ts",
     "check": "node --test tests/phase0-security.test.mjs && node build-railway-function.mjs",
     "build:function": "node build-railway-function.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.0"
   }
 }
