@@ -53,6 +53,9 @@ jobs:
       - name: Run Phase 1 360/430 bilingual E2E
         run: node apps/agent-mobile/tests/phase1-live.mjs
 
+      - name: Run shared-device draft isolation E2E
+        run: node apps/agent-mobile/tests/draft-user-isolation.mjs
+
       - name: Run Lighthouse mobile
         run: |
           set -euo pipefail
