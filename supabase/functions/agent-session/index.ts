@@ -15,6 +15,11 @@ function clean(v, max = 120) {
   return String(v ?? "").trim().slice(0, max);
 }
 
+// Business day is Asia/Kuching (UTC+8, no DST); the database functions use the same zone.
+const kuchingToday = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+// Statuses that may not sell. Must cover every non-selling value of agents.status.
+const SELLING_LOCKED = ["trainee", "restricted", "recovery", "dormant", "suspended"];
+
 const url = Deno.env.get("SUPABASE_URL") || "";
 const pubKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
 const secKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
@@ -63,14 +68,14 @@ Deno.serve(async (req) => {
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
   if (action === "mission") {
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : new Date().toISOString().slice(0,10);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
     const { data, error } = await admin.rpc("get_or_create_daily_mission_internal", { p_agent_id: agent.id, p_date: date });
     if (error) return reply({ error: error.message }, 400);
     return reply({ ok: true, mission: data });
   }
 
   if (action === "create_lead") {
-    if (["trainee","restricted","dormant","suspended"].includes(agent.status)) return reply({error:"selling_access_locked"},403);
+    if (SELLING_LOCKED.includes(agent.status)) return reply({error:"selling_access_locked"},403);
     const source = clean(body.source, 40) || "other";
     const allowed = ["instagram","facebook","threads","xiaohongshu","whatsapp","personal_network","referral","previous_customer","corporate_outreach","other"];
     if (!allowed.includes(source)) return reply({ error: "invalid_source" }, 400);
@@ -92,7 +97,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "qualify_lead") {
-    if (["trainee","restricted","dormant","suspended"].includes(agent.status)) return reply({error:"selling_access_locked"},403);
+    if (SELLING_LOCKED.includes(agent.status)) return reply({error:"selling_access_locked"},403);
     const leadId = clean(body.lead_id, 80);
     const { data: ownLead, error: ownErr } = await admin.from("leads").select("id,status").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
     if (ownErr || !ownLead) return reply({ error:"lead_not_found" },404);
@@ -103,6 +108,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "schedule_followup") {
+    if (SELLING_LOCKED.includes(agent.status)) return reply({error:"selling_access_locked"},403);
     const leadId = clean(body.lead_id,80);
     const at = new Date(String(body.followup_at||""));
     if (!Number.isFinite(at.getTime())) return reply({error:"invalid_followup_time"},400);
@@ -114,6 +120,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "complete_followup") {
+    if (SELLING_LOCKED.includes(agent.status)) return reply({error:"selling_access_locked"},403);
     const leadId = clean(body.lead_id,80);
     const { data: ownLead } = await admin.from("leads").select("id").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
     if (!ownLead) return reply({error:"lead_not_found"},404);
@@ -122,7 +129,7 @@ Deno.serve(async (req) => {
     return reply({ok:true});
   }
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = kuchingToday();
   const missionReq = admin.rpc("get_or_create_daily_mission_internal", { p_agent_id: agent.id, p_date: today });
   const progressReq = admin.rpc("agent_today_progress_internal", { p_agent_id: agent.id, p_date: today });
   const campaignsReq = admin.rpc("agent_campaigns_internal", { p_agent_id: agent.id });
