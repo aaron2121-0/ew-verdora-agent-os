@@ -23,7 +23,7 @@ export function createAIChat({api,tr,getData,getLang}){
   row.append(body);history.append(row);
   if(animate){setAIState("speaking");typeText(body,content,{duration:14}).then(()=>{if(!busy)setAIState("done")})}
   else body.textContent=String(content||"");
-  if(role!=="user"){
+  if(role==="assistant"){
    const actions=el("div","ai-message-actions");
    for(const [label,signal] of [[ "👍","thumbs_up"],["👎","thumbs_down"],[tr("copyText"),"copied"],[tr("aiWhatsApp"),"sent_whatsapp"]]){
     const btn=el("button","btn btn-text btn-small",label);btn.type="button";btn.addEventListener("click",async()=>{
