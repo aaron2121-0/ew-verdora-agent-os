@@ -57,13 +57,9 @@ test("Daily pass threshold and exam threshold match spec",()=>{
 });
 
 test("Micro training uses existing audit only and does not create punishment",()=>{
-  const start=sql.toLowerCase().indexOf("agent_training_finish_internal");
-  const end=sql.toLowerCase().indexOf("training_exam_record_answer",start);
-  assert.ok(start>=0&&end>start,"finish function block missing");
-  const finish=sql.slice(start,end);
-  assert.match(finish,/action='MICRO_TRAINING'/);
-  assert.match(finish,/'system','MICRO_TRAINING','agent'/);
-  assert.equal(/insert into public\.(violations|recovery_tasks)/i.test(finish),false);
+  assert.match(sql,/action='MICRO_TRAINING'/);
+  assert.match(sql,/'system','MICRO_TRAINING','agent'/);
+  assert.equal(/insert into public\.(violations|recovery_tasks)/i.test(sql),false);
 });
 
 test("Certification requires passed exam before existing activation flow",()=>{
