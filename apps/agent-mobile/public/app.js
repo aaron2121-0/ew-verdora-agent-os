@@ -170,7 +170,9 @@ function setupHandlers(){
   const role=setupBottomSheet($("roleSheet"));
   $("closeRole").addEventListener("click",()=>role?.close());
   document.addEventListener("visibilitychange",()=>{
-    if(document.visibilityState==="visible"&&session&&UI)refresh().catch(()=>{});
+    if(document.visibilityState==="visible"&&session&&UI){
+      refresh().then(()=>UI?.onForeground?.()).catch(()=>{});
+    }
   });
 }
 
