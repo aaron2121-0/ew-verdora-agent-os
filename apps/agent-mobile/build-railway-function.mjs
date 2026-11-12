@@ -5,7 +5,7 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 const gzip=text=>zlib.gzipSync(Buffer.from(text,"utf8"),{level:9}).toString("base64");
 
@@ -46,7 +46,7 @@ function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type
 export default {fetch(req){
   const u=new URL(req.url);
   if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
-  if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.4.0-phase1",source:"native-phase1-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
+  if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.5.0-phase2",source:"native-phase2-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
   const body=bodyFor(u.pathname);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
   return new Response(body,{headers:headers({"content-type":TYPES[u.pathname]||"application/octet-stream","cache-control":u.pathname==="/"||u.pathname==="/index.html"?"no-store":"public, max-age=300"})});
