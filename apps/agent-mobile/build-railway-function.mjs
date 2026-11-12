@@ -26,6 +26,10 @@ fs.mkdirSync(generatedFonts,{recursive:true});
 fs.writeFileSync(path.join(generatedFonts,"inter-latin.woff2"),inter);
 fs.writeFileSync(path.join(generatedFonts,"noto-app-subset.woff2"),noto);
 files["styles.css"]+=`\n@font-face{font-family:Inter;src:url("/fonts/inter-latin.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}\n@font-face{font-family:"Noto Sans SC";src:url("/fonts/noto-app-subset.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap;unicode-range:${ranges}}\n`;
+// E2E serves the exact CSS after font-face injection, matching the Railway asset.
+const outDirForTests=path.join(root,"dist");
+fs.mkdirSync(outDirForTests,{recursive:true});
+fs.writeFileSync(path.join(outDirForTests,"styles.test.css"),files["styles.css"]);
 const sdkCandidates=[path.join(root,"node_modules","@supabase","supabase-js","dist","umd","supabase.js"),path.join(root,"..","..","node_modules","@supabase","supabase-js","dist","umd","supabase.js")];
 const sdkPath=sdkCandidates.find(p=>fs.existsSync(p));
 if(!sdkPath)throw new Error("Pinned Supabase SDK 2.119.0 missing: run npm install before building");
