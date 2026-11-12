@@ -1,12 +1,14 @@
 {
   "phase": "0",
-  "verified_at": "2026-11-13T00:26:00+08:00",
-  "source_head": "ad7ee6e2f8a8e1c619846ab3eea4d2041164da57",
+  "verified_at": "2026-11-13T00:31:00+08:00",
+  "source_head": "ca43bfc1387b86b932024ffc606d91b5e0232661",
   "production": {
-    "owner_mobile_deployment": "27059d12-809a-442c-abf4-ac4ae08290eb",
+    "owner_mobile_deployment": "d90ff850-017e-44c9-b598-a9d038577892",
     "owner_mobile_status": "SUCCESS",
+    "owner_mobile_version": "0.2.1-phase0",
     "agent_mobile_deployment": "45ddbcb6-3eac-4761-a28b-904e707bfba4",
     "agent_mobile_status": "SUCCESS",
+    "agent_mobile_version": "0.3.3-phase0",
     "staged_changes": false
   },
   "post_fix_checks": {
@@ -14,7 +16,7 @@
     "no_agent_inner_html_assignment": true,
     "no_inline_event_attributes": true,
     "csp_present": true,
-    "no_unsafe_inline_scripts": true,
+    "no_unsafe_inline_scripts_on_agent": true,
     "i18n_en_zh_key_parity": true,
     "language_persistence": true,
     "required_lucide_icons_present": true,
@@ -23,24 +25,27 @@
     "shared_components_present": true,
     "access_link_invite_email_flow_preserved": true,
     "frontend_uses_publishable_key_only": true,
+    "owner_uses_unified_escapeHtml": true,
     "owner_db_text_escaped": true,
     "owner_errors_redacted_to_friendly_messages": true,
-    "owner_dates_and_expiry_use_Asia_Kuching": true
+    "owner_dates_and_expiry_use_Asia_Kuching": true,
+    "owner_bundle_syntax_regression_guard": true
   },
-  "unchanged_agent_qa_evidence": {
+  "full_live_qa_evidence": {
+    "evidence_commit": "77c7dcd94a891832ea60b4319d248397cf875835",
     "lighthouse": {
       "performance": 100,
       "accessibility": 95,
       "best_practices": 96,
       "cls": 0.008794236111111112,
-      "fcp_ms": 784.428,
-      "lcp_ms": 978.419,
+      "first_contentful_paint_ms": 784.428,
+      "largest_contentful_paint_ms": 978.419,
       "total_blocking_time_ms": 0
     },
     "simulated_4g_interactive_ms": 386,
     "motion_p95_ms_360": 16.8,
     "motion_p95_ms_430": 16.7,
-    "xss_payload": "<img src=x onerror=alert(1)>",
-    "note": "Agent UI source did not change after commit 77c7dcd94a891832ea60b4319d248397cf875835; only Owner hardening/tests/notices changed."
+    "exact_xss_payload": "<img src=x onerror=alert(1)>",
+    "unchanged_scope_note": "Since the full live QA evidence commit, Agent UI/runtime source is unchanged. Subsequent Phase 0 changes are limited to Owner Mobile hardening, regression tests, third-party notices, and this verification evidence."
   }
 }
