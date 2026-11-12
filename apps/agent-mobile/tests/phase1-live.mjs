@@ -11,11 +11,12 @@ const payload='<img src=x onerror=alert(1)>';
 const supabaseStub=String.raw`
 (()=>{
   let currentSession=null;
+  try{currentSession=JSON.parse(localStorage.getItem("__phase1_test_session")||"null")}catch{}
   const auth={
-    async setSession(tokens){currentSession={access_token:tokens.access_token,refresh_token:tokens.refresh_token,user:{id:"u-test"}};return {data:{session:currentSession},error:null}},
+    async setSession(tokens){currentSession={access_token:tokens.access_token,refresh_token:tokens.refresh_token,user:{id:"u-test"}};try{localStorage.setItem("__phase1_test_session",JSON.stringify(currentSession))}catch{};return {data:{session:currentSession},error:null}},
     async getSession(){return {data:{session:currentSession},error:null}},
     onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}}},
-    async signOut(){currentSession=null;return {error:null}},
+    async signOut(){currentSession=null;try{localStorage.removeItem("__phase1_test_session")}catch{};return {error:null}},
     async signInWithOtp(){return {error:null}}
   };
   window.supabase={createClient(){return {auth,storage:{from(){return {async uploadToSignedUrl(){return {error:null}}}}}}}};
@@ -164,7 +165,8 @@ async function testDraftRestore(browser){
   await page.locator("#app").waitFor({state:"visible"});
   await page.locator('[data-tab="order"]').click();
   await page.locator(".reference-picker.has-file").waitFor({state:"visible"});
-  if(!(await page.locator("body").textContent()).includes("Draft Customer"))throw new Error("text draft not restored");
+  const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem("ew_phase1_order_draft_v1")||"{}"));
+  if(restored.customerName!=="Draft Customer"||restored.step!==2)throw new Error("text draft not restored");
   await context.close();
 }
 
