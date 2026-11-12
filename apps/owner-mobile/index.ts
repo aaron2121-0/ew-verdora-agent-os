@@ -19,7 +19,21 @@ function show(x){$("login").classList.toggle("hidden",x!=="login");$("app").clas
 async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboard"}),call({action:"quote_queue"})]),d=j.dashboard||{};show("app");$("mode").textContent=String(d.profit_mode||"normal").toUpperCase();$("margin").textContent=(Number(d.net_margin_30d||0)*100).toFixed(1)+"%";$("orders").textContent=d.orders_today||0;$("revenue").textContent="RM "+Number(d.revenue_today||0).toFixed(0);$("avg").textContent=Number(d.avg_orders_per_active_agent||0).toFixed(2);$("active").textContent=d.active_agents||0;$("dormant").textContent=d.dormant_agents||0;$("comm").textContent="RM "+Number(d.commission_liability||0).toFixed(0);$("bonus").textContent="RM "+Number(d.bonus_liability||0).toFixed(0);$("exCount").textContent=(d.serious_exceptions||0)+" open";let ex=j.exceptions||[];$("exceptions").innerHTML=ex.length?ex.map(e=>"<div class=item><div class=row style='justify-content:space-between'><div><b class=damage>"+e.severity.toUpperCase()+" · "+e.type+"</b><div class=muted>"+e.summary+"</div></div><div class=row><button class='btn ex' data-id='"+e.id+"' data-a='freeze'>Freeze</button><button class='btn ex' data-id='"+e.id+"' data-a='dismiss'>Dismiss</button></div></div></div>").join(""):"<div class='item muted'>No serious exceptions.</div>";document.querySelectorAll(".ex").forEach(b=>b.onclick=async()=>{await call({action:"decide_exception",exception_id:b.dataset.id,decision:b.dataset.a});await refresh()});
 let qq=qj.queue||[];$("quoteCount").textContent=qq.length+" pending";$("quoteQueue").innerHTML=qq.length?qq.map(q=>"<div class=item><div><b>RM "+Number(q.customer_budget||0).toFixed(0)+" · "+q.design_commitment+"</b><div class=muted>"+q.status+"</div></div>"+(q.image_url?"<img src='"+q.image_url+"' style='width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:8px;background:#f4f4f1'>":"")+"<div class=form style='margin-top:9px'><select class='q-size' data-id='"+q.id+"'><option value=small>Small</option><option value=medium selected>Medium</option><option value=large>Large</option><option value=xl>XL</option><option value=structure>Structure</option></select><select class='q-density' data-id='"+q.id+"'><option value=light>Light</option><option value=medium selected>Medium</option><option value=full>Full</option><option value=very_full>Very Full</option></select><select class='q-premium' data-id='"+q.id+"'><option value=low>Low premium</option><option value=medium selected>Medium premium</option><option value=high>High premium</option><option value=very_high>Very high premium</option></select><select class='q-complexity' data-id='"+q.id+"'><option value=low>Low complexity</option><option value=medium selected>Medium complexity</option><option value=high>High complexity</option><option value=special>Special</option></select><input class='q-cost' data-id='"+q.id+"' type=number step=0.01 placeholder='Safe production cost RM'><button class='btn primary q-review' data-id='"+q.id+"'>Approve Review</button><div class='muted q-msg' data-id='"+q.id+"'></div></div></div>").join(""):"<div class='item muted'>No manual quote reviews.</div>";
 document.querySelectorAll(".q-review").forEach(b=>b.onclick=async()=>{let id=b.dataset.id,find=c=>document.querySelector(c+"[data-id='"+id+"']"),msg=find(".q-msg");try{msg.textContent="...";let r=await call({action:"review_quote",request_id:id,size:find(".q-size").value,density:find(".q-density").value,premium:find(".q-premium").value,complexity:find(".q-complexity").value,flexibility:"moderate",safe_cost:Number(find(".q-cost").value)});msg.textContent=(r.quote_request.classification||"")+" · "+(r.quote_request.customer_note_en||"");await refresh()}catch(e){msg.textContent=e.message}});
-}catch(e){show("login");$("msg").textContent=e.message}}
+}catch(e){
+  const m=String(e?.message||e||"");
+  if(session&&/owner_required|forbidden/i.test(m)){
+    const h=new URLSearchParams();
+    h.set("access_token",session.access_token);
+    h.set("refresh_token",session.refresh_token);
+    h.set("token_type",session.token_type||"bearer");
+    h.set("expires_in",String(session.expires_in||3600));
+    h.set("type","magiclink");
+    location.replace("https://agent-mobile-production.up.railway.app/#"+h.toString());
+    return;
+  }
+  show("login");
+  $("msg").textContent=m;
+}}
 let loginPending=false;
 $("loginBtn").onclick=async()=>{
   if(loginPending)return;
@@ -50,14 +64,35 @@ $("loginBtn").onclick=async()=>{
 };
 $("logout").onclick=async()=>{await sb.auth.signOut();session=null;show("login")};
 $("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||new Date().toISOString().slice(0,10),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=e.message}};
-(async()=>{CFG=await fetch("/config").then(r=>r.json());sb=window.supabase.createClient(CFG.url,CFG.key);let g=await sb.auth.getSession();session=g.data.session;if(session)await refresh();else show("login");sb.auth.onAuthStateChange(async(_e,s)=>{session=s;if(s)await refresh();else show("login")});$("date").value=new Date().toISOString().slice(0,10)})();
+(async()=>{
+CFG=await fetch("/config").then(r=>r.json());
+sb=window.supabase.createClient(CFG.url,CFG.key);
+const qs=new URLSearchParams(location.search);
+const tokenHash=qs.get("token_hash");
+if(tokenHash){
+  show("login");
+  $("msg").textContent="Verifying secure Owner sign-in...";
+  const {error}=await sb.auth.verifyOtp({token_hash:tokenHash,type:"email"});
+  if(error){
+    history.replaceState({},document.title,"/");
+    $("msg").textContent=error.message||"Owner sign-in link is invalid or expired.";
+  }else{
+    history.replaceState({},document.title,"/");
+  }
+}
+let g=await sb.auth.getSession();
+session=g.data.session;
+if(session)await refresh();else show("login");
+sb.auth.onAuthStateChange(async(_e,s)=>{session=s;if(s)await refresh();else show("login")});
+$("date").value=new Date().toISOString().slice(0,10)
+})();
 `;
 export default {
-  fetch(req){
+  async fetch(req){
     const u=new URL(req.url);
     if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:{"cache-control":"no-store"}});
     if(u.pathname==="/owner.js")return new Response(JS,{headers:{"content-type":"application/javascript; charset=utf-8","cache-control":"no-store"}});
-    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Owner Mobile",version:"0.1.4"});
+    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Owner Mobile",version:"0.1.7"});
     return new Response(HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
   }
 };
