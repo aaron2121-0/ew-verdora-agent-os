@@ -2,6 +2,7 @@ import {I18N,getStoredLanguage,setStoredLanguage,translate} from "./i18n.js";
 import {clear,element,emptyState,setButtonLoading,setupBottomSheet,stagger,toast,vibrate} from "./components.js";
 
 let sb=null;
+let CFG=null;
 let session=null;
 let D=null;
 let lang=getStoredLanguage();
@@ -490,6 +491,7 @@ async function bootstrap(){
   try{
     await waitForSupabase();
     const config=await fetch("/config",{cache:"no-store"}).then(r=>r.json());
+    CFG=config;
     window.CFG=config;
     sb=window.supabase.createClient(config.url,config.key);
 
