@@ -37,7 +37,7 @@ function chip(label,active=false){
   return b;
 }
 
-export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,onSent}){
+export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,onLocked,onSent}){
   const root=()=>document.getElementById("orderPage");
   let referenceFile=null;
   let previewUrl="";
@@ -63,7 +63,7 @@ export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,on
     quote:null,
     sent:false
   });
-  let state={...fresh(),...(loadOrderDraft()||{})};
+  let state={...fresh(),...(loadOrderDraft(getUserId())||{})};
   state.step=Math.min(4,Math.max(1,Number(state.step)||1));
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(state.deliveryDate||"")))state.deliveryDate=kuchingDateKey();
 
@@ -78,7 +78,7 @@ export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,on
   }
 
   function save(){
-    if(!state.sent)saveOrderDraft(serializable());
+    if(!state.sent)saveOrderDraft(getUserId(),serializable());
   }
 
   function setState(patch,{persist=true,draw=true}={}){
@@ -88,9 +88,9 @@ export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,on
   }
 
   async function init(){
-    referenceFile=await loadOrderReference();
+    referenceFile=await loadOrderReference(getUserId());
     if(referenceFile&&!state.referenceName)state.referenceName=referenceFile.name||"reference";
-    if(loadOrderDraft()&&!restoredNoticeShown){
+    if(loadOrderDraft(getUserId())&&!restoredNoticeShown){
       restoredNoticeShown=true;
       setTimeout(()=>toast(tr("draftRestored"),{tone:"success"}),180);
     }
@@ -259,7 +259,7 @@ export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,on
       if(!file)return;
       referenceFile=file;
       state.referenceName=file.name||"reference";
-      await saveOrderReference(file);
+      await saveOrderReference(getUserId(),file);
       save();
       vibrate(10);
       render();
@@ -436,7 +436,7 @@ export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,on
     const opened=window.open(url,"_blank","noopener,noreferrer");
     if(!opened)location.href=url;
     state.sent=true;
-    await clearOrderDraft();
+    await clearOrderDraft(getUserId());
     referenceFile=null;
     if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=""}
     toast(tr("orderDraftCleared"),{tone:"success"});
@@ -492,7 +492,7 @@ export function createOrderWizard({getData,getLang,tr,api,onNavigate,onLocked,on
     if(restart){
       state=fresh();
       referenceFile=null;
-      await clearOrderDraft();
+      await clearOrderDraft(getUserId());
     }
     render();
     if(state.quoteRequestId&&state.step===3)checkQuoteStatus({silent:true});
