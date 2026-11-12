@@ -1,6 +1,6 @@
 {
   "viewport": 360,
-  "p95FrameMs": 16.700000000000045,
-  "maxFrameMs": 16.700000000000045,
-  "frames": 32
+  "p95FrameMs": 16.800000000000182,
+  "maxFrameMs": 33.19999999999982,
+  "frames": 31
 }
