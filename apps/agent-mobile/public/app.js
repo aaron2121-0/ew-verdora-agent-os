@@ -4,7 +4,7 @@ import {setupBottomSheet,setButtonLoading,toast,vibrate} from "./components.js";
 import {createPhase1UI} from "./phase1.js";
 import {clearOrderDraft,prepareOrderDraftForUser} from "./draft.js";
 import {initMotion} from "./motion.js";
-import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile} from "./ai-ui.js";
+import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile,aiStart,aiEnd} from "./ai-ui.js";
 import {createAIChat} from "./ai-chat.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
@@ -128,11 +128,13 @@ async function openPractice(code){
   $("roleAnswer").value="";
   $("scoreRole").classList.remove("hidden");
   $("roleResult").classList.remove("roleplay-practice-result");
+  aiStart();
   try{
     const j=await fn("agent-ai",{action:"roleplay_generate",weakness:activeModule});
     scenario=j.scenario||"";
     $("scenario").textContent=scenario;
   }catch(e){$("scenario").textContent=friendlyError(e.message)}
+  finally{aiEnd()}
 }
 
 function setupAppearance(){
@@ -176,6 +178,7 @@ function setupHandlers(){
   $("scoreRole").addEventListener("click",async()=>{
     const out=$("roleResult");out.classList.remove("hidden");out.textContent=tr("loading");
     setButtonLoading($("scoreRole"),true,tr("loading"));
+    aiStart();
     try{
       const j=await fn("agent-ai",{action:"roleplay_score",scenario,answer:$("roleAnswer").value,module_code:activeModule});
       const score=j.score||{};
@@ -205,7 +208,7 @@ function setupHandlers(){
       vibrate(12);
       await refresh();
     }catch(e){out.textContent=friendlyError(e.message)}
-    finally{setButtonLoading($("scoreRole"),false,tr("submit"))}
+    finally{aiEnd();setButtonLoading($("scoreRole"),false,tr("submit"))}
   });
   $("logout").addEventListener("click",async()=>{
     const uid=session?.user?.id||"";
