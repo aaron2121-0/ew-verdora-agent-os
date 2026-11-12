@@ -49,16 +49,38 @@ $("loginBtn").onclick=async()=>{
   try{
     const {error}=await sb.auth.signInWithOtp({
       email:em,
-      options:{emailRedirectTo:"https://agent-mobile-production.up.railway.app"}
+      options:{
+        shouldCreateUser:true,
+        emailRedirectTo:"https://agent-mobile-production.up.railway.app"
+      }
     });
     if(error)throw error;
     $("loginMsg").textContent=lang==="zh"?"登录链接已发送，请检查邮箱。":"Sign-in link sent. Check your email.";
     btn.textContent=lang==="zh"?"已发送":"Link sent";
   }catch(e){
-    $("loginMsg").textContent=e?.message||"Unable to send sign-in link.";
-    btn.disabled=false;
-    btn.textContent=lang==="zh"?"发送登录链接":"Send sign-in link";
-    loginPending=false;
+    const m=String(e?.message||"");
+    if(/rate limit|security purposes/i.test(m)){
+      $("loginMsg").textContent=lang==="zh"
+        ?"邮件登录服务暂时限流。请不要重复点击，稍后再试。"
+        :"Email sign-in is temporarily rate-limited. Please do not keep tapping; try again shortly.";
+      let left=60;
+      btn.disabled=true;
+      const timer=setInterval(()=>{
+        left--;
+        btn.textContent=(lang==="zh"?"稍后重试 ":"Retry in ")+left+"s";
+        if(left<=0){
+          clearInterval(timer);
+          btn.disabled=false;
+          btn.textContent=lang==="zh"?"发送登录链接":"Send sign-in link";
+          loginPending=false;
+        }
+      },1000);
+    }else{
+      $("loginMsg").textContent=m||"Unable to send sign-in link.";
+      btn.disabled=false;
+      btn.textContent=lang==="zh"?"发送登录链接":"Send sign-in link";
+      loginPending=false;
+    }
   }
 };
 $("regBtn").onclick=async()=>{try{let j=await fn("agent-session",{action:"register",display_name:$("name").value,language:lang});$("regMsg").textContent="✓ "+(j.agent_code||"");await refresh()}catch(e){$("regMsg").textContent=e.message}};
