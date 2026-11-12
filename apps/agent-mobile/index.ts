@@ -51,7 +51,7 @@ $("loginBtn").onclick=async()=>{
       email:em,
       options:{
         shouldCreateUser:true,
-        emailRedirectTo:"https://agent-mobile-production.up.railway.app"
+        emailRedirectTo:"https://owner-mobile-production.up.railway.app"
       }
     });
     if(error)throw error;
@@ -94,7 +94,32 @@ $("budgetQuoteBtn").onclick=()=>acceptQuote("budget");$("recommendedQuoteBtn").o
 $("quoteBtn").onclick=async()=>{let o=$("quoteOut");o.classList.remove("hidden");o.textContent="...";try{let file=$("refFile").files[0];if(!file)throw Error("Reference image required");let c=await fn("quote-intake",{action:"create",lead_id:activeLead,customer_budget:Number($("qBudget").value),design_commitment:$("commit").value,content_type:file.type});let up=await sb.storage.from(c.bucket).uploadToSignedUrl(c.path,c.upload_token,file,{contentType:file.type});if(up.error)throw up.error;let j=await fn("quote-intake",{action:"analyze",request_id:c.request_id});let q=j.quote_request;o.textContent=(q.classification||"RED")+"\n"+(lang==="zh"?q.customer_note_zh:q.customer_note_en)+(q.recommended_price?"\nRecommended: RM "+q.recommended_price:"")}catch(e){o.textContent=e.message}};
 $("logout").onclick=async()=>{await sb.auth.signOut();session=null;D=null;view("login")};
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active",s.dataset.page===b.dataset.tab))});
-(async()=>{let c=await fetch("/config").then(r=>r.json());window.CFG=c;sb=window.supabase.createClient(c.url,c.key);sb.auth.onAuthStateChange(async(_e,s)=>{session=s;if(s){try{await refresh()}catch(e){console.error(e);view("login")}}else view("login")});let g=await sb.auth.getSession();session=g.data.session;if(session){try{await refresh()}catch(e){view("login")}}else view("login");applyLang()})();
+(async()=>{
+  let c=await fetch("/config").then(r=>r.json());
+  window.CFG=c;
+  sb=window.supabase.createClient(c.url,c.key);
+  const hp=new URLSearchParams((location.hash||"").replace(/^#/,""));
+  const accessToken=hp.get("access_token");
+  const refreshToken=hp.get("refresh_token");
+  if(accessToken&&refreshToken){
+    const {error}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+    history.replaceState({},document.title,location.pathname||"/");
+    if(error){
+      $("loginMsg").textContent=error.message||"Secure sign-in session could not be restored.";
+      view("login");
+    }
+  }
+  sb.auth.onAuthStateChange(async(_e,s)=>{
+    session=s;
+    if(s){try{await refresh()}catch(e){console.error(e);view("login")}}
+    else view("login");
+  });
+  let g=await sb.auth.getSession();
+  session=g.data.session;
+  if(session){try{await refresh()}catch(e){view("login")}}
+  else view("login");
+  applyLang()
+})();
 `;
 
 export default {
