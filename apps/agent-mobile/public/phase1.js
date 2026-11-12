@@ -1,0 +1,671 @@
+import {clear,element,emptyState,countTo,stagger,toast,vibrate,setupBottomSheet,setButtonLoading,progress} from "./components.js";
+import {createIcon} from "./icons.js";
+import {greetingPeriod,kuchingDateKey,formatKuchingDateTime} from "./date.js";
+import {createOrderWizard} from "./order.js";
+
+const NAV=[
+  ["today","house","navToday"],
+  ["customers","users","navCustomers"],
+  ["order","plus","navOrder"],
+  ["training","graduationCap","navTraining"],
+  ["performance","trendingUp","navPerformance"]
+];
+const LOCKED=new Set(["trainee","restricted","recovery","dormant","suspended"]);
+
+function iconButton(icon,label,className="btn btn-secondary",attrs={}){
+  const b=element("button",{className,attrs:{type:"button",...attrs}});
+  b.append(createIcon(icon,{size:20}),element("span",{text:label}));
+  return b;
+}
+function money(v){return "RM "+Number(v||0).toLocaleString("en-MY",{minimumFractionDigits:0,maximumFractionDigits:2})}
+function pct(v){return (Number(v||0)*100).toFixed(Number(v||0)*100%1?1:0)}
+function statusTone(status){
+  if(["active","certified"].includes(status))return "success";
+  if(["trainee","recovery","dormant"].includes(status))return "warning";
+  return "danger";
+}
+function tierKey(tier){
+  return {starter:"tierStarter",active:"tierActive",pro:"tierPro",elite:"tierElite"}[tier]||"tierStarter";
+}
+function categoryKey(value){
+  return {
+    birthday:"categoryBirthday",anniversary:"categoryAnniversary",condolence:"categoryCondolence",
+    opening:"categoryOpening",proposal:"categoryProposal",graduation:"categoryGraduation",
+    corporate:"categoryCorporate",wedding:"categoryWedding",general:"categoryGeneral"
+  }[value]||null;
+}
+
+export function createPhase1UI({getData,getLang,tr,api,onRefresh}){
+  let active="today";
+  let previousNavIndex=0;
+  let lockController=null;
+  let detailController=null;
+  let generatedKit=null;
+  let generatedKitCode=null;
+  let lastAllDone=false;
+
+  const order=createOrderWizard({
+    getData,getLang,tr,api,
+    onNavigate:navigate,
+    onLocked:showLock,
+    onSent:()=>{markLocalTask("kit",true);renderNavBadges()}
+  });
+
+  function langText(value){
+    const key=categoryKey(value);
+    return key?tr(key):String(value||"—");
+  }
+
+  function isLocked(){
+    return LOCKED.has(String(getData()?.agent?.status||"").toLowerCase())||getData()?.phase1?.can_sell===false;
+  }
+
+  function setupNav(){
+    const nav=document.getElementById("nav");
+    if(!nav)return;
+    clear(nav);
+    const inner=element("div",{className:"nav-inner"});
+    const indicator=element("span",{className:"nav-indicator",attrs:{"aria-hidden":"true"}});
+    inner.append(indicator);
+    NAV.forEach(([tab,icon,key],index)=>{
+      const b=element("button",{className:"nav-item"+(tab==="order"?" nav-order":"")+(tab===active?" active":""),attrs:{type:"button","data-tab":tab,"aria-label":tr(key)}});
+      const iconWrap=element("span",{className:"nav-icon-wrap"});
+      iconWrap.append(createIcon(icon,{size:24}));
+      const label=element("span",{className:"nav-label",text:tr(key)});
+      iconWrap.append(element("span",{className:"nav-badge hidden","data-badge":tab}));
+      b.append(iconWrap,label);
+      b.addEventListener("click",()=>{
+        if(tab==="order"&&isLocked()){showLock();return}
+        navigate(tab);
+      });
+      inner.append(b);
+    });
+    nav.append(inner);
+    renderNavBadges();
+    updateNavIndicator();
+  }
+
+  function updateNavIndicator(){
+    const nav=document.getElementById("nav");
+    if(!nav)return;
+    const index=Math.max(0,NAV.findIndex(x=>x[0]===active));
+    const indicator=nav.querySelector(".nav-indicator");
+    if(indicator)indicator.style.setProperty("--nav-index",String(index));
+    nav.querySelectorAll(".nav-item").forEach(b=>{
+      const isActive=b.dataset.tab===active;
+      b.classList.toggle("active",isActive);
+      b.setAttribute("aria-current",isActive?"page":"false");
+    });
+  }
+
+  function renderNavBadges(){
+    const nav=document.getElementById("nav");
+    if(!nav)return;
+    const p=getData()?.phase1||{};
+    const due=(p.due_followups||[]).length;
+    const customerBadge=nav.querySelector('[data-badge="customers"]');
+    if(customerBadge){
+      customerBadge.textContent=due>99?"99+":String(due);
+      customerBadge.classList.toggle("hidden",due===0);
+    }
+    const trainingBadge=nav.querySelector('[data-badge="training"]');
+    if(trainingBadge){
+      trainingBadge.textContent="";
+      trainingBadge.classList.toggle("hidden",!p.training_pending);
+      trainingBadge.classList.toggle("dot",Boolean(p.training_pending));
+    }
+  }
+
+  function pageSwap(next){
+    const old=document.querySelector(".section.active");
+    const target=document.querySelector('.section[data-page="'+next+'"]');
+    if(!target)return;
+    const nextIndex=NAV.findIndex(x=>x[0]===next);
+    const direction=nextIndex>=0&&previousNavIndex>=0&&nextIndex<previousNavIndex?-1:1;
+    const swap=()=>{
+      document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+      target.classList.add("active");
+    };
+    const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if(document.startViewTransition&&!reduced){
+      document.startViewTransition(swap);
+    }else{
+      swap();
+      if(!reduced)target.animate(
+        [{opacity:0,transform:"translateX("+(direction*14)+"px)"},{opacity:1,transform:"translateX(0)"}],
+        {duration:220,easing:"cubic-bezier(.2,.8,.2,1)"}
+      );
+    }
+    if(nextIndex>=0)previousNavIndex=nextIndex;
+  }
+
+  function navigate(next,{scrollTo=null}={}){
+    if(next==="order"&&isLocked()){showLock();return}
+    active=next;
+    pageSwap(next);
+    updateNavIndicator();
+    if(next==="today")renderToday();
+    else if(next==="customers")renderCustomers();
+    else if(next==="order")order.open();
+    else if(next==="training")renderTraining();
+    else if(next==="performance")renderPerformance();
+    else if(next==="selling")renderSelling();
+    requestAnimationFrame(()=>{
+      if(scrollTo)document.getElementById(scrollTo)?.scrollIntoView({behavior:"smooth",block:"start"});
+      else window.scrollTo({top:0,behavior:"instant"});
+    });
+  }
+
+  function showLock(){
+    const sheet=document.getElementById("lockSheet");
+    if(!sheet)return;
+    const status=String(getData()?.agent?.status||"").toLowerCase();
+    document.getElementById("lockStatus").textContent=status.toUpperCase();
+    document.getElementById("lockTitle").textContent=tr("lockTitle");
+    document.getElementById("lockDesc").textContent=status==="trainee"?tr("lockDescTrainee"):tr("lockDescRestricted");
+    document.getElementById("lockHow").textContent=tr("unlockHow");
+    document.getElementById("lockAction").textContent=tr("unlockAction");
+    sheet.classList.remove("hidden");
+    vibrate([12,35,12]);
+  }
+
+  function setupSheets(){
+    lockController=setupBottomSheet(document.getElementById("lockSheet"));
+    detailController=setupBottomSheet(document.getElementById("leadDetailSheet"));
+    document.getElementById("closeLock")?.addEventListener("click",()=>lockController?.close());
+    document.getElementById("lockAction")?.addEventListener("click",()=>{lockController?.close();navigate("training")});
+    document.getElementById("closeLeadDetail")?.addEventListener("click",()=>detailController?.close());
+  }
+
+  function localTaskState(){
+    const key="ew_phase1_tasks_"+(getData()?.phase1?.kuching_date||kuchingDateKey());
+    try{return {key,data:JSON.parse(localStorage.getItem(key)||"{}")}}catch{return {key,data:{}}}
+  }
+  function markLocalTask(name,value){
+    const x=localTaskState();
+    x.data[name]=Boolean(value);
+    try{localStorage.setItem(x.key,JSON.stringify(x.data))}catch{}
+    renderToday();
+  }
+
+  function taskFacts(){
+    const p=getData()?.phase1||{};
+    const local=localTaskState().data;
+    return {
+      followup:(p.due_followups||[]).length===0,
+      kit:Boolean(local.kit),
+      training:!p.training_pending
+    };
+  }
+
+  function celebrateIfNeeded(){
+    const facts=taskFacts();
+    const all=facts.followup&&facts.kit&&facts.training;
+    if(all&&!lastAllDone){
+      const date=getData()?.phase1?.kuching_date||kuchingDateKey();
+      const key="ew_phase1_celebrated_"+date;
+      let done=false;try{done=localStorage.getItem(key)==="1"}catch{}
+      if(!done){
+        try{localStorage.setItem(key,"1")}catch{}
+        const layer=document.getElementById("celebrationLayer");
+        if(layer){
+          clear(layer);layer.classList.remove("hidden");
+          for(let i=0;i<14;i++){
+            const p=element("span",{className:"celebration-particle"});
+            p.style.setProperty("--x",String((i%7-3)*18)+"px");
+            p.style.setProperty("--r",String((i*47)%180)+"deg");
+            p.style.setProperty("--d",String((i%5)*35)+"ms");
+            layer.append(p);
+          }
+          setTimeout(()=>{layer.classList.add("hidden");clear(layer)},900);
+        }
+        vibrate([12,25,12]);
+      }
+    }
+    lastAllDone=all;
+  }
+
+  function statusLabel(status){
+    const key={
+      trainee:"statusTrainee",active:"statusActive",certified:"statusCertified",
+      restricted:"statusRestricted",recovery:"statusRecovery",dormant:"statusDormant",suspended:"statusSuspended"
+    }[String(status||"").toLowerCase()];
+    return key?tr(key):String(status||"—");
+  }
+
+  function screenHeader(title,subtitle,{back=false}={}){
+    const row=element("div",{className:"screen-header"});
+    const left=element("div");
+    if(back){
+      const b=iconButton("arrowLeft",tr("back"),"btn btn-text screen-back");
+      b.addEventListener("click",()=>navigate("today"));
+      row.append(b);
+    }
+    left.append(element("h1",{className:"screen-title",text:title}),element("p",{className:"screen-subtitle",text:subtitle}));
+    row.append(left);
+    return row;
+  }
+
+  function renderToday(){
+    const host=document.getElementById("todayPage");if(!host)return;
+    clear(host);
+    const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
+    const page=element("div",{className:"page-shell today-shell"});
+
+    const live=element("div",{className:"today-live"});
+    const left=element("span",{className:"live-chip"});
+    left.append(element("i"),element("span",{text:tr("kuchingLive")}));
+    const refresh=iconButton("refreshCw",tr("refreshNow"),"btn btn-text btn-small");
+    refresh.addEventListener("click",async()=>{
+      refresh.classList.add("spinning");
+      try{await onRefresh()}finally{refresh.classList.remove("spinning")}
+    });
+    live.append(left,refresh);
+    page.append(live);
+
+    const greet=element("div",{className:"greeting-row"});
+    const greetingKey={morning:"greetingMorning",afternoon:"greetingAfternoon",evening:"greetingEvening",night:"greetingNight"}[greetingPeriod()];
+    const gLeft=element("div");
+    gLeft.append(element("h1",{className:"greeting",text:tr(greetingKey)+", "+(a.display_name||a.agent_code||"")}),
+      element("div",{className:"status-line",text:statusLabel(a.status)}));
+    const badges=element("div",{className:"greeting-badges"});
+    badges.append(element("span",{className:"badge badge-gold",text:tr(tierKey(a.tier))}),
+      element("span",{className:"badge badge-"+statusTone(a.status),text:statusLabel(a.status)}));
+    greet.append(gLeft,badges);
+    page.append(greet);
+
+    if(isLocked()){
+      const lock=element("div",{className:"lock-banner"});
+      const ico=element("div",{className:"lock-banner-icon"});ico.append(createIcon("lock",{size:22}));
+      const copy=element("div",{className:"lock-banner-copy"});
+      copy.append(element("strong",{text:tr("lockTitle")}),
+        element("span",{text:String(a.status).toLowerCase()==="trainee"?tr("lockDescTrainee"):tr("lockDescRestricted")}));
+      const action=iconButton("graduationCap",tr("unlockHow"),"btn btn-warning btn-small");
+      action.addEventListener("click",showLock);
+      lock.append(ico,copy,action);
+      page.append(lock);
+    }
+
+    const moneyCard=element("section",{className:"money-card"});
+    const moneyHead=element("div",{className:"money-head"});
+    const moneyTitle=element("div");
+    moneyTitle.append(element("span",{className:"money-kicker",text:tr("moneyCardTitle")}),
+      element("span",{className:"money-rate",text:tr("commissionRate",{rate:pct(tp.commission_rate??a.commission_rate)})}));
+    const walletIcon=element("div",{className:"money-wallet"});walletIcon.append(createIcon("wallet",{size:24}));
+    moneyHead.append(moneyTitle,walletIcon);
+    const grid=element("div",{className:"money-grid"});
+    [["todayEarned",m.today_earned,"success"],["pendingCommission",m.pending,"gold"],["monthEarned",m.month_earned,"light"]].forEach(([key,value,tone])=>{
+      const cell=element("div",{className:"money-cell"});
+      cell.append(element("span",{className:"money-label",text:tr(key)}));
+      const n=element("strong",{className:"money-number "+tone,text:"RM 0"});
+      cell.append(n);grid.append(cell);
+      requestAnimationFrame(()=>countTo(n,Number(value||0),{duration:650,formatter:x=>"RM "+Math.round(x).toLocaleString("en-MY")}));
+    });
+    moneyCard.append(moneyHead,grid);
+
+    const tierWrap=element("div",{className:"tier-progress"});
+    const tierTop=element("div",{className:"tier-progress-top"});
+    if(tp.next_tier){
+      tierTop.append(element("span",{text:tr("nextTierLine",{tier:tr(tierKey(tp.next_tier))})}),
+        element("strong",{text:tr("nextTierNeeds",{orders:Number(tp.orders_remaining||0),score:Number(tp.score_remaining||0).toFixed(0)})}));
+      const orderRatio=tp.next_orders_required?Math.min(1,Number(tp.orders_30d||0)/Number(tp.next_orders_required)):1;
+      const scoreRatio=tp.next_score_required?Math.min(1,Number(tp.performance_score||0)/Number(tp.next_score_required)):1;
+      tierWrap.append(tierTop,progress(Math.min(orderRatio,scoreRatio)).lastChild,
+        element("div",{className:"tier-progress-foot",text:tr("orders30d",{count:Number(tp.orders_30d||0)})}));
+    }else{
+      tierTop.append(element("span",{text:tr("maxTier")}),element("strong",{text:tr(tierKey(tp.current_tier||a.tier))}));
+      tierWrap.append(tierTop);
+    }
+    moneyCard.append(tierWrap);
+    page.append(moneyCard);
+
+    page.append(renderQuickActions());
+    page.append(renderTodayTasks());
+    page.append(renderDueFollowups());
+    page.append(renderCampaigns());
+    host.append(page);
+    stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
+    celebrateIfNeeded();
+  }
+
+  function renderQuickActions(){
+    const p=getData()?.phase1||{},m=p.money||{};
+    const section=element("section",{className:"section-block"});
+    section.append(element("h2",{className:"section-title",text:tr("quickActions")}));
+    const grid=element("div",{className:"quick-grid"});
+    const items=[
+      {icon:"plus",title:"tileOrder",sub:"tileOrderSub",tone:"primary",action:()=>isLocked()?showLock():navigate("order"),status:tr("readyBadge"),locked:isLocked()},
+      {icon:"phoneCall",title:"tileFollowup",sub:"tileFollowupSub",tone:"amber",action:()=>navigate("today",{scrollTo:"dueFollowups"}),status:tr("dueBadge",{count:(p.due_followups||[]).length})},
+      {icon:"megaphone",title:"tileSelling",sub:"tileSellingSub",tone:"blue",action:()=>isLocked()?showLock():navigate("selling"),status:taskFacts().kit?tr("completedBadge"):tr("readyBadge"),locked:isLocked()},
+      {icon:"graduationCap",title:"tileTraining",sub:"tileTrainingSub",tone:"green",action:()=>navigate("training"),status:p.training_pending?tr("trainingPendingBadge"):tr("completedBadge")},
+      {icon:"trendingUp",title:"tilePerformance",sub:"tilePerformanceSub",tone:"indigo",action:()=>navigate("performance"),status:tr(tierKey(p.tier_progress?.current_tier||getData()?.agent?.tier))},
+      {icon:"wallet",title:"tileWallet",sub:"tileWalletSub",tone:"gold",action:()=>navigate("performance",{scrollTo:"commissionPreview"}),status:money(m.pending)}
+    ];
+    items.forEach(item=>{
+      const b=element("button",{className:"quick-tile tone-"+item.tone+(item.locked?" is-locked":""),attrs:{type:"button","aria-disabled":item.locked?"true":"false"}});
+      const top=element("div",{className:"quick-top"});
+      const ico=element("span",{className:"quick-icon"});ico.append(createIcon(item.icon,{size:20}));
+      top.append(ico,element("span",{className:"quick-status",text:item.status}));
+      b.append(top,element("strong",{text:tr(item.title)}),element("small",{text:tr(item.sub)}));
+      b.addEventListener("click",item.action);
+      grid.append(b);
+    });
+    section.append(grid);
+    return section;
+  }
+
+  function renderTodayTasks(){
+    const section=element("section",{className:"task-card"});
+    const facts=taskFacts();
+    const doneCount=Object.values(facts).filter(Boolean).length;
+    const head=element("div",{className:"card-head"});
+    const title=element("div",{className:"card-head-title"});title.append(createIcon("listChecks",{size:20}),element("h2",{text:tr("todayThreeTitle")}));
+    head.append(title,element("span",{className:"task-count",text:doneCount+" / 3"}));
+    section.append(head);
+    const tasks=[
+      {id:"followup",title:"taskFollowupTitle",desc:"taskFollowupDesc",done:facts.followup,go:()=>navigate("today",{scrollTo:"dueFollowups"})},
+      {id:"kit",title:"taskKitTitle",desc:"taskKitDesc",done:facts.kit,go:()=>isLocked()?showLock():navigate("selling")},
+      {id:"training",title:"taskTrainingTitle",desc:"taskTrainingDesc",done:facts.training,go:()=>navigate("training")}
+    ].sort((a,b)=>Number(a.done)-Number(b.done));
+    if(doneCount===3){
+      const all=element("div",{className:"all-done"});
+      all.append(createIcon("sparkles",{size:18}),element("span",{text:tr("allDoneText")}));
+      section.append(all);
+    }
+    const list=element("div",{className:"task-list"});
+    tasks.forEach(task=>{
+      const row=element("button",{className:"task-row"+(task.done?" done":""),attrs:{type:"button"}});
+      const check=element("span",{className:"task-check"});
+      if(task.done)check.append(createIcon("check",{size:17}));
+      const copy=element("span",{className:"task-copy"});
+      copy.append(element("strong",{text:tr(task.title)}),element("small",{text:tr(task.desc)}));
+      row.append(check,copy,element("span",{className:"task-go",text:task.done?tr("completedBadge"):tr("goNow")}));
+      row.addEventListener("click",task.go);
+      list.append(row);
+    });
+    section.append(list);
+    return section;
+  }
+
+  function renderDueFollowups(){
+    const p=getData()?.phase1||{},rows=p.due_followups||[];
+    const section=element("section",{className:"section-block",attrs:{id:"dueFollowups"}});
+    const h=element("div",{className:"section-heading-row"});
+    const title=element("div",{className:"section-heading-left"});title.append(createIcon("clock",{size:20}),element("h2",{className:"section-title",text:tr("dueFollowupsTitle")}));
+    h.append(title,element("span",{className:"count-badge",text:String(rows.length)}));section.append(h);
+    if(!rows.length){
+      section.append(emptyState({icon:"circleCheck",title:tr("noDueFollowups")}));
+      return section;
+    }
+    const list=element("div",{className:"follow-list"});
+    rows.forEach(lead=>{
+      const card=element("article",{className:"follow-card"});
+      const top=element("div",{className:"follow-card-top"});
+      const who=element("div",{className:"follow-person"});
+      const avatar=element("span",{className:"follow-avatar"});avatar.append(createIcon("user",{size:18}));
+      const name=element("div");
+      name.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:formatKuchingDateTime(lead.next_followup_at,getLang())+" · "+String(lead.source||"").toUpperCase()}));
+      who.append(avatar,name);
+      top.append(who,element("span",{className:"badge badge-danger",text:tr("dueBadge",{count:1})}));
+      const meta=element("div",{className:"follow-meta"});
+      meta.append(element("span",{text:tr("customerOccasionLabel")+" · "+langText(lead.occasion||lead.sales_category)}),
+        element("strong",{text:money(lead.budget)}));
+      const actions=element("div",{className:"follow-actions"});
+      const wa=iconButton("messageCircle",tr("whatsappFollowup"),"btn btn-whatsapp");
+      wa.addEventListener("click",()=>{
+        if(isLocked()){showLock();return}
+        const msg=tr("followupMessage",{name:lead.customer_label||"",occasion:langText(lead.occasion||lead.sales_category)});
+        window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");
+        vibrate(10);
+      });
+      const done=iconButton("check",tr("markComplete"),"btn btn-secondary");
+      done.addEventListener("click",async()=>{
+        if(isLocked()){showLock();return}
+        setButtonLoading(done,true,tr("loading"));
+        try{
+          await api.agent({action:"complete_followup",lead_id:lead.id});
+          toast(tr("completedBadge"),{tone:"success"});
+          vibrate(12);await onRefresh();
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+        finally{setButtonLoading(done,false,tr("markComplete"))}
+      });
+      actions.append(wa,done);
+      card.append(top,meta,actions);list.append(card);
+    });
+    section.append(list);
+    return section;
+  }
+
+  function renderCampaigns(){
+    const rows=getData()?.campaigns||[];
+    const section=element("section",{className:"section-block"});
+    const h=element("div",{className:"section-heading-row"});
+    const left=element("div",{className:"section-heading-left"});left.append(createIcon("target",{size:20}),element("h2",{className:"section-title",text:tr("campaignsTitle")}));
+    h.append(left);section.append(h);
+    if(!rows.length){
+      section.append(emptyState({icon:"target",title:tr("noCampaigns")}));
+      return section;
+    }
+    const strip=element("div",{className:"campaign-strip"});
+    rows.forEach(c=>{
+      const done=Number(c.completed_orders||0),target=Math.max(1,Number(c.target_orders||0));
+      const card=element("article",{className:"campaign-banner"});
+      card.append(element("strong",{text:getLang()==="zh"?c.title_zh:c.title_en}),
+        element("span",{text:tr("campaignProgress",{done,target})}));
+      const track=element("div",{className:"campaign-progress"});
+      const fill=element("span");fill.style.transform="scaleX("+Math.min(1,done/target)+")";track.append(fill);
+      card.append(track,element("small",{text:tr("campaignBonus",{amount:Number(c.fixed_bonus||0).toFixed(0)})}));
+      strip.append(card);
+    });
+    section.append(strip);return section;
+  }
+
+  function renderCustomers(){
+    const host=document.getElementById("customersPage");if(!host)return;
+    clear(host);
+    const page=element("div",{className:"page-shell"});
+    page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
+    const rows=getData()?.phase1?.recent_leads||[];
+    if(!rows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));host.append(page);return}
+    const list=element("div",{className:"customer-list"});
+    rows.forEach(lead=>{
+      const card=element("button",{className:"customer-card",attrs:{type:"button"}});
+      const top=element("div",{className:"customer-card-top"});
+      const who=element("div");
+      who.append(element("strong",{text:lead.customer_label||"—"}),element("small",{text:langText(lead.occasion||lead.sales_category)+" · "+String(lead.source||"").toUpperCase()}));
+      top.append(who,element("span",{className:"badge",text:customerStageLabel(lead)}));
+      const pipeline=renderPipeline(lead,{compact:true});
+      const foot=element("div",{className:"customer-card-foot"});
+      foot.append(element("span",{text:tr("customerBudgetLabel")}),element("strong",{text:money(lead.budget)}));
+      card.append(top,pipeline,foot);
+      card.addEventListener("click",()=>openLeadDetail(lead));
+      list.append(card);
+    });
+    page.append(list);host.append(page);stagger(list.children);
+  }
+
+  function stageIndex(lead){
+    const os=String(lead.order_status||"");
+    const ps=String(lead.payment_status||"");
+    if(os==="completed")return 4;
+    if(["producing","qc_pending","qc_pass","delivering"].includes(os))return 3;
+    if(ps==="paid"||["paid","confirmed"].includes(os)&&ps==="paid")return 2;
+    if(lead.quote_id||["approved","sent","accepted"].includes(String(lead.quote_status||"")))return 1;
+    return 0;
+  }
+  function customerStageLabel(lead){
+    return tr(["stageNeed","stageQuoted","stagePaid","stageProducing","stageDelivered"][stageIndex(lead)]);
+  }
+  function renderPipeline(lead,{compact=false}={}){
+    const current=stageIndex(lead),wrap=element("div",{className:"pipeline"+(compact?" compact":"")});
+    const keys=["stageNeed","stageQuoted","stagePaid","stageProducing","stageDelivered"];
+    keys.forEach((key,i)=>{
+      const item=element("div",{className:"pipeline-step"+(i<=current?" complete":"")+(i===current?" current":"")});
+      const dot=element("span",{className:"pipeline-dot"});if(i<current)dot.append(createIcon("check",{size:12}));
+      item.append(dot,element("span",{text:tr(key)}));wrap.append(item);
+    });
+    return wrap;
+  }
+  function openLeadDetail(lead){
+    const sheet=document.getElementById("leadDetailSheet");if(!sheet)return;
+    const body=document.getElementById("leadDetailBody");clear(body);
+    body.append(element("h2",{className:"sheet-title",text:lead.customer_label||tr("customerDetails")}),
+      element("p",{className:"sheet-subtitle",text:tr("customerDetails")}));
+    const meta=element("div",{className:"detail-grid"});
+    [[tr("customerSourceLabel"),String(lead.source||"—").toUpperCase()],
+     [tr("customerOccasionLabel"),langText(lead.occasion||lead.sales_category)],
+     [tr("customerBudgetLabel"),money(lead.budget)],
+     [tr("currentStatus"),customerStageLabel(lead)]].forEach(([k,v])=>{
+       const x=element("div");x.append(element("span",{text:k}),element("strong",{text:v}));meta.append(x);
+     });
+    body.append(meta,element("h3",{className:"detail-section-title",text:tr("statusProgress")}),renderPipeline(lead));
+    sheet.classList.remove("hidden");
+  }
+
+  function renderTraining(){
+    const host=document.getElementById("trainingPage");if(!host)return;
+    clear(host);
+    const page=element("div",{className:"page-shell"});
+    page.append(screenHeader(tr("trainingTitle"),tr("trainingSubtitle")));
+    const rows=getData()?.training||[];
+    const summary=element("div",{className:"training-summary"});
+    const icon=element("span",{className:"training-summary-icon"});icon.append(createIcon("graduationCap",{size:24}));
+    summary.append(icon,element("div",{className:"training-summary-copy"}));
+    summary.lastChild.append(element("strong",{text:getData()?.phase1?.training_pending?tr("trainingPendingBadge"):tr("completedBadge")}),
+      element("span",{text:tr("taskTrainingDesc")}));
+    page.append(summary);
+    const list=element("div",{className:"training-list"});
+    if(!rows.length)list.append(emptyState({icon:"graduationCap",title:tr("noTraining")}));
+    rows.forEach(x=>{
+      const mod=x.training_modules||{},row=element("article",{className:"training-row"});
+      const left=element("div");
+      left.append(element("strong",{text:getLang()==="zh"?mod.title_zh:mod.title_en}),
+        element("small",{text:statusLabel(x.status)+" · "+Number(x.best_score||0)+"/100"}));
+      row.append(left);
+      if(x.status==="passed"||x.status==="waived"){
+        row.append(element("span",{className:"badge badge-success",text:tr("passed")}));
+      }else{
+        const b=iconButton("graduationCap",tr("practice"),"btn btn-secondary btn-small");
+        b.addEventListener("click",()=>api.openPractice(mod.code));
+        row.append(b);
+      }
+      list.append(row);
+    });
+    page.append(list);host.append(page);
+  }
+
+  function renderPerformance(){
+    const host=document.getElementById("performancePage");if(!host)return;
+    clear(host);
+    const D=getData()||{},p=D.phase1||{},tp=p.tier_progress||{},a=D.agent||{},m=p.money||{};
+    const page=element("div",{className:"page-shell"});
+    page.append(screenHeader(tr("performanceTitle"),tr("performanceSubtitle")));
+    const hero=element("section",{className:"performance-hero"});
+    const tier=element("div");tier.append(element("span",{text:tr("tier")}),element("strong",{text:tr(tierKey(tp.current_tier||a.tier))}));
+    const score=element("div");score.append(element("span",{text:tr("score")}),element("strong",{text:String(tp.performance_score??a.performance_score??0)}));
+    const pending=element("div");pending.append(element("span",{text:tr("pendingCommission")}),element("strong",{text:money(m.pending)}));
+    hero.append(tier,score,pending);page.append(hero);
+    const section=element("section",{className:"commission-card",attrs:{id:"commissionPreview"}});
+    const h=element("div",{className:"card-head-title"});h.append(createIcon("wallet",{size:20}),element("h2",{text:tr("commissionPreview")}));
+    section.append(h);
+    const rows=D.commissions||[];
+    if(!rows.length)section.append(emptyState({icon:"wallet",title:tr("noCommissions")}));
+    rows.slice(0,10).forEach(c=>{
+      const row=element("div",{className:"commission-row"});
+      row.append(element("strong",{text:money(c.amount)}),element("span",{text:String(c.status||"").toUpperCase()}));
+      section.append(row);
+    });
+    page.append(section);host.append(page);
+  }
+
+  function renderSelling(){
+    const host=document.getElementById("sellingPage");if(!host)return;
+    clear(host);
+    const page=element("div",{className:"page-shell"});
+    page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
+    const kits=getData()?.selling_kits||[];
+    if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
+    const list=element("div",{className:"kit-list"});
+    kits.forEach(k=>{
+      const card=element("article",{className:"selling-card"});
+      const title=getLang()==="zh"?k.title_zh:k.title_en;
+      const content=getLang()==="zh"?k.content_zh:k.content_en;
+      const channels=k.recommended_channels||[];
+      const missionChannels=getData()?.mission?.recommended_channels||[];
+      const chosen=missionChannels.find(x=>channels.includes(x))||channels[0]||"personal_network";
+      const top=element("div",{className:"selling-card-top"});
+      const ico=element("span",{className:"selling-icon"});ico.append(createIcon("megaphone",{size:20}));
+      const copy=element("div");copy.append(element("strong",{text:title}),element("small",{text:channels.join(" · ")}));
+      top.append(ico,copy);card.append(top);
+      if(content?.opening)card.append(element("p",{className:"selling-opening",text:content.opening}));
+      const gen=iconButton("sparkles",tr("generateTodayCopy"),"btn btn-primary");
+      gen.addEventListener("click",async()=>{
+        if(isLocked()){showLock();return}
+        setButtonLoading(gen,true,tr("loading"));
+        try{
+          const j=await api.ai({action:"daily_content",kit_code:k.code,channel:chosen});
+          generatedKit=j.content||{};generatedKitCode=k.code;
+          renderSelling();
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+        finally{setButtonLoading(gen,false,tr("generateTodayCopy"))}
+      });
+      card.append(gen);
+      if(generatedKit&&generatedKitCode===k.code){
+        const out=element("div",{className:"generated-copy"});
+        const body=[
+          tr("generatedFor",{channel:chosen}),
+          generatedKit.post_copy||"",
+          generatedKit.outreach_copy||"",
+          generatedKit.followup_copy||""
+        ].filter(Boolean).join("\n\n");
+        out.append(element("pre",{text:body}));
+        const actions=element("div",{className:"generated-actions"});
+        const copyBtn=iconButton("copy",tr("copyText"),"btn btn-secondary");
+        copyBtn.addEventListener("click",async()=>{
+          try{await navigator.clipboard.writeText(body);toast(tr("copied"),{tone:"success"})}
+          catch{toast(tr("errorRequestFailed"),{tone:"danger"})}
+        });
+        const wa=iconButton("messageCircle",tr("sendWhatsAppKit"),"btn btn-whatsapp");
+        wa.addEventListener("click",()=>{
+          if(isLocked()){showLock();return}
+          window.open("https://wa.me/?text="+encodeURIComponent(body),"_blank","noopener,noreferrer");
+          markLocalTask("kit",true);vibrate(10);
+        });
+        actions.append(copyBtn,wa);out.append(actions);card.append(out);
+      }
+      list.append(card);
+    });
+    page.append(list);
+    const details=element("details",{className:"playbook-details"});
+    details.append(element("summary",{text:tr("channelStrategy")}));
+    const inside=element("div",{className:"playbook-list"});
+    (getData()?.channel_playbooks||[]).forEach(p=>{
+      const content=getLang()==="zh"?p.content_zh:p.content_en;
+      const x=element("div",{className:"playbook-item"});
+      x.append(element("strong",{text:getLang()==="zh"?p.title_zh:p.title_en}),element("span",{text:content?.goal||""}));
+      inside.append(x);
+    });
+    details.append(inside);page.append(details);host.append(page);
+  }
+
+  function renderAll(){
+    setupNav();
+    renderToday();renderCustomers();renderTraining();renderPerformance();renderSelling();order.render();
+    renderNavBadges();
+  }
+
+  function onLanguageChange(){
+    renderAll();
+    order.onLanguageChange();
+  }
+
+  async function init(){
+    setupSheets();
+    setupNav();
+    await order.init();
+    renderAll();
+    navigate("today");
+  }
+
+  return {init,renderAll,onLanguageChange,navigate,showLock,renderNavBadges,order};
+}
