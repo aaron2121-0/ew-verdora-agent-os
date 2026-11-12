@@ -16,6 +16,14 @@ const marker='QA-P0-'+runTag+'-'+runId;
 const created={auth_users:[],agents:[],agent_auth_invites:[],owner_auth_invites:[],leads:[],quote_requests:[],ai_chat_messages:[],lead_events:[]};
 const deleted={auth_users:[],agents:[],agent_auth_invites:[],leads:[],lead_events:[]};
 const results=[];const errors=[];const intendedEmails=new Set();
+const reportDir='qa-results',manifestPath=path.join(reportDir,'fixture-manifest.json');
+fs.mkdirSync(reportDir,{recursive:true});
+function checkpoint(){
+ const temp=manifestPath+'.tmp';
+ fs.writeFileSync(temp,JSON.stringify({run:marker,created,deleted,intendedEmails:[...intendedEmails],tests:results,errors},null,2)+'\\n');
+ fs.renameSync(temp,manifestPath);
+}
+checkpoint();
 const timeout=15000;
 function headers(admin=false,token=''){
  return {apikey:admin?secret:pub,...(token&&!admin?{authorization:'Bearer '+token}:{}),'content-type':'application/json'};
@@ -42,15 +50,18 @@ const tests=[];
 async function makeIdentity(label){
  const email='qa-'+label+'-'+runId+'@example.com';
  intendedEmails.add(email);
+ checkpoint();
  const code=randomBytes(32).toString('hex');
  const hash=sha(code);
  const invite=await expectHttp('/rest/v1/agent_auth_invites?select=id',{admin:true,method:'POST',
   prefer:'return=representation',data:{email,code_hash:hash,expires_at:new Date(Date.now()+10*60*1000).toISOString()}},[201]);
  assert.equal(invite.length,1);
  created.agent_auth_invites.push(invite[0].id);
+ checkpoint();
  const r=await expectHttp('/functions/v1/agent-auth',{method:'POST',data:{action:'invite_session',email,code}},[200]);
  assert.ok(r.access_token&&r.user_id,'invite session missing access token or user ID');
  created.auth_users.push(r.user_id);
+ checkpoint();
  const replay=await http('/functions/v1/agent-auth',{method:'POST',data:{action:'invite_session',email,code}});
  assert.equal(replay.status,400,'replayed invite was accepted');
  assert.ok(!replay.data?.access_token,'replayed invite returned token');
@@ -64,6 +75,7 @@ async function agent(name){
   data:{id,user_id:a.userId,agent_code:code,display_name:'qa-'+name,
    status:'active',tier:'starter',is_demo:true,preferred_language:'en'}},[201]);
  created.agents.push(id);a.agentId=id;
+ checkpoint();
  const row=await expectHttp('/rest/v1/agents?select=id,is_demo,status&id=eq.'+id,{admin:true});
  assert.equal(row.length,1);assert.equal(row[0].is_demo,true);
  return a;
@@ -82,6 +94,7 @@ try{
  assert.match(ownerCode,/^[a-f0-9]{64}$/);
  const pending=await expectHttp('/rest/v1/owner_auth_invites?select=id&user_id=eq.'+o.userId,{admin:true});
  created.owner_auth_invites.push(...pending.map(x=>x.id));
+ checkpoint();
  const ownerFirst=await http('/functions/v1/owner-auth',{method:'POST',data:{action:'invite_session',code:ownerCode}});
  assert.equal(ownerFirst.status,200,'Owner first invite redemption failed');
  assert.ok(ownerFirst.data?.access_token,'Owner first invite lacked token');
@@ -149,14 +162,15 @@ try{
   prefer:'return=representation',data:{agent_id:b.agentId,source:'referral',
    customer_label:marker+'-fixture',status:'new'}},[201]);
  created.leads.push(lead[0].id);
+ checkpoint();
 
  const sampleQuote=await expectHttp('/rest/v1/quote_requests?select=id',{admin:true,method:'POST',
   prefer:'return=representation',data:{agent_id:b.agentId,lead_id:lead[0].id,customer_budget:150,
   design_commitment:'adapted',status:'awaiting_reference'}},[201]);
- assert.equal(sampleQuote.length,1);created.quote_requests.push(sampleQuote[0].id);
+ assert.equal(sampleQuote.length,1);created.quote_requests.push(sampleQuote[0].id);checkpoint();
  const chat=await expectHttp('/rest/v1/ai_chat_messages?select=id',{admin:true,method:'POST',
   prefer:'return=representation',data:{agent_id:b.agentId,role:'user',content:marker}},[201]);
- assert.equal(chat.length,1);created.ai_chat_messages.push(chat[0].id);
+ assert.equal(chat.length,1);created.ai_chat_messages.push(chat[0].id);checkpoint();
  tests.push(test('Agent cannot fetch another Agent quote request',async()=>{
   const x=await http('/functions/v1/quote-intake',{method:'POST',token:a.token,
    data:{action:'status',request_id:sampleQuote[0].id}});
@@ -238,6 +252,7 @@ finally{
    try{const r=await http('/rest/v1/'+table+'?id=eq.'+id,{admin:true,method:'DELETE'});
     if(r.status!==204)throw Error('HTTP '+r.status);
     deleted[key].push(id);
+    checkpoint();
    }catch(e){errors.push('CLEANUP_FAILURE '+table+' '+id+' '+e.message);}
   }
  }
@@ -251,6 +266,7 @@ finally{
      for(const u of users){
        if(intendedEmails.has(String(u.email||'').toLowerCase())&&!created.auth_users.includes(u.id)){
          created.auth_users.push(u.id);
+         checkpoint();
        }
      }
      if(users.length<1000)break;
@@ -261,6 +277,7 @@ finally{
    const r=await http('/auth/v1/admin/users/'+userId,{admin:true,method:'DELETE'});
    if(![200,204].includes(r.status))throw Error('HTTP '+r.status);
    deleted.auth_users.push(userId);
+   checkpoint();
   }catch(e){errors.push('CLEANUP_FAILURE auth user '+userId+' '+e.message);}
  }
  for(const [table,key] of [['leads','leads'],['agent_auth_invites','agent_auth_invites'],['agents','agents']]){
@@ -275,8 +292,7 @@ finally{
  }catch(e){errors.push('VERIFY_AUTH_CLEANUP '+e.message);}
  const report={run:marker,tests:results,created,deleted,errors,cleanup_complete:
   errors.every(e=>!e.startsWith('CLEANUP_')&&!e.startsWith('RESIDUAL_')&&!e.startsWith('VERIFY_'))};
- const dir='qa-results';fs.mkdirSync(dir,{recursive:true});
- fs.writeFileSync(path.join(dir,'fixture-manifest.json'),JSON.stringify(report,null,2)+'\n');
+ fs.writeFileSync(manifestPath,JSON.stringify({...report,intendedEmails:[...intendedEmails]},null,2)+'\n');
  console.log('QA_FIXTURE_SUMMARY '+JSON.stringify({created:Object.fromEntries(Object.entries(created).map(([k,v])=>[k,v.length])),
   deleted:Object.fromEntries(Object.entries(deleted).map(([k,v])=>[k,v.length])),passed:results.filter(x=>x.status==='PASS').length,
   failed:results.filter(x=>x.status==='FAIL').length,cleanup_complete:report.cleanup_complete}));
