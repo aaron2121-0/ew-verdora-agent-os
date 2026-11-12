@@ -1,32 +1,59 @@
-# P0 QA regression — scope and safety
+# QA P0 — Regression gate and isolated production demo fixtures
 
-Status: P0 only. No deployment or DB writes are part of this branch.
+## Scope and check
 
-## Required check
-GitHub Actions job name: `qa-regression`. The repository owner must make this exact check required in branch protection/ruleset. This workflow never pushes to main.
+- Exactly one required GitHub Actions job: `qa-regression`.
+- Trigger: `pull_request` to main or `push` to main, plus manual dispatch.
+- QA credentials are read only by the integration step for main pushes and same-repository PRs. Fork PRs receive no credentials; `pull_request_target` is forbidden.
+- No App, Edge Function, migration, Railway or Supabase configuration changes are in scope. No deployment or merging performed by QA.
 
-## Fixture requirements
-GitHub Secrets (never in files or logs):
-- `QA_AGENT_A_TOKEN`, `QA_AGENT_B_TOKEN`: dedicated, current, distinct **is_demo=true** agents
-- `QA_OWNER_TOKEN`: isolated owner test account only
-- `QA_NO_ROLE_TOKEN`: identity with no application role
-- `QA_AGENT_A_ID`, `QA_AGENT_B_ID`: their Agent UUIDs
+## GitHub repository Secrets (values never printed)
 
-GitHub Variable `QA_DEMO_FIXTURES_VERIFIED=true` only after a human checks the identities against the database. Tokens must not be real Agent, Owner, customer or order credentials. A missing fixture fails closed, not reported as green.
+- `SUPABASE_URL`: assigned Supabase project origin.
+- `SUPABASE_PUBLISHABLE_KEY`: public/publishable key used alongside test-user JWTs.
+- `SUPABASE_QA_SECRET_KEY`: dedicated revocable backend QA key, *not* the general production secret. Treat this as a service-role-level key and rotate it if exposed.
 
-The authenticated P0 suite intentionally performs **read-only** actions. It does not redeem invites, start formal exams, create leads, request quotes, spend AI quota, or change settings in production. Invitations, duplicate submissions, timeout, sales-lock variants, refunds and action-side effects require an isolated test backend or approved dedicated test data with documented cleanup; **not yet exercised** by this P0 iteration. Never report them passed based solely on source assertions.
+The QA integration script fails closed if any secret is missing.
 
-## Required future fixture runner
-Before enabling mutating tests, implement a fixture allocator with run-scoped `is_demo=true` identities, recorded created IDs, a cleanup step running even after errors, a verification query checking zero residual test rows, and a cleanup manifest in the CI artifact. HTTP calls across Edge Functions cannot be rolled back by one SQL transaction. Refuse unsafe runs when cleanup cannot be proven.
+## Disposable identity lifecycle
 
-## Feature contracts
-- AI partner: platform_post, weekly_plan, profile_setup, lost_review (activate once source branch merges)
-- Quote vision: Gemini unavailable/invalid response must fall back to manual review
-- Owner v2: needs_info and rejected (activate when merged)
-- Public quote/tracking: 404 invalid token, expired links and no internal fields (activate when endpoints exist)
+`scripts/qa/run-isolated-integration.mjs` creates unique `@example.com` identities per CI run:
+- `qa-agent-a`, `qa-agent-b`, `qa-no-role`, `qa-owner`, each suffixed with a random run identifier.
+- Auth sessions obtained via `agent-auth` one-use invites; no actual email is sent.
+- Two Agent rows inserted atomically with `is_demo=true`; the tests do not reassign or modify any existing Agent.
+- QA Owner role assigned to the disposable owner identity via the existing restricted `assign_owner_internal` service-role RPC. Owner invitation generated and redeemed once; replay must fail.
+- The code never logs access tokens, invitation codes, publishable keys, QA secret keys, or email addresses.
+- For five forbidden selling statuses, only the freshly created Agent A row is updated; its `active` state is restored in `finally` before deletion.
+- A disposable lead is created under Agent B to test Agent A data isolation. Other business tables are only queried.
+- Child Agent rows and Auth identities are deleted using exact IDs, with post-cleanup verification. Auth deletion cascades test-only dependent records.
+- Each run publishes `qa-results/fixture-manifest.json` listing all created/deleted test IDs, results, any cleanup errors, and an explicit cleanup completeness flag.
+- Never delete records by prefix, status, or date; exact IDs only. If cleanup fails the CI result is red and manual investigation is required.
 
-## Current known scanner blocker
-`apps/owner-mobile/index.ts` contains an `innerHTML` write near line 34. The requested strict scanner reports it. Do **not** weaken the scanner to conceal this result; assign to Owner UI engineer to replace with safe DOM node assembly.
+**Caution:** Cancellation or runner crash can interrupt in-process `finally`. Concurrency cancellation is disabled for this workflow, but ungraceful infrastructure failures remain possible. The manifest can be used for investigation; do not assume an absent manifest means cleanup succeeded.
 
-## Design-approved security exceptions
-The three public RLS tables `agent_ai_profile`, `ai_chat_messages`, `ai_feedback_events` intentionally have no client policies. `private.is_owner()` execute for authenticated is approved provided its body remains identity-scoped. `pg_net` in public is risk-accepted; leaked-password protection is not applicable to passwordless login. These are P1/P2 audit specifications only, not changes in P0.
+## Known temporary Owner HTML exception
+
+Exactly two locations in `apps/owner-mobile/index.ts` are temporarily allowed:
+- Line 33: exceptions HTML markup with dynamic values passed through `escapeHtml()`.
+- Line 34: quotation queue markup using local `esc=escapeHtml`.
+
+This is a strict, line-anchored exemption for **Owner Phase A only**. Moving or changing those lines without preserving the escaping is a failing check. At **Owner Phase B**, both occurrences must be removed; pass `QA_OWNER_PHASE_B_COMPLETE=true` or include the explicit completion marker in the Owner implementation to expire the allowlist. Every new `innerHTML` / `outerHTML` / `insertAdjacentHTML` / `document.write` occurrence remains blocking. Temporary exception is **not** a general XSS exemption.
+
+## Test contract and limits
+
+- Reuse the existing core and Phase 0–3 source tests without modifying their files.
+- Public read-only smoke tests cover Agent, Owner and unauthenticated Edge endpoint behavior.
+- Isolated authenticated tests cover disposable Agent and Owner invites and replay, Agent/non-role access to Owner actions, direct RLS reads, own dashboard/training, status lock 403s, and daily MCQ duplicate/timeouts.
+- Additional AI actions `platform_post`, `weekly_plan`, `profile_setup`, `lost_review` activate after their implementation merges.
+- Owner `needs_info` and `rejected` activate on owner-v2 merge.
+- Future public quote/tracking contracts activate when endpoint source is added.
+- Gemini vision `manual_fallback` is currently checked at the source-contract level. Reproducing a provider outage against production is not attempted or faked.
+
+## Approved security exceptions
+
+- Policy-free RLS: `agent_ai_profile`, `ai_chat_messages`, `ai_feedback_events`.
+- `private.is_owner()` may be callable by authenticated only so long as it checks `auth.uid()` and stays unchanged.
+- `pg_net` public: accepted, no migration.
+- Leaked Password Protection: not applicable to passwordless sign-in.
+
+These are future security-audit policy exceptions, not P0 database configuration changes.
