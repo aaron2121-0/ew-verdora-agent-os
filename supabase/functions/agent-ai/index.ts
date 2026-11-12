@@ -337,28 +337,12 @@ Deno.serve(async req=>{
     const {error:saveError}=await admin.from("roleplay_sessions").insert({
       agent_id:agent.id,scenario_code:String(body.scenario_code||"DAILY").slice(0,60),
       language:lang,score:scored.score,
-      requirement_discovery:scored.requirement_discovery,
-      customer_handling:scored.customer_handling,
-      closing_ability:scored.closing_ability,
-      pricing_discipline:scored.pricing_discipline,
+      requirement_discovery:scored.requirement_discovery,customer_handling:scored.customer_handling,
+      closing_ability:scored.closing_ability,pricing_discipline:scored.pricing_discipline,
       policy_compliance:scored.policy_compliance,
       result:"practice",feedback:scored
     });
-    if(saveError){
-      // Existing DB deployments may constrain result to pass/fail; preserve the
-      // practice record without ever invoking the training-result RPC.
-      if(saveError.code==="23514"){
-        const legacy=await admin.from("roleplay_sessions").insert({
-          agent_id:agent.id,scenario_code:String(body.scenario_code||"DAILY").slice(0,60),
-          language:lang,score:scored.score,
-          requirement_discovery:scored.requirement_discovery,customer_handling:scored.customer_handling,
-          closing_ability:scored.closing_ability,pricing_discipline:scored.pricing_discipline,
-          policy_compliance:scored.policy_compliance,
-          result:scored.score>=80&&!risk?"pass":"fail",feedback:{...scored,practice_only:true}
-        });
-        if(legacy.error){console.error("ROLEPLAY_SAVE",legacy.error.code||"");return reply({error:"practice_save_failed"},500);}
-      }else{console.error("ROLEPLAY_SAVE",saveError.code||"");return reply({error:"practice_save_failed"},500);}
-    }
+    if(saveError){console.error("ROLEPLAY_SAVE",saveError.code||"");return reply({error:"practice_save_failed"},500);}
     return reply({ok:true,provider:valid?"gemini":"fallback",practice_only:true,
       score:scored,feedback:scored.feedback,model_answer:scored.model_answer});
   }
