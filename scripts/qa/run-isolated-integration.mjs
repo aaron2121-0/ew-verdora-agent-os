@@ -15,7 +15,7 @@ const runId=randomBytes(5).toString('hex');
 const marker='QA-P0-'+runTag+'-'+runId;
 const created={auth_users:[],agents:[],agent_auth_invites:[],owner_auth_invites:[],leads:[],lead_events:[]};
 const deleted={auth_users:[],agents:[],agent_auth_invites:[],leads:[],lead_events:[]};
-const results=[];const errors=[];
+const results=[];const errors=[];const intendedEmails=new Set();
 const timeout=15000;
 function headers(admin=false,token=''){
  return {apikey:admin?secret:pub,...(token&&!admin?{authorization:'Bearer '+token}:{}),'content-type':'application/json'};
@@ -41,6 +41,7 @@ function test(name,fn){return async()=>{
 const tests=[];
 async function makeIdentity(label){
  const email='qa-'+label+'-'+runId+'@example.com';
+ intendedEmails.add(email);
  const code=randomBytes(32).toString('hex');
  const hash=sha(code);
  const invite=await expectHttp('/rest/v1/agent_auth_invites?select=id',{admin:true,method:'POST',
@@ -191,6 +192,21 @@ finally{
    }catch(e){errors.push('CLEANUP_FAILURE '+table+' '+id+' '+e.message);}
   }
  }
+ // Recover the exact run-owned identity if an Edge Function created it but
+ // its response failed before QA could capture user_id.
+ try{
+   for(let page=1;page<=10;page++){
+     const listing=await http('/auth/v1/admin/users?page='+page+'&per_page=1000',{admin:true});
+     if(listing.status!==200)throw Error('admin user enumeration HTTP '+listing.status);
+     const users=listing.data?.users||[];
+     for(const u of users){
+       if(intendedEmails.has(String(u.email||'').toLowerCase())&&!created.auth_users.includes(u.id)){
+         created.auth_users.push(u.id);
+       }
+     }
+     if(users.length<1000)break;
+   }
+ }catch(e){errors.push('VERIFY_AUTH_ENUMERATION '+String(e.message).slice(0,150));}
  for(const userId of [...created.auth_users].reverse()){
   try{
    const r=await http('/auth/v1/admin/users/'+userId,{admin:true,method:'DELETE'});
