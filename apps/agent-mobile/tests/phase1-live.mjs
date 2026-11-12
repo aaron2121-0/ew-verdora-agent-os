@@ -161,6 +161,10 @@ async function testDraftRestore(browser){
   await page.getByRole("button",{name:"Next",exact:true}).click();
   await page.locator('input[type="file"]').setInputFiles({name:"draft.webp",mimeType:"image/webp",buffer:Buffer.from("draft")});
   await page.waitForTimeout(120);
+  await context.setOffline(true);
+  const offlineDraft=await page.evaluate(()=>JSON.parse(localStorage.getItem("ew_phase1_order_draft_v1")||"{}"));
+  if(offlineDraft.customerName!=="Draft Customer"||offlineDraft.step!==2)throw new Error("draft missing while offline");
+  await context.setOffline(false);
   await page.reload({waitUntil:"networkidle"});
   await page.locator("#app").waitFor({state:"visible"});
   await page.locator('[data-tab="order"]').click();
