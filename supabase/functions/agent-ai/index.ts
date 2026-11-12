@@ -519,7 +519,8 @@ Deno.serve(async req=>{
   if(action==="platform_post"){
     const platform=String(body.platform||"").toLowerCase();
     const kitCode=String(body.kit_code||"").toUpperCase().replace(/[^A-Z0-9_-]/g,"").slice(0,60);
-    const rawAngle=String(body.angle||"").trim().slice(0,120);\n    const angle=(containsMarketingPolicyViolation(rawAngle)||containsSensitiveOutput(rawAngle))?"":rawAngle;
+    const rawAngle=String(body.angle||"").trim().slice(0,120);
+    const angle=(containsMarketingPolicyViolation(rawAngle)||containsSensitiveOutput(rawAngle))?"":rawAngle;
     if(!PLATFORM_POSTS.has(platform)) return reply({error:"invalid_platform"},400);
     if(!kitCode) return reply({error:"kit_code_required"},400);
 
