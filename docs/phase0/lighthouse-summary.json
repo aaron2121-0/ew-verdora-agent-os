@@ -2,8 +2,8 @@
   "performance": 100,
   "accessibility": 95,
   "bestPractices": 96,
-  "cls": 0.008794236111111112,
-  "firstContentfulPaintMs": 788.4585,
-  "largestContentfulPaintMs": 950.4585,
+  "cls": 0,
+  "firstContentfulPaintMs": 917.682,
+  "largestContentfulPaintMs": 1043.258,
   "totalBlockingTimeMs": 0
 }

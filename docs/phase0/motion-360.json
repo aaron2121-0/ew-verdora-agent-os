@@ -1,7 +1,7 @@
 {
   "viewport": 360,
   "frames": 34,
-  "p95FrameMs": 16.799999999999727,
+  "p95FrameMs": 16.700000000000728,
   "maxFrameMs": 16.800000000000182,
   "thresholdMs": 34
 }
