@@ -119,6 +119,7 @@ if(u.pathname==="/api/review-manifest")return json({
     "Claude handoff: owner-session raw database errors sanitized",
     "Agent session dashboard quote-request runtime bug fixed in v11",
     "Owner/Agent auth bridge implemented without paid services",
+    "One-time Agent Access Link auth",
     "Legacy Owner bootstrap endpoint retired"
   ],
   live:{
@@ -165,7 +166,9 @@ if(u.pathname==="/api/review-manifest")return json({
     agentRegistrationDashboardE2E:"PASS",
     ownerPrelogin100:"PASS",
     authBridgeLive100:"PASS",
+    agentInviteAuthE2E:"PASS",
     agentRedirectStrategy:"Magic Link returns to allowed Owner Mobile domain; authenticated non-Owner sessions are client-routed to Agent Mobile through URL fragment and immediately restored/cleared",
+    emailDeliveryFallback:"Supabase email 429 over_email_send_rate_limit confirmed; Owner-issued one-time Agent Access Links provide zero-email fallback",
     legacyBootstrap:"RETIRED",
     ownerSessionVersion:8,
     agentSessionVersion:11
