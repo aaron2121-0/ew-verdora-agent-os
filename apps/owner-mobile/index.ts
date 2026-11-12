@@ -18,6 +18,9 @@ let sb,session=null;
 const $=x=>document.getElementById(x);
 const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 const safeImageUrl=v=>{try{const u=new URL(String(v||""));return u.protocol==="https:"&&u.hostname.endsWith(".supabase.co")?u.href:""}catch{return""}};
+const KUCHING_TZ="Asia/Kuching";
+const kuchingDate=value=>{const parts=new Intl.DateTimeFormat("en-GB",{timeZone:KUCHING_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(value instanceof Date?value:new Date(value));const get=t=>parts.find(p=>p.type===t)?.value||"";return `${get("year")}-${get("month")}-${get("day")}`};
+const kuchingDateTime=value=>new Intl.DateTimeFormat("en-GB",{timeZone:KUCHING_TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value))+" MYT";
 const friendlyError=code=>{
   const c=String(code||"").toLowerCase();
   if(c.includes("owner_required")||c.includes("forbidden"))return "Owner access required. / 需要 Owner 权限。";
@@ -43,13 +46,13 @@ document.querySelectorAll(".q-review").forEach(b=>b.onclick=async()=>{let id=b.d
     return;
   }
   show("login");
-  $("msg").textContent=m;
+  $("msg").textContent=friendlyError(m);
 }}
 let loginPending=false;
 $("loginBtn").onclick=async()=>{
   if(loginPending)return;
   const email=$("email").value.trim();
-  if(!email){$("msg").textContent="Enter your owner email.";return}
+  if(!email){$("msg").textContent="Please enter your Owner email. / 请输入 Owner Email。";return}
   loginPending=true;
   const btn=$("loginBtn");
   btn.disabled=true;
@@ -67,7 +70,7 @@ $("loginBtn").onclick=async()=>{
     $("msg").textContent="Sign-in link sent. Check your email.";
     btn.textContent="Link sent";
   }catch(e){
-    $("msg").textContent=e?.message||"Unable to send sign-in link.";
+    $("msg").textContent=friendlyError(e?.message);
     btn.disabled=false;
     btn.textContent="Send sign-in link";
     loginPending=false;
@@ -79,16 +82,16 @@ $("inviteBtn").onclick=async()=>{
   const email=$("inviteEmail").value.trim();
   $("inviteOut").textContent="";
   $("copyInvite").classList.add("hidden");
-  if(!email){$("inviteOut").textContent="Enter the agent email.";return}
+  if(!email){$("inviteOut").textContent="Please enter the Agent email. / 请输入 Agent Email。";return}
   try{
     $("inviteBtn").disabled=true;
     $("inviteBtn").textContent="Creating...";
     const j=await call({action:"create_agent_invite",email});
     latestInvite=j.invite_url||"";
-    $("inviteOut").textContent="Ready · valid until "+new Date(j.expires_at).toLocaleString();
+    $("inviteOut").textContent="Ready · valid until "+kuchingDateTime(j.expires_at)+" / 已建立 · 有效至古晋时间 "+kuchingDateTime(j.expires_at);
     if(latestInvite)$("copyInvite").classList.remove("hidden");
   }catch(e){
-    $("inviteOut").textContent=e.message||"Unable to create link.";
+    $("inviteOut").textContent=friendlyError(e?.message);
   }finally{
     $("inviteBtn").disabled=false;
     $("inviteBtn").textContent="Create one-time Agent link";
@@ -108,10 +111,10 @@ $("recoveryBtn").onclick=async()=>{
     $("recoveryBtn").textContent="Creating...";
     const j=await call({action:"create_owner_recovery_link"});
     latestRecovery=j.recovery_url||"";
-    $("recoveryOut").textContent="Ready · valid until "+new Date(j.expires_at).toLocaleString()+". Save this link securely.";
+    $("recoveryOut").textContent="Ready · valid until "+kuchingDateTime(j.expires_at)+". Save this link securely. / 已建立 · 有效至古晋时间 "+kuchingDateTime(j.expires_at)+"，请安全保存。";
     if(latestRecovery)$("copyRecovery").classList.remove("hidden");
   }catch(e){
-    $("recoveryOut").textContent=e.message||"Unable to create recovery link.";
+    $("recoveryOut").textContent=friendlyError(e?.message);
   }finally{
     $("recoveryBtn").disabled=false;
     $("recoveryBtn").textContent="Create Owner recovery link";
@@ -122,7 +125,7 @@ $("copyRecovery").onclick=async()=>{
   try{await navigator.clipboard.writeText(latestRecovery);$("recoveryOut").textContent="Copied ✓ · keep this recovery link private."}
   catch{$("recoveryOut").textContent=latestRecovery}
 };
-$("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||new Date().toISOString().slice(0,10),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=friendlyError(e?.message)}};
+$("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||kuchingDate(),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=friendlyError(e?.message)}};
 (async()=>{
 CFG=await fetch("/config").then(r=>r.json());
 sb=window.supabase.createClient(CFG.url,CFG.key);
@@ -165,7 +168,7 @@ let g=await sb.auth.getSession();
 session=g.data.session;
 if(session)await refresh();else show("login");
 sb.auth.onAuthStateChange(async(_e,s)=>{session=s;if(s)await refresh();else show("login")});
-$("date").value=new Date().toISOString().slice(0,10)
+$("date").value=kuchingDate()
 })();
 `;
 const CSP=[
