@@ -2,12 +2,6 @@ name: Phase 0 Live QA
 # Phase 0 acceptance rerun marker
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/agent-mobile/**"
-      - "apps/owner-mobile/**"
-      - ".github/workflows/phase0-live-qa.yml"
   workflow_dispatch:
 
 permissions:
