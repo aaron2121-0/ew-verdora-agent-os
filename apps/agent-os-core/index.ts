@@ -289,13 +289,14 @@ if(u.pathname==="/api/review-manifest")return json({
     "Owner/Agent one-time auth bridges completed and replay-protected",
     "CRITICAL owner NULL-role SECURITY DEFINER bypass fixed across all owner functions",
     "Railway /api/health now gates deployment on live auth boundaries and one-time E2E when test inputs are present",
-    "Email magic-link UI disabled; secure one-time links are canonical login path"
+    "Email magic-link UI disabled; secure one-time links are canonical login path",
+    "5-minute auth-health heartbeat scheduled with existing Supabase pg_cron + pg_net against Railway core"
   ],
   live:{
     supabaseProject:"EW VERDORA Agent OS",
     edgeFunctions:["agent-session","agent-ai","quote-intake","owner-session"],
     railwayServices:["agent-os-core","agent-mobile","owner-mobile"],
-    cron:["ew_agent_daily_manager daily","ew_release_commissions every 15 min"]
+    cron:["ew_agent_daily_manager daily","ew_release_commissions every 15 min","ew_railway_auth_health every 5 min"]
   },
   tests:{
     dbRegressionRuns:100,
@@ -352,8 +353,8 @@ if(u.pathname==="/api/review-manifest")return json({
   canonicalLocalHead:"818efa43c69638cfad398d9abcc70f308ce2baf6",
   githubRepository:"aaron2121-0/ew-verdora-agent-os",
   githubBranch:"main",
-  githubOwnerSessionSyncCommit:"pending-current-live-sync",
-  githubStatus:"Canonical source is in GitHub aaron2121-0/ew-verdora-agent-os (main). Current auth bridge/security live sync is being committed from verified Supabase/Railway source.",
+  githubLiveSync:"main",
+  githubStatus:"Canonical source and current verified Supabase/Railway auth-security implementation are synced to GitHub main.",
   claudeInstructions:[
     "Do not rebuild frozen modules.",
     "Review current Supabase migrations/functions and Railway live services.",
