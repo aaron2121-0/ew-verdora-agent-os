@@ -60,7 +60,7 @@ test("Agent JS payload stays below 150KB gzip",()=>{
 });
 
 test("Owner source has CSP and escapes DB text before innerHTML",()=>{
-  const owner=read(path.join(repoRoot,"owner-mobile/index.ts"));
+  const owner=read(path.join(repoRoot,"apps/owner-mobile/index.ts"));
   assert.match(owner,/Content-Security-Policy/);
   assert.match(owner,/const esc=/);
   assert.match(owner,/safeImageUrl/);
