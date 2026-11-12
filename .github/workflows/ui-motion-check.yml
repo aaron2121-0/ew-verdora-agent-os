@@ -10,7 +10,7 @@ permissions:
 jobs:
   agent-ui-motion:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +22,19 @@ jobs:
         run: npm run check --workspace @ew-verdora/agent-mobile
       - name: Repository TypeScript checks and unit tests
         run: npm run check
+      - name: Install headless browser test runner
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run mocked browser E2E and capture responsive screenshots
+        run: node apps/agent-mobile/tests/e2e-motion.mjs
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-motion-responsive
+          path: apps/agent-mobile/artifacts/ui-motion/
+          if-no-files-found: ignore
       - name: Validate no prohibited dynamic HTML sinks in AI modules
         run: |
           if grep -En 'innerHTML|insertAdjacentHTML|outerHTML|document.write' apps/agent-mobile/public/{motion,ai-ui,ai-chat}.js; then
