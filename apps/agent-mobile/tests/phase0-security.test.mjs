@@ -72,6 +72,7 @@ test("Owner source has CSP and escapes DB text before innerHTML",()=>{
   assert.match(owner,/Asia\/Kuching/);
   assert.match(owner,/kuchingDate\(\)/);
   assert.match(owner,/kuchingDateTime\(j\.expires_at\)/);
+  assert.match(owner,/return get\("year"\)\+"-"\+get\("month"\)\+"-"\+get\("day"\)/);
   assert.equal(/textContent=e\?\.message/.test(owner),false);
   assert.equal(/textContent=e\.message/.test(owner),false);
   assert.match(owner,/textContent=friendlyError\(m\)/);
