@@ -9,7 +9,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const publicDir=path.join(root,"public");
 const screenshots=path.join(root,"artifacts","ui-motion");
 await fs.mkdir(screenshots,{recursive:true});
-const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2e-token\",refresh_token:\"e2e-refresh\",user:{id:\"e2e-agent\"}};return {auth:{onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}}},async getSession(){return {data:{session}}},async setSession(value){session={...value,user:{id:\"e2e-agent\"}};return {error:null}},async signInWithOtp(){return {error:null}},async signOut(){session=null;return {error:null}}},storage:{from(){return {uploadToSignedUrl:async()=>({error:null})}}}}}};";
+const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2e-token\",refresh_token:\"e2e-refresh\",user:{id:\"e2e-agent\"}};return {auth:{onAuthStateChange(cb){window.__testAuthChange=cb;return {data:{subscription:{unsubscribe(){}}}}},async getSession(){return {data:{session}}},async setSession(value){session={...value,user:{id:\"e2e-agent\"}};return {error:null}},async signInWithOtp(){return {error:null}},async signOut(){session=null;return {error:null}}},storage:{from(){return {uploadToSignedUrl:async()=>({error:null})}}}}}};";
 const dashboard={agent:{id:"e2e-agent",display_name:"Test Agent",agent_code:"T001",status:"active",tier:"starter"},phase1:{can_sell:true,due_followups:[],recent_leads:[{id:"mock-lead",customer_label:"𠮷野 · 龘龖",status:"new",budget:200,source:"instagram",lead_score:78,lead_score_reason:{zh:"今天可以优先联系",en:"Prioritize today"},next_best_action:"follow_up",best_followup_time:"2026-11-13T02:00:00+08:00"}],tier_progress:{commission_rate:0.1},money:{today_earned:0,pending:0,month_earned:0},training_pending:false},selling_kits:[],campaigns:[],channel_playbooks:[],training:[]};
 const mime={".html":"text/html",".css":"text/css",".js":"text/javascript",".woff2":"font/woff2",".svg":"image/svg+xml"};
 const server=createServer(async(req,res)=>{
@@ -31,7 +31,7 @@ const server=createServer(async(req,res)=>{
   return json({ok:true,server_now:new Date().toISOString()});
  }
  let pathname=decodeURIComponent(u.pathname);if(pathname==="/")pathname="/index.html";
- if(pathname==="/vendor/supabase-2.119.0.js"){res.writeHead(200,{"content-type":"text/javascript"});res.end(sdkMock);return}
+ if(pathname==="/vendor/supabase-2.119.0.js"){res.writeHead(200,{"content-type":"text/javascript"});if(u.searchParams.get("real")==="1"){const sdkPath=path.join(root,"..","..","node_modules","@supabase","supabase-js","dist","umd","supabase.js");res.end(await fs.readFile(sdkPath))}else res.end(sdkMock);return}
  if(pathname.includes("..")){res.writeHead(404);res.end();return}
  try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\bgzip\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
  catch{res.writeHead(404);res.end("Not found")}
@@ -62,10 +62,18 @@ try{
    await page.locator("#aiProfileOpen").click();
    await page.locator(".ai-profile-sheet:not(.hidden)").waitFor({timeout:15000});
    await page.screenshot({path:path.join(screenshots,"ai-profile.png")});
+   await page.evaluate(()=>window.__testAuthChange?.("TOKEN_REFRESHED",{access_token:"renewed-token",refresh_token:"renewed-refresh",user:{id:"e2e-agent"}}));
+   await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
   }
   assert.deepEqual(errors,[],"page errors "+width+" "+lang+" "+theme);
   await ctx.close();
  }
+ const sdkContext=await browser.newContext();
+ const sdkPage=await sdkContext.newPage();
+ await sdkPage.goto(origin);
+ await sdkPage.addScriptTag({url:origin+"/vendor/supabase-2.119.0.js?real=1"});
+ assert.equal(await sdkPage.evaluate(()=>typeof window.supabase?.createClient),"function","self-hosted Supabase SDK loads in real Chromium");
+ await sdkContext.close();
  const ctx=await browser.newContext({viewport:{width:360,height:850}});
  const page=await ctx.newPage();
  await page.goto(origin+"/#invite=E2E&email=test%40example.com");
