@@ -115,6 +115,8 @@ async function openPractice(code){
   $("scenario").textContent=tr("loading");
   $("roleResult").classList.add("hidden");
   $("roleAnswer").value="";
+  $("scoreRole").classList.remove("hidden");
+  $("roleResult").classList.remove("roleplay-practice-result");
   try{
     const j=await fn("agent-ai",{action:"roleplay_generate",weakness:activeModule});
     scenario=j.scenario||"";
@@ -156,13 +158,31 @@ function setupHandlers(){
     setButtonLoading($("scoreRole"),true,tr("loading"));
     try{
       const j=await fn("agent-ai",{action:"roleplay_score",scenario,answer:$("roleAnswer").value,module_code:activeModule});
-      if(j.certification_pending_ai){
-        out.textContent=tr("practiceOnly")+"\n"+tr("scoreLine",{score:j.score.score})+"\n"+String(j.message||j.score.feedback||"");
-      }else{
-        const pass=(j.training&&typeof j.training.passed==="boolean")?j.training.passed:j.pass;
-        out.textContent=(pass?tr("pass"):tr("retrain"))+" · "+tr("scoreLine",{score:j.score.score})+"\n"+String(j.score.feedback||"");
-      }
-      vibrate(j.pass?12:[20,40,20]);
+      const score=j.score||{};
+      const fb=j.feedback||score.feedback||{};
+      const strengths=Array.isArray(fb.strengths)?fb.strengths:[];
+      const improvements=Array.isArray(fb.improvements)?fb.improvements:[];
+      const zh=lang==="zh";
+      const line=(s)=>{const p=document.createElement("p");p.textContent=s;out.append(p)};
+      const heading=(s)=>{const h=document.createElement("h3");h.textContent=s;out.append(h)};
+      const points=(items)=>{const ul=document.createElement("ul");items.forEach(s=>{const li=document.createElement("li");li.textContent=String(s);ul.append(li)});out.append(ul)};
+      out.replaceChildren();
+      out.classList.add("roleplay-practice-result");
+      heading((zh?"练习分数":"Practice score")+" · "+String(score.score??0)+"/100");
+      line((j.provider==="gemini"?"Gemini":"Rule-based")+" · "+(zh?"仅供练习，不影响训练通过或认证":"Practice only · does not affect module or certification status"));
+      const dims=[["requirement_discovery",zh?"需求了解":"Needs"],["customer_handling",zh?"客户沟通":"Customer handling"],["closing_ability",zh?"成交能力":"Closing"],["pricing_discipline",zh?"价格纪律":"Pricing"],["policy_compliance",zh?"规则遵守":"Policy"]];
+      const grid=document.createElement("div");grid.className="roleplay-dimensions";
+      dims.forEach(([key,label])=>{const r=document.createElement("div");r.textContent=label+" · "+String(score[key]??0)+"/20";grid.append(r)});
+      out.append(grid);
+      heading(zh?"做得好的":"What went well");points(strengths);
+      heading(zh?"需要改进的":"What to improve");points(improvements);
+      heading(zh?"示范回答":"Model answer");line(String(j.model_answer||score.model_answer||""));
+      const again=document.createElement("button");
+      again.type="button";again.className="btn btn-secondary btn-wide";again.textContent=zh?"再练一次":"Practice again";
+      again.addEventListener("click",()=>openPractice(activeModule));
+      out.append(again);
+      $("scoreRole").classList.add("hidden");
+      vibrate(12);
       await refresh();
     }catch(e){out.textContent=friendlyError(e.message)}
     finally{setButtonLoading($("scoreRole"),false,tr("submit"))}
