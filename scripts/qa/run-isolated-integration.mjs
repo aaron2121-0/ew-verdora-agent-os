@@ -13,7 +13,7 @@ assert.ok(!url.includes('localhost'));
 const runTag=(process.env.GITHUB_RUN_ID||Date.now().toString()).replace(/[^0-9]/g,'').slice(-12);
 const runId=randomBytes(5).toString('hex');
 const marker='QA-P0-'+runTag+'-'+runId;
-const created={auth_users:[],agents:[],agent_auth_invites:[],leads:[],lead_events:[]};
+const created={auth_users:[],agents:[],agent_auth_invites:[],owner_auth_invites:[],leads:[],lead_events:[]};
 const deleted={auth_users:[],agents:[],agent_auth_invites:[],leads:[],lead_events:[]};
 const results=[];const errors=[];
 const timeout=15000;
@@ -67,9 +67,26 @@ async function agent(name){
  assert.equal(row.length,1);assert.equal(row[0].is_demo,true);
  return a;
 }
-let a,b,n;
+let a,b,n,o;
 try{
  a=await agent('agent-a');b=await agent('agent-b');n=await makeIdentity('no-role');
+ o=await makeIdentity('owner');
+ await expectHttp('/rest/v1/rpc/assign_owner_internal',{admin:true,method:'POST',
+   data:{p_user_id:o.userId,p_role:'owner'}},[200,204]);
+ const ownerProbe=await http('/functions/v1/owner-session',{token:o.token,method:'POST',data:{action:'dashboard'}});
+ assert.equal(ownerProbe.status,200,'Dedicated QA Owner role setup failed');
+ const recovery=await expectHttp('/functions/v1/owner-session',{token:o.token,method:'POST',
+  data:{action:'create_owner_recovery_link'}},[200]);
+ const ownerCode=new URL(recovery.recovery_url).hash.split('owner_invite=')[1];
+ assert.match(ownerCode,/^[a-f0-9]{64}$/);
+ const pending=await expectHttp('/rest/v1/owner_auth_invites?select=id&user_id=eq.'+o.userId,{admin:true});
+ created.owner_auth_invites.push(...pending.map(x=>x.id));
+ const ownerFirst=await http('/functions/v1/owner-auth',{method:'POST',data:{action:'invite_session',code:ownerCode}});
+ assert.equal(ownerFirst.status,200,'Owner first invite redemption failed');
+ assert.ok(ownerFirst.data?.access_token,'Owner first invite lacked token');
+ const ownerReplay=await http('/functions/v1/owner-auth',{method:'POST',data:{action:'invite_session',code:ownerCode}});
+ assert.equal(ownerReplay.status,400,'Owner invite replay must fail');
+ tests.push(test('Owner invite first use succeeds and replay fails',()=>assert.ok(ownerFirst.data?.access_token)));
  tests.push(test('Agent invite first use succeeds and replay fails',()=>assert.ok(a.token&&b.token)));
  const actions=['dashboard','exceptions','decide_exception','add_opex','update_setting','refresh_profit','quote_queue','review_quote','set_reference_baseline','create_agent_invite','create_owner_recovery_link'];
  for(const who of [a,b,n])for(const action of actions)tests.push(test(who.label+' forbidden Owner '+action,async()=>{
@@ -125,7 +142,7 @@ finally{
   const r=await http('/rest/v1/agents?id=eq.'+a.agentId,{admin:true,method:'PATCH',data:{status:'active'}});
   if(r.status!==204)errors.push('RESTORE_STATE_FAILURE agent-a status '+r.status);
  }
- for(const [table,key] of [['leads','leads'],['agent_auth_invites','agent_auth_invites'],['agents','agents']]){
+ for(const [table,key] of [['leads','leads'],['agent_auth_invites','agent_auth_invites'],['owner_auth_invites','owner_auth_invites'],['agents','agents']]){
   for(const id of [...created[key]].reverse()){
    try{const r=await http('/rest/v1/'+table+'?id=eq.'+id,{admin:true,method:'DELETE'});
     if(r.status!==204)throw Error('HTTP '+r.status);
