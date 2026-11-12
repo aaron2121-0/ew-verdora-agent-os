@@ -211,3 +211,14 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 .ai-coach-panel textarea{width:100%}
 .ai-priority-list{display:grid;gap:12px}
 @media(max-width:380px){.top-actions{gap:3px}.top-actions .btn{padding-left:7px;padding-right:7px}.ai-profile-button,.ai-theme-button{padding:6px}.topbar{gap:5px}}
+
+@property --ai-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes ai-edge-shift{to{--ai-angle:360deg}}
+.ai-output-card.ai-live{
+ border:1px solid transparent;
+ background:linear-gradient(var(--surface),var(--surface)) padding-box,conic-gradient(from var(--ai-angle),#2E7D5B,#3FB6A8,#D4B47A,#2E7D5B) border-box;
+}
+.ai-output-card.ai-live:before{display:none}
+.ai-output-card.ai-live:first-of-type{animation:ai-edge-shift 10s linear infinite}
+:root[data-motion="limited"] .ai-output-card.ai-live{animation:none}
+@media(prefers-reduced-motion:reduce){.ai-output-card.ai-live{animation:none!important}}
