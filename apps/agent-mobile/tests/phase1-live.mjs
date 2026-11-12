@@ -146,8 +146,8 @@ async function testOrder(browser){
   await page.waitForTimeout(220);
   const wa=await page.evaluate(()=>window.__wa);
   if(!wa.length||!wa[0].startsWith("https://wa.me/?text="))throw new Error("WhatsApp send missing");
-  const draft=await page.evaluate(()=>localStorage.getItem("ew_phase1_order_draft_v1"));
-  if(draft!==null)throw new Error("draft was not cleared after send");
+  const draft=await page.evaluate(()=>({scoped:localStorage.getItem("ew_phase1_order_draft_v2:u-test"),legacy:localStorage.getItem("ew_phase1_order_draft_v2:u-test")}));
+  if(draft.scoped!==null||draft.legacy!==null)throw new Error("draft was not cleared after send");
   if(!bodies.some(x=>x.action==="accept_option"&&x.option==="recommended"))throw new Error("server quote option not accepted");
   await page.screenshot({path:path.join(out,"gif-04-after-send.png"),fullPage:false});
   await context.close();
@@ -162,14 +162,14 @@ async function testDraftRestore(browser){
   await page.locator('input[type="file"]').setInputFiles({name:"draft.webp",mimeType:"image/webp",buffer:Buffer.from("draft")});
   await page.waitForTimeout(120);
   await context.setOffline(true);
-  const offlineDraft=await page.evaluate(()=>JSON.parse(localStorage.getItem("ew_phase1_order_draft_v1")||"{}"));
+  const offlineDraft=await page.evaluate(()=>JSON.parse(localStorage.getItem("ew_phase1_order_draft_v2:u-test")||"{}"));
   if(offlineDraft.customerName!=="Draft Customer"||offlineDraft.step!==2)throw new Error("draft missing while offline");
   await context.setOffline(false);
   await page.reload({waitUntil:"networkidle"});
   await page.locator("#app").waitFor({state:"visible"});
   await page.locator('[data-tab="order"]').click();
   await page.locator(".reference-picker.has-file").waitFor({state:"visible"});
-  const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem("ew_phase1_order_draft_v1")||"{}"));
+  const restored=await page.evaluate(()=>JSON.parse(localStorage.getItem("ew_phase1_order_draft_v2:u-test")||"{}"));
   if(restored.customerName!=="Draft Customer"||restored.step!==2)throw new Error("text draft not restored");
   await context.close();
 }
