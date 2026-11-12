@@ -119,5 +119,6 @@ jobs:
           git add -f docs/phase3
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Phase 3 QA evidence"
+          git restore .
           git pull --rebase origin main
           git push
