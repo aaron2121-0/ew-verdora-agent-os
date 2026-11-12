@@ -6,7 +6,7 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","ai-ui.js","ai-chat.js"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","ai-ui.js","ai-chat.js","favicon.svg"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
@@ -56,7 +56,7 @@ const encoded={"/":gzip(files["index.html"]),"/index.html":gzip(files["index.htm
 const types={"/":"text/html; charset=utf-8","/index.html":"text/html; charset=utf-8"};
 for(const name of [...names.slice(1),"vendor/supabase-2.119.0.js"]){
   encoded["/"+name]=gzip(files[name]);
-  types["/"+name]=name.endsWith(".css")?"text/css; charset=utf-8":"text/javascript; charset=utf-8";
+  types["/"+name]=name.endsWith(".css")?"text/css; charset=utf-8":name.endsWith(".svg")?"image/svg+xml":"text/javascript; charset=utf-8";
 }
 
 encoded["/fonts/inter-latin.woff2"]=zlib.gzipSync(inter,{level:9}).toString("base64");
