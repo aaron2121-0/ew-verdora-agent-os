@@ -41,13 +41,32 @@ jobs:
       - name: Reuse Phase 0–3 source tests once
         run: node --test apps/agent-mobile/tests/phase0-security.test.mjs apps/agent-mobile/tests/phase1-security.test.mjs apps/agent-mobile/tests/phase2-security.test.mjs apps/agent-mobile/tests/phase3-security.test.mjs apps/agent-mobile/tests/phase3-seed-import.test.mjs
       - name: P0 security and contract tests
+        id: source
+        continue-on-error: true
         run: node --test tests/qa-p0-source.test.mjs tests/qa-p0-future.test.mjs
       - name: P0 public read-only smoke tests
+        id: public
+        if: always()
+        continue-on-error: true
         run: node --test tests/qa-p0-public.test.mjs
       - name: Require isolated demo credentials for production-data tests
+        id: fixtures
+        if: always()
+        continue-on-error: true
         run: node scripts/qa/verify-fixtures.mjs
       - name: P0 authenticated read-only isolation and permission tests
+        id: authenticated
+        if: always() && steps.fixtures.outcome == 'success'
+        continue-on-error: true
         run: node --test tests/qa-p0-authenticated.test.mjs
+      - name: Enforce all P0 checks
+        if: always()
+        run: |
+          echo "source=${{ steps.source.outcome }} public=${{ steps.public.outcome }} fixtures=${{ steps.fixtures.outcome }} authenticated=${{ steps.authenticated.outcome }}"
+          test "${{ steps.source.outcome }}" = "success"
+          test "${{ steps.public.outcome }}" = "success"
+          test "${{ steps.fixtures.outcome }}" = "success"
+          test "${{ steps.authenticated.outcome }}" = "success"
       - name: Publish P0 summary
         if: always()
         run: |
