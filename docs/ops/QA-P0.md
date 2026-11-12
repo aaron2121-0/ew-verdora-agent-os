@@ -4,7 +4,7 @@
 
 - Exactly one required GitHub Actions job: `qa-regression`.
 - Trigger: `pull_request` to main or `push` to main, plus manual dispatch.
-- QA credentials are read only by the integration step for main pushes and same-repository PRs. Fork PRs receive no credentials; `pull_request_target` is forbidden.
+- QA credentials are read only by the integration and cleanup steps for main pushes and same-repository PRs. Fork PRs and manual `workflow_dispatch` runs receive no credentials; `pull_request_target` is forbidden.
 - No App, Edge Function, migration, Railway or Supabase configuration changes are in scope. No deployment or merging performed by QA.
 
 ## GitHub repository Secrets (values never printed)
