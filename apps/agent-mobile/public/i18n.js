@@ -1,5 +1,6 @@
 export const I18N={
   en:{
+    aiChanceHigh:"High opportunity",aiChanceMedium:"Medium opportunity",aiChanceLow:"Lower opportunity",aiNextAction:"Suggested next step",aiBestFollowup:"Suggested follow-up time",
     aiProvider:"AI",
     aiTemplate:"Template",
     aiOpenChat:"Open AI companion",
@@ -439,6 +440,7 @@ export const I18N={
     commissionWaived:"Waived",
   },
   zh:{
+    aiChanceHigh:"高机会",aiChanceMedium:"中等机会",aiChanceLow:"较低机会",aiNextAction:"建议下一步",aiBestFollowup:"建议跟进时间",
     aiProvider:"AI",
     aiTemplate:"模板",
     aiOpenChat:"打开 AI 伙伴",
