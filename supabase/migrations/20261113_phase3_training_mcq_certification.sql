@@ -396,9 +396,13 @@ CREATE OR REPLACE FUNCTION private.training_skill_snapshot(p_agent_id uuid)
  STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
-with skills(skill) as (values('LEAD-FINDING'),('QUALIFY'),('REFERENCE'),('OBJECTION'),('CLOSING'),('PAYMENT')),
+with skills(skill) as (
+  values('LEAD-FINDING'),('QUALIFY'),('REFERENCE'),('OBJECTION'),('CLOSING'),('PAYMENT')
+),
 stats as (
-  select q.skill_code,count(a.id)::int answers,count(a.id) filter(where a.is_correct)::int correct
+  select q.skill_code,
+    count(a.id)::int answers,
+    count(a.id) filter(where a.is_correct)::int correct_count
   from private.training_questions q
   left join public.training_daily_items i on i.question_id=q.id and i.agent_id=p_agent_id
   left join public.training_daily_answers a on a.item_id=i.id
@@ -406,11 +410,13 @@ stats as (
   group by q.skill_code
 )
 select coalesce(jsonb_agg(jsonb_build_object(
- 'skill',s.skill,'answers',coalesce(st.answers,0),'correct',coalesce(st.correct,0),
- 'accuracy',case when coalesce(st.answers,0)>0 then round(st.correct::numeric/st.answers,4) else null end
+  'skill',s.skill,
+  'answers',coalesce(st.answers,0),
+  'accuracy',case when coalesce(st.answers,0)>0 then round(st.correct_count::numeric/st.answers,4) else null end
 ) order by array_position(array['LEAD-FINDING','QUALIFY','REFERENCE','OBJECTION','CLOSING','PAYMENT'],s.skill)),'[]'::jsonb)
 from skills s left join stats st on st.skill_code=s.skill;
 $function$
+
 
 
 CREATE OR REPLACE FUNCTION public.agent_training_answer_internal(p_agent_id uuid, p_date date, p_position smallint, p_selected_index smallint)
