@@ -37,7 +37,8 @@ test("Agent app never writes untrusted data through innerHTML",()=>{
 test("Agent server ships restrictive CSP and no unsafe-inline scripts",()=>{
   const server=read(path.join(root,"server.ts"));
   assert.match(server,/Content-Security-Policy/);
-  assert.match(server,/script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
+  assert.match(server,/script-src 'self'/);
+  assert.equal(/script-src[^\n]*cdn\\.jsdelivr\\.net/.test(server),false);
   assert.equal(/script-src[^\n]*unsafe-inline/.test(server),false);
   assert.match(server,/object-src 'none'/);
   assert.match(server,/frame-ancestors 'none'/);
