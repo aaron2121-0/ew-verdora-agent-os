@@ -1,0 +1,28 @@
+name: Agent UI Motion Validation
+on:
+  push:
+    branches: [ui-motion]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  agent-ui-motion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install workspace dependencies
+        run: npm install --no-audit --no-fund
+      - name: Agent tests and bundled asset budgets
+        run: npm run check --workspace @ew-verdora/agent-mobile
+      - name: Repository TypeScript checks and unit tests
+        run: npm run check
+      - name: Validate no prohibited dynamic HTML sinks in AI modules
+        run: |
+          if grep -En 'innerHTML|insertAdjacentHTML|outerHTML|document.write' apps/agent-mobile/public/{motion,ai-ui,ai-chat}.js; then
+            echo "Prohibited dynamic HTML API detected"
+            exit 1
+          fi
