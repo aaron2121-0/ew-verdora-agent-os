@@ -11,7 +11,7 @@ const sdkCandidates=[path.join(root,"node_modules","@supabase","supabase-js","di
 const sdkPath=sdkCandidates.find(p=>fs.existsSync(p));
 if(!sdkPath)throw new Error("Pinned Supabase SDK 2.119.0 missing: run npm install before building");
 files["vendor/supabase-2.119.0.js"]=fs.readFileSync(sdkPath,"utf8");
-const sdkPkg=JSON.parse(fs.readFileSync(path.resolve(sdkPath,"../../../package.json"),"utf8"));
+const sdkPkg=JSON.parse(fs.readFileSync(path.resolve(path.dirname(sdkPath),"../../package.json"),"utf8"));
 if(sdkPkg.version!=="2.119.0")throw new Error("Supabase SDK version mismatch: "+sdkPkg.version);
 const gzip=text=>zlib.gzipSync(Buffer.from(text,"utf8"),{level:9}).toString("base64");
 
