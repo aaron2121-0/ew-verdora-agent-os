@@ -8,7 +8,7 @@ const quote=read('supabase/functions/quote-intake/index.ts');
 
 // Feature gates detect implementation in the HEAD under test. A branch merge
 // activates tests automatically; absent features never trigger live mutations.
-const has=(src,action)=>new RegExp('(?:action\\s*===?|action\\s*!==?)\\s*["\\\']'+action+'["\\\']').test(src);
+const has=(src,action)=>src.includes('action==="'+action+'"')||src.includes('action === "'+action+'"')||src.includes("action==='"+action+"'")||src.includes("action === '"+action+"'");
 for(const action of ['platform_post','weekly_plan','profile_setup','lost_review']){
   test('P0 AI partner contract: '+action+' (activates after merge)',{skip:!has(ai,action)},()=>{
     assert.match(ai,/agent_ai_profile/,'AI actions must read per-Agent profile');
