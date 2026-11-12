@@ -16,11 +16,20 @@ const HTML=[
 const JS=String.raw`
 let sb,session=null;
 const $=x=>document.getElementById(x);
+const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+const safeImageUrl=v=>{try{const u=new URL(String(v||""));return u.protocol==="https:"&&u.hostname.endsWith(".supabase.co")?u.href:""}catch{return""}};
+const friendlyError=code=>{
+  const c=String(code||"").toLowerCase();
+  if(c.includes("owner_required")||c.includes("forbidden"))return "Owner access required. / 需要 Owner 权限。";
+  if(c.includes("invalid")||c.includes("expired"))return "This secure link is invalid or expired. / 安全链接无效或已过期。";
+  if(c.includes("rate"))return "Service is temporarily busy. Please try again later. / 服务暂时繁忙，请稍后再试。";
+  return "Unable to complete this action. Please try again. / 暂时无法完成，请再试一次。";
+};
 async function call(body){let r=await fetch(CFG.url+"/functions/v1/owner-session",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":CFG.key},body:JSON.stringify(body||{})});let j=await r.json();if(!r.ok)throw Error(j.error||"Request failed");return j}
 function show(x){$("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
-async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboard"}),call({action:"quote_queue"})]),d=j.dashboard||{};show("app");$("mode").textContent=String(d.profit_mode||"normal").toUpperCase();$("margin").textContent=(Number(d.net_margin_30d||0)*100).toFixed(1)+"%";$("orders").textContent=d.orders_today||0;$("revenue").textContent="RM "+Number(d.revenue_today||0).toFixed(0);$("avg").textContent=Number(d.avg_orders_per_active_agent||0).toFixed(2);$("active").textContent=d.active_agents||0;$("dormant").textContent=d.dormant_agents||0;$("comm").textContent="RM "+Number(d.commission_liability||0).toFixed(0);$("bonus").textContent="RM "+Number(d.bonus_liability||0).toFixed(0);$("exCount").textContent=(d.serious_exceptions||0)+" open";let ex=j.exceptions||[];$("exceptions").innerHTML=ex.length?ex.map(e=>"<div class=item><div class=row style='justify-content:space-between'><div><b class=damage>"+e.severity.toUpperCase()+" · "+e.type+"</b><div class=muted>"+e.summary+"</div></div><div class=row><button class='btn ex' data-id='"+e.id+"' data-a='freeze'>Freeze</button><button class='btn ex' data-id='"+e.id+"' data-a='dismiss'>Dismiss</button></div></div></div>").join(""):"<div class='item muted'>No serious exceptions.</div>";document.querySelectorAll(".ex").forEach(b=>b.onclick=async()=>{await call({action:"decide_exception",exception_id:b.dataset.id,decision:b.dataset.a});await refresh()});
-let qq=qj.queue||[];$("quoteCount").textContent=qq.length+" pending";$("quoteQueue").innerHTML=qq.length?qq.map(q=>"<div class=item><div><b>RM "+Number(q.customer_budget||0).toFixed(0)+" · "+q.design_commitment+"</b><div class=muted>"+q.status+"</div></div>"+(q.image_url?"<img src='"+q.image_url+"' style='width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:8px;background:#f4f4f1'>":"")+"<div class=form style='margin-top:9px'><select class='q-size' data-id='"+q.id+"'><option value=small>Small</option><option value=medium selected>Medium</option><option value=large>Large</option><option value=xl>XL</option><option value=structure>Structure</option></select><select class='q-density' data-id='"+q.id+"'><option value=light>Light</option><option value=medium selected>Medium</option><option value=full>Full</option><option value=very_full>Very Full</option></select><select class='q-premium' data-id='"+q.id+"'><option value=low>Low premium</option><option value=medium selected>Medium premium</option><option value=high>High premium</option><option value=very_high>Very high premium</option></select><select class='q-complexity' data-id='"+q.id+"'><option value=low>Low complexity</option><option value=medium selected>Medium complexity</option><option value=high>High complexity</option><option value=special>Special</option></select><input class='q-cost' data-id='"+q.id+"' type=number step=0.01 placeholder='Safe production cost RM'><button class='btn primary q-review' data-id='"+q.id+"'>Approve Review</button><div class='muted q-msg' data-id='"+q.id+"'></div></div></div>").join(""):"<div class='item muted'>No manual quote reviews.</div>";
-document.querySelectorAll(".q-review").forEach(b=>b.onclick=async()=>{let id=b.dataset.id,find=c=>document.querySelector(c+"[data-id='"+id+"']"),msg=find(".q-msg");try{msg.textContent="...";let r=await call({action:"review_quote",request_id:id,size:find(".q-size").value,density:find(".q-density").value,premium:find(".q-premium").value,complexity:find(".q-complexity").value,flexibility:"moderate",safe_cost:Number(find(".q-cost").value)});msg.textContent=(r.quote_request.classification||"")+" · "+(r.quote_request.customer_note_en||"");await refresh()}catch(e){msg.textContent=e.message}});
+async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboard"}),call({action:"quote_queue"})]),d=j.dashboard||{};show("app");$("mode").textContent=String(d.profit_mode||"normal").toUpperCase();$("margin").textContent=(Number(d.net_margin_30d||0)*100).toFixed(1)+"%";$("orders").textContent=d.orders_today||0;$("revenue").textContent="RM "+Number(d.revenue_today||0).toFixed(0);$("avg").textContent=Number(d.avg_orders_per_active_agent||0).toFixed(2);$("active").textContent=d.active_agents||0;$("dormant").textContent=d.dormant_agents||0;$("comm").textContent="RM "+Number(d.commission_liability||0).toFixed(0);$("bonus").textContent="RM "+Number(d.bonus_liability||0).toFixed(0);$("exCount").textContent=(d.serious_exceptions||0)+" open";let ex=j.exceptions||[];$("exceptions").innerHTML=ex.length?ex.map(e=>"<div class=item><div class=row style='justify-content:space-between'><div><b class=damage>"+esc(String(e.severity||"").toUpperCase())+" · "+esc(e.type)+"</b><div class=muted>"+esc(e.summary)+"</div></div><div class=row><button class='btn ex' data-id='"+esc(e.id)+"' data-a='freeze'>Freeze</button><button class='btn ex' data-id='"+esc(e.id)+"' data-a='dismiss'>Dismiss</button></div></div></div>").join(""):"<div class='item muted'>No serious exceptions.</div>";document.querySelectorAll(".ex").forEach(b=>b.onclick=async()=>{await call({action:"decide_exception",exception_id:b.dataset.id,decision:b.dataset.a});await refresh()});
+let qq=qj.queue||[];$("quoteCount").textContent=qq.length+" pending";$("quoteQueue").innerHTML=qq.length?qq.map(q=>"<div class=item><div><b>RM "+Number(q.customer_budget||0).toFixed(0)+" · "+esc(q.design_commitment)+"</b><div class=muted>"+esc(q.status)+"</div></div>"+(safeImageUrl(q.image_url)?"<img src='"+esc(safeImageUrl(q.image_url))+"' alt='' style='width:100%;max-height:260px;object-fit:contain;border-radius:12px;margin-top:8px;background:#f4f4f1'>":"")+"<div class=form style='margin-top:9px'><select class='q-size' data-id='"+esc(q.id)+"'><option value=small>Small</option><option value=medium selected>Medium</option><option value=large>Large</option><option value=xl>XL</option><option value=structure>Structure</option></select><select class='q-density' data-id='"+esc(q.id)+"'><option value=light>Light</option><option value=medium selected>Medium</option><option value=full>Full</option><option value=very_full>Very Full</option></select><select class='q-premium' data-id='"+esc(q.id)+"'><option value=low>Low premium</option><option value=medium selected>Medium premium</option><option value=high>High premium</option><option value=very_high>Very high premium</option></select><select class='q-complexity' data-id='"+esc(q.id)+"'><option value=low>Low complexity</option><option value=medium selected>Medium complexity</option><option value=high>High complexity</option><option value=special>Special</option></select><input class='q-cost' data-id='"+esc(q.id)+"' type=number step=0.01 placeholder='Safe production cost RM'><button class='btn primary q-review' data-id='"+esc(q.id)+"'>Approve Review</button><div class='muted q-msg' data-id='"+esc(q.id)+"'></div></div></div>").join(""):"<div class='item muted'>No manual quote reviews.</div>";
+document.querySelectorAll(".q-review").forEach(b=>b.onclick=async()=>{let id=b.dataset.id,find=c=>document.querySelector(c+"[data-id='"+id+"']"),msg=find(".q-msg");try{msg.textContent="...";let r=await call({action:"review_quote",request_id:id,size:find(".q-size").value,density:find(".q-density").value,premium:find(".q-premium").value,complexity:find(".q-complexity").value,flexibility:"moderate",safe_cost:Number(find(".q-cost").value)});msg.textContent=(r.quote_request.classification||"")+" · "+(r.quote_request.customer_note_en||"");await refresh()}catch(e){msg.textContent=friendlyError(e?.message)}});
 }catch(e){
   const m=String(e?.message||e||"");
   if(session&&/owner_required|forbidden/i.test(m)){
@@ -113,7 +122,7 @@ $("copyRecovery").onclick=async()=>{
   try{await navigator.clipboard.writeText(latestRecovery);$("recoveryOut").textContent="Copied ✓ · keep this recovery link private."}
   catch{$("recoveryOut").textContent=latestRecovery}
 };
-$("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||new Date().toISOString().slice(0,10),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=e.message}};
+$("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||new Date().toISOString().slice(0,10),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=friendlyError(e?.message)}};
 (async()=>{
 CFG=await fetch("/config").then(r=>r.json());
 sb=window.supabase.createClient(CFG.url,CFG.key);
@@ -147,7 +156,7 @@ if(tokenHash){
   const {error}=await sb.auth.verifyOtp({token_hash:tokenHash,type:"email"});
   if(error){
     history.replaceState({},document.title,"/");
-    $("msg").textContent=error.message||"Owner sign-in link is invalid or expired.";
+    $("msg").textContent=friendlyError(error?.message||"invalid_or_expired");
   }else{
     history.replaceState({},document.title,"/");
   }
@@ -159,12 +168,31 @@ sb.auth.onAuthStateChange(async(_e,s)=>{session=s;if(s)await refresh();else show
 $("date").value=new Date().toISOString().slice(0,10)
 })();
 `;
+const CSP=[
+  "default-src 'self'",
+  "script-src 'self' https://cdn.jsdelivr.net",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.supabase.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "upgrade-insecure-requests"
+].join("; ");
+const securityHeaders=(extra={})=>({
+  "Content-Security-Policy":CSP,
+  "X-Content-Type-Options":"nosniff",
+  "Referrer-Policy":"strict-origin-when-cross-origin",
+  "Permissions-Policy":"camera=(), microphone=(), geolocation=()",
+  ...extra
+});
 export default {
   async fetch(req){
     const u=new URL(req.url);
-    if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:{"cache-control":"no-store"}});
-    if(u.pathname==="/owner.js")return new Response(JS,{headers:{"content-type":"application/javascript; charset=utf-8","cache-control":"no-store"}});
-    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Owner Mobile",version:"0.2.0"});
-    return new Response(HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
+    if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:securityHeaders({"cache-control":"no-store"})});
+    if(u.pathname==="/owner.js")return new Response(JS,{headers:securityHeaders({"content-type":"application/javascript; charset=utf-8","cache-control":"no-store"})});
+    if(u.pathname==="/health")return Response.json({ok:true,service:"EW VERDORA Owner Mobile",version:"0.2.1-phase0"},{headers:securityHeaders({"cache-control":"no-store"})});
+    return new Response(HTML,{headers:securityHeaders({"content-type":"text/html; charset=utf-8","cache-control":"no-store"})});
   }
 };
