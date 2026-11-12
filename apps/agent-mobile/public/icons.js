@@ -1,0 +1,40 @@
+const NS="http://www.w3.org/2000/svg";
+const PATHS={
+  house:["M3 11.5 12 4l9 7.5","M5 10v10h14V10","M9 20v-6h6v6"],
+  users:["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2","M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8","M22 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75"],
+  plus:["M12 5v14","M5 12h14"],
+  phoneCall:["M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.28-1.28a2 2 0 0 1 2.11-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.92Z","M14.5 2.5a5 5 0 0 1 7 7"],
+  clock:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20","M12 6v6l4 2"],
+  receipt:["M4 2v20l2-2 2 2 2-2 2 2 2-2 2 2 2-2 2 2V2l-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2Z","M16 8h-6","M16 12h-6","M13 16h-3"],
+  imagePlus:["M16 5h6","M19 2v6","M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7","m3 16 5-5 6 6","m14 15 1-1 6 6"],
+  graduationCap:["M22 10 12 5 2 10l10 5 10-5Z","M6 12v5c3 2 9 2 12 0v-5","M22 10v6"],
+  listChecks:["M3 5l1 1 2-2","M3 12l1 1 2-2","M3 19l1 1 2-2","M9 5h12","M9 12h12","M9 19h12"],
+  trendingUp:["m3 17 6-6 4 4 8-8","M14 7h7v7"],
+  trophy:["M8 21h8","M12 17v4","M7 4h10v5a5 5 0 0 1-10 0V4Z","M5 6H3v2a4 4 0 0 0 4 4","M19 6h2v2a4 4 0 0 1-4 4"],
+  wallet:["M20 7V5a2 2 0 0 0-2-2H5a3 3 0 0 0 0 6h15v10a2 2 0 0 1-2 2H5a3 3 0 0 1-3-3V6","M16 13h4"],
+  megaphone:["m3 11 18-5v12L3 14v-3Z","M11.6 16.8 13 21H7l-1-6"],
+  messageCircle:["M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"],
+  lock:["M6 10V8a6 6 0 0 1 12 0v2","M5 10h14v11H5z","M12 14v3"],
+  circleHelp:["M9.1 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4","M12 18h.01","M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20"],
+  settings:["M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z","M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.55V20h-3v-.09a1.7 1.7 0 0 0-1.04-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.04H5v-3h.09A1.7 1.7 0 0 0 6.64 9.9 1.7 1.7 0 0 0 6.3 8.02l-.06-.06 2.12-2.12.06.06A1.7 1.7 0 0 0 10.3 6.24 1.7 1.7 0 0 0 11.34 4.7V4h3v.09a1.7 1.7 0 0 0 1.04 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.12 2.12-.06.06A1.7 1.7 0 0 0 19.04 9.3 1.7 1.7 0 0 0 20.6 10.34H21v3h-.09A1.7 1.7 0 0 0 19.4 15Z"],
+  languages:["m5 8 6 6","m4 14 6-6 2-3","M2 5h12","M7 2h1","m22 22-5-10-5 10","M14 18h6"]
+};
+
+export const ICON_NAMES=Object.freeze(Object.keys(PATHS));
+
+export function createIcon(name,{size=20,className=""}={}){
+  const paths=PATHS[name]||PATHS.circleHelp;
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("viewBox","0 0 24 24");
+  svg.setAttribute("aria-hidden","true");
+  svg.setAttribute("focusable","false");
+  svg.classList.add("icon");
+  if(size===24)svg.classList.add("icon-nav");
+  if(className)svg.classList.add(...String(className).split(/\s+/).filter(Boolean));
+  for(const d of paths){
+    const p=document.createElementNS(NS,"path");
+    p.setAttribute("d",d);
+    svg.appendChild(p);
+  }
+  return svg;
+}
