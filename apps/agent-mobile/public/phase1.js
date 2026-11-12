@@ -345,7 +345,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     page.append(moneyCard);
 
     const daily=document.createElement("div");daily.id="aiDailyBrief";daily.dataset.priorityCard="brief";page.append(daily);
-    if(aiGreeting){const g=aiGreeting.greeting||{};const out=createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr});daily.append(out.card)}
+    if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
     const priorities=element("div",{className:"ai-priority-list"});
@@ -361,10 +361,23 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     celebrateIfNeeded();
   }
 
+  function renderDailyBrief(response){
+    const g=response?.greeting||{};
+    const card=createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!response.cached,tr}).card;
+    if(g.focus){
+      const focus=Array.isArray(g.focus)?g.focus.join(" · "):typeof g.focus==="string"?g.focus:JSON.stringify(g.focus);
+      card.append(element("p",{className:"ai-priority-why",text:tr("aiDailyFocus")+": "+focus}));
+    }
+    const due=(getData()?.phase1?.due_followups||[]).length;
+    const action=element("button",{className:"btn btn-primary btn-small",text:due?tr("aiDailyFollowup"):tr("aiDailyViewTasks"),attrs:{type:"button"}});
+    action.addEventListener("click",()=>navigate("today",{scrollTo:due?"dueFollowups":null}));
+    card.append(action);return card;
+  }
+
   async function loadDailyGreeting(){
     if(aiGreetingLoading||aiGreeting)return;
     aiGreetingLoading=true;aiStart();let aiOk=false;
-    try{aiGreeting=await api.ai({action:"daily_greeting"});aiOk=true;const host=document.getElementById("aiDailyBrief");if(host){host.replaceChildren();const g=aiGreeting.greeting||{};host.append(createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr}).card)}}
+    try{aiGreeting=await api.ai({action:"daily_greeting"});aiOk=true;const host=document.getElementById("aiDailyBrief");if(host){host.replaceChildren();host.append(renderDailyBrief(aiGreeting))}}
     catch{document.getElementById("aiDailyBrief")?.replaceChildren(element("p",{className:"ai-chat-thinking",text:tr("aiDailyUnavailable")}))}
     finally{aiGreetingLoading=false;aiEnd(aiOk)}
   }
