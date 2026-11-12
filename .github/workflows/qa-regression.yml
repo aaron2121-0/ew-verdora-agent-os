@@ -1,0 +1,83 @@
+name: QA P0 Regression
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-p0-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qa-regression:
+    name: qa-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      QA_AGENT_URL: https://agent-mobile-production.up.railway.app
+      QA_OWNER_URL: https://owner-mobile-production.up.railway.app
+      QA_SUPABASE_URL: https://vuibesuahnhlafsfraeo.supabase.co
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies (repository has no lockfile)
+        run: npm install --ignore-scripts
+      - name: Existing core regression
+        run: npm run check
+      - name: Reuse Phase 0–3 source tests once
+        run: node --test apps/agent-mobile/tests/phase0-security.test.mjs apps/agent-mobile/tests/phase1-security.test.mjs apps/agent-mobile/tests/phase2-security.test.mjs apps/agent-mobile/tests/phase3-security.test.mjs apps/agent-mobile/tests/phase3-seed-import.test.mjs
+      - name: P0 security and contract tests
+        id: source
+        continue-on-error: true
+        run: node --test tests/qa-p0-source.test.mjs tests/qa-p0-future.test.mjs
+      - name: P0 public read-only smoke tests
+        id: public
+        if: always()
+        continue-on-error: true
+        run: node --test tests/qa-p0-public.test.mjs
+      - name: P0 isolated demo identities, one-time invite and RBAC checks
+        id: integration
+        # Forked PRs never receive QA credentials; no pull_request_target.
+        if: always() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_QA_SECRET_KEY: ${{ secrets.SUPABASE_QA_SECRET_KEY }}
+        run: node scripts/qa/run-isolated-integration.mjs
+      - name: Verify and retry exact-ID QA fixture cleanup
+        id: cleanup
+        if: always() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_QA_SECRET_KEY: ${{ secrets.SUPABASE_QA_SECRET_KEY }}
+        run: node scripts/qa/cleanup-fixtures.mjs
+      - name: Enforce all P0 checks
+        if: always()
+        run: |
+          echo "source=${{ steps.source.outcome }} public=${{ steps.public.outcome }} integration=${{ steps.integration.outcome }}"
+          test "${{ steps.source.outcome }}" = "success"
+          test "${{ steps.public.outcome }}" = "success"
+          if { [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; } || { [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; }; then
+            test "${{ steps.integration.outcome }}" = "success"
+            test "${{ steps.cleanup.outcome }}" = "success"
+          fi
+      - name: Publish P0 summary
+        if: always()
+        run: |
+          mkdir -p qa-results
+          printf 'P0 commit: %s\nRun: %s\nResult: %s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "${{ job.status }}" > qa-results/summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-p0-${{ github.run_id }}
+          path: qa-results/
+          retention-days: 14
