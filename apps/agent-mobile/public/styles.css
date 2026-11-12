@@ -204,3 +204,10 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 .money-number,.metric-value,.wallet-total,.stat-value{font-variant-numeric:tabular-nums}
 .ai-chat-open{overflow:hidden}
 .ai-profile-button.hidden{display:none!important}
+
+.top-actions{display:flex;align-items:center;gap:5px;min-width:0}
+.ai-profile-button,.ai-theme-button{white-space:nowrap;font-size:12px;padding:7px 8px;min-width:34px}
+.ai-coach-panel{margin-top:18px;border-top:1px solid var(--border);padding-top:12px;display:grid;gap:10px}
+.ai-coach-panel textarea{width:100%}
+.ai-priority-list{display:grid;gap:12px}
+@media(max-width:380px){.top-actions{gap:3px}.top-actions .btn{padding-left:7px;padding-right:7px}.ai-profile-button,.ai-theme-button{padding:6px}.topbar{gap:5px}}
