@@ -2,9 +2,9 @@
   "performance": 100,
   "accessibility": 95,
   "bestPractices": 96,
-  "interactiveMs": 843.194,
-  "cls": 0.01939010308159722,
-  "fcpMs": 818.194,
-  "lcpMs": 818.194,
+  "interactiveMs": 883.8499999999999,
+  "cls": 0,
+  "fcpMs": 869.8499999999999,
+  "lcpMs": 869.8499999999999,
   "totalBlockingTimeMs": 0
 }
