@@ -393,8 +393,15 @@ Deno.serve(async req=>{
   if(action==="daily_greeting" && prof?.greeting_date===today && prof?.greeting){
     return reply({ok:true,cached:true,greeting:prof.greeting});
   }
+  if(action==="weekly_plan"){
+    const weekStart=weekStartKuching(today);
+    const {data:cached,error:cacheError}=await admin.from("ai_weekly_plan_cache")
+      .select("payload,provider,created_at").eq("agent_id",agent.id).eq("week_start",weekStart).maybeSingle();
+    if(cacheError){ console.error("AI_WEEKLY_CACHE",cacheError.code||""); return reply({error:"cache_check_failed"},500); }
+    if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
+  }
 
-  const quotaAction=["coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting"].includes(action)?action:null;
+  const quotaAction=["coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
