@@ -19,8 +19,9 @@ function safeErr(e){
 const url=Deno.env.get("SUPABASE_URL")||"";
 const pub=JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")||"{}").default||Deno.env.get("SUPABASE_ANON_KEY")||"";
 const sec=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}").default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
-const aiKey=""; // paid external vision hard-disabled by business policy
-const model=Deno.env.get("OPENAI_VISION_MODEL")||Deno.env.get("OPENAI_MODEL")||"gpt-6-luna";
+// Free-tier Google Gemini vision (key in Edge Function secrets). No key = manual review fallback. Paid AI stays disabled.
+const geminiKey=Deno.env.get("GEMINI_API_KEY")||"";
+const model=(Deno.env.get("GEMINI_MODEL")||"gemini-flash-latest").replace(/[^a-zA-Z0-9.\-]/g,"");
 const bucket="agent-references";
 
 function safeResult(row){
@@ -37,28 +38,35 @@ function parseJsonText(s){
   try{return JSON.parse(String(s).replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`\s*$/,"").trim())}catch{return null}
 }
 async function visionAnalyze(imageUrl){
-  if(!aiKey)return null;
-  const r=await fetch("https://api.openai.com/v1/responses",{
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+aiKey},
-    body:JSON.stringify({
-      model,
-      instructions:"Analyze a flower arrangement reference image only for commercial visual classification. Return ONLY JSON. Do not estimate price or cost. Allowed enums: size_band small|medium|large|xl|structure; density_band light|medium|full|very_full; premium_intensity low|medium|high|very_high; complexity_band low|medium|high|special; flower_flexibility flexible|moderate|exact_risk. Also return visual_features object with short non-sensitive observations. Do not identify florist/brand/person.",
-      input:[{role:"user",content:[
-        {type:"input_text",text:"Classify this floral reference image for EW VERDORA quotation routing."},
-        {type:"input_image",image_url:imageUrl,detail:"low"}
-      ]}],
-      max_output_tokens:500
-    })
-  });
-  if(!r.ok)return null;
-  const j=await r.json();
-  let txt=j.output_text||"";
-  if(!txt){
-    const parts=[];
-    for(const item of j.output||[])for(const c of item.content||[])if(typeof c.text==="string")parts.push(c.text);
-    txt=parts.join("\n");
-  }
+  if(!geminiKey)return null;
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),15000);
+  let txt="";
+  try{
+    const img=await fetch(imageUrl,{signal:ctl.signal});
+    if(!img.ok)return null;
+    const mime=(img.headers.get("content-type")||"image/jpeg").split(";")[0].trim().toLowerCase();
+    if(!["image/jpeg","image/png","image/webp"].includes(mime))return null;
+    const bytes=new Uint8Array(await img.arrayBuffer());
+    if(bytes.length===0||bytes.length>7*1024*1024)return null; // too large: manual review
+    let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
+    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+      method:"POST",signal:ctl.signal,
+      headers:{"Content-Type":"application/json","x-goog-api-key":geminiKey},
+      body:JSON.stringify({
+        systemInstruction:{parts:[{text:"Analyze a flower arrangement reference image only for commercial visual classification. Return ONLY JSON with keys size_band, density_band, premium_intensity, complexity_band, flower_flexibility, visual_features. Do not estimate price or cost. Allowed enums: size_band small|medium|large|xl|structure; density_band light|medium|full|very_full; premium_intensity low|medium|high|very_high; complexity_band low|medium|high|special; flower_flexibility flexible|moderate|exact_risk. visual_features is an object of short non-sensitive observations. Do not identify any florist, brand or person. If the image is not a flower arrangement, set complexity_band to special and flower_flexibility to exact_risk."}]},
+        contents:[{role:"user",parts:[
+          {text:"Classify this floral reference image for EW VERDORA quotation routing."},
+          {inline_data:{mime_type:mime,data:btoa(bin)}}
+        ]}],
+        generationConfig:{maxOutputTokens:1024,temperature:0.2,responseMimeType:"application/json"}
+      })
+    });
+    if(!r.ok){console.error("GEMINI_VISION_STATUS",r.status);return null;}
+    const j=await r.json();
+    txt=(j?.candidates?.[0]?.content?.parts||[]).map(p=>typeof p.text==="string"&&!p.thought?p.text:"").join("").trim();
+  }catch(e){console.error("GEMINI_VISION_ERROR",e?.name||"error");return null;}
+  finally{clearTimeout(timer);}
   const o=parseJsonText(txt);
   if(!o)return null;
   const ok={
@@ -145,7 +153,7 @@ Deno.serve(async req=>{
       }).eq("id",qr.id).select("*").single();
       return reply({ok:true,quote_request:safeResult(row),provider:"rule"});
     }
-    if(aiKey){
+    if(geminiKey){
       const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:"reference_analysis"});
       if(quota.error)return reply({error: safeErr(quota.error)},400);
       if(!quota.data?.allowed)return reply({error:"ai_daily_limit",quota:quota.data},429);
@@ -165,11 +173,11 @@ Deno.serve(async req=>{
     const {data:row,error:finErr}=await admin.rpc("finalize_quote_request_internal",{
       p_request_id:qr.id,p_size:analysis.size_band,p_density:analysis.density_band,
       p_premium:analysis.premium_intensity,p_complexity:analysis.complexity_band,
-      p_flexibility:analysis.flower_flexibility,p_features:analysis.visual_features||{},
-      p_provider:"openai",p_model:model,p_raw:analysis
+      p_flexibility:analysis.flower_flexibility,p_features:(analysis.visual_features&&typeof analysis.visual_features==="object")?analysis.visual_features:{},
+      p_provider:"gemini",p_model:model,p_raw:analysis
     });
     if(finErr)return reply({error: safeErr(finErr)},400);
-    return reply({ok:true,quote_request:safeResult(row),provider:"openai"});
+    return reply({ok:true,quote_request:safeResult(row),provider:"gemini"});
   }
 
   return reply({error:"unknown_action"},400);
