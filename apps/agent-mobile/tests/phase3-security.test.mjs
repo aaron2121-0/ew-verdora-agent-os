@@ -82,3 +82,14 @@ test("Training UI remains safe native JS",()=>{
   assert.match(ui,/server_now/);
   assert.match(ui,/deadline_at/);
 });
+
+test("Private training helpers are not client executable",()=>{
+  const lines=[
+    "revoke all on function private.training_option_order(text,uuid) from public,anon,authenticated;",
+    "revoke all on function private.training_select_daily_questions(uuid,date) from public,anon,authenticated;",
+    "revoke all on function private.training_skill_snapshot(uuid) from public,anon,authenticated;",
+    "revoke all on function private.training_daily_record_answer(uuid,uuid,smallint,smallint,timestamptz,date) from public,anon,authenticated;",
+    "revoke all on function private.training_exam_record_answer(uuid,uuid,smallint,smallint,timestamptz) from public,anon,authenticated;"
+  ];
+  for(const line of lines)assert.ok(sql.toLowerCase().includes(line),"missing "+line);
+});
