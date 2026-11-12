@@ -1,0 +1,40 @@
+name: Phase 0 UI Security
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/agent-mobile/**"
+      - "apps/owner-mobile/**"
+      - ".github/workflows/phase0-ui-security.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/agent-mobile/**"
+      - "apps/owner-mobile/**"
+
+permissions:
+  contents: read
+
+jobs:
+  phase0:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Phase 0 modular/security tests
+        run: node --test apps/agent-mobile/tests/phase0-security.test.mjs
+      - name: Check no inline event attributes
+        run: |
+          if grep -RniE ' on[a-z]+=' apps/agent-mobile/public/index.html; then
+            echo "Inline event attribute found"
+            exit 1
+          fi
+      - name: Check no Agent innerHTML assignment
+        run: |
+          if grep -RniE '\.innerHTML[[:space:]]*=' apps/agent-mobile/public/*.js; then
+            echo "innerHTML assignment found in Agent public JS"
+            exit 1
+          fi
