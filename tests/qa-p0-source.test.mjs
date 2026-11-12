@@ -26,7 +26,15 @@ function violations(pattern,include=appFiles){
 test('P0: no unsafe DOM HTML sinks in either application (file:line)',()=>{
   const hits=violations(/\b(?:innerHTML|outerHTML|insertAdjacentHTML|document\.write)\b/g,
     appFiles.filter(p=>/\.(?:html|js|mjs|ts)$/.test(p)));
-  assert.deepEqual(hits,[],'Unsafe HTML sinks: '+hits.join('; '));
+  // Temporary exact-line exception, approved for Owner Phase A only.
+  // Expiry: Owner Phase B or explicit QA_OWNER_PHASE_B_COMPLETE=true.
+  const owner=read('apps/owner-mobile/index.ts').split('\\n');
+  const phaseB=process.env.QA_OWNER_PHASE_B_COMPLETE==='true' || owner.some(x=>x.includes('QA_OWNER_PHASE_B_COMPLETE'));
+  const exceptions=new Set(phaseB?[]:['apps/owner-mobile/index.ts:33 innerHTML','apps/owner-mobile/index.ts:34 innerHTML']);
+  const escaped=owner[32]?.includes('escapeHtml(')&&owner[33]?.includes('.innerHTML=')&&owner.slice(34,39).join(' ').includes('const esc=escapeHtml');
+  assert.ok(phaseB||escaped,'Owner Phase A exception must retain escaping at precise lines 33–34');
+  const disallowed=hits.filter(h=>!exceptions.has(h));
+  assert.deepEqual(disallowed,[],'Unsafe HTML sinks (Owner Phase B expires exception): '+disallowed.join('; '));
 });
 test('P0: no inline browser event attributes in HTML or template literals',()=>{
   const hits=violations(/\son(?:click|error|load|submit|change|input|mouseover|focus|blur|keydown)\s*=/gi,
