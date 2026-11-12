@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/prelogin-100.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           OWNER="https://owner-mobile-production.up.railway.app"
-          CFG="$(curl -fsS "$OWNER/config")"
+          CFG="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/config")"
           SUPABASE_URL="$(printf '%s' "$CFG" | jq -r '.url')"
           KEY="$(printf '%s' "$CFG" | jq -r '.key')"
           test -n "$SUPABASE_URL"
@@ -26,11 +27,33 @@ jobs:
           test "$SUPABASE_URL" != "null"
           test "$KEY" != "null"
 
+          request_owner_session() {
+            local status
+            for attempt in 1 2 3 4 5; do
+              status="$(curl -sS -o /tmp/out -w '%{http_code}'                 -X POST "$SUPABASE_URL/functions/v1/owner-session"                 -H "Content-Type: application/json"                 -H "apikey: $KEY"                 --data '{"action":"dashboard"}')" || status="000"
+
+              if [ "$status" = "401" ] || [ "$status" = "403" ]; then
+                printf '%s' "$status"
+                return 0
+              fi
+
+              if [ "$status" = "429" ] || [ "$status" = "500" ] || [ "$status" = "502" ] || [ "$status" = "503" ] || [ "$status" = "504" ] || [ "$status" = "000" ]; then
+                sleep "$attempt"
+                continue
+              fi
+
+              printf '%s' "$status"
+              return 0
+            done
+
+            printf '%s' "$status"
+          }
+
           for i in $(seq 1 100); do
-            HEALTH="$(curl -fsS "$OWNER/health")"
+            HEALTH="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/health")"
             printf '%s' "$HEALTH" | jq -e '.ok == true' >/dev/null
 
-            JS="$(curl -fsS "$OWNER/owner.js")"
+            JS="$(curl --retry 4 --retry-all-errors --retry-delay 1 -fsS "$OWNER/owner.js")"
             printf '%s' "$JS" | grep -F 'shouldCreateUser:false' >/dev/null
             printf '%s' "$JS" | grep -F 'https://owner-mobile-production.up.railway.app' >/dev/null
             if printf '%s' "$JS" | grep -F 'emailRedirectTo:location.origin' >/dev/null; then
@@ -38,10 +61,10 @@ jobs:
               exit 1
             fi
 
-            STATUS="$(curl -sS -o /tmp/out -w '%{http_code}'               -X POST "$SUPABASE_URL/functions/v1/owner-session"               -H "Content-Type: application/json"               -H "apikey: $KEY"               --data '{"action":"dashboard"}')"
+            STATUS="$(request_owner_session)"
             if [ "$STATUS" != "401" ] && [ "$STATUS" != "403" ]; then
               echo "round $i: unauthenticated owner-session unexpectedly returned $STATUS"
-              cat /tmp/out
+              cat /tmp/out || true
               exit 1
             fi
           done
