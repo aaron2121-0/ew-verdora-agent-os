@@ -1,19 +1,199 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>EW VERDORA Agent OS</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="/styles.css"></head><body>
-<main class="shell"><div class="top"><div><div class="brand">EW VERDORA</div><div class="sub">Agent OS · AI Sales Manager</div></div><div class="row"><button id="lang" class="btn small">中文</button><button id="logout" class="btn small hidden">Sign out</button></div></div>
-<section id="login" class="card"><div class="title" data-t="login">Agent Secure Access</div><div class="muted" data-t="loginD">Enter your email to receive a secure sign-in link.</div><div class="form" style="margin-top:12px"><input id="email" class="hidden" type="email" placeholder="name@example.com"><button id="loginBtn" class="btn primary hidden" data-t="send">Send sign-in link</button><div id="loginMsg" class="muted"></div></div></section>
-<section id="register" class="card hidden"><div class="title" data-t="register">Create Agent Profile</div><div class="muted" data-t="registerD">No manager approval. Training is assigned automatically.</div><div class="form" style="margin-top:12px"><input id="name" placeholder="Your name"><button id="regBtn" class="btn primary" data-t="start">Start training</button><div id="regMsg" class="muted"></div></div></section>
-<div id="app" class="hidden">
-<section class="section active" data-page="home"><div class="card"><div class="row" style="justify-content:space-between"><div><div class="muted" data-t="today">TODAY</div><div id="hello" class="title">Hi</div></div><span id="tier" class="pill"></span></div><div class="grid four" style="margin-top:14px"><div><div class="muted" data-t="orders">Orders</div><div id="orders" class="metric"></div></div><div><div class="muted" data-t="leads">Qualified Leads</div><div id="leadsN" class="metric"></div></div><div><div class="muted" data-t="quotes">Quotes</div><div id="quotes" class="metric"></div></div><div><div class="muted" data-t="follow">Follow-ups</div><div id="follow" class="metric"></div></div></div><div id="mission" class="notice" style="margin-top:14px"></div></div>
-<div id="campaignCard" class="card hidden"><div class="title">Campaign</div><div id="campaignList"></div></div>
-<div class="card"><div class="row" style="justify-content:space-between"><div class="title" data-t="training">Required Training</div><button id="practice" class="btn small" data-t="practice">AI Practice</button></div><div id="trainingList"></div></div>
-<div class="card"><div class="title" data-t="coach">AI Sales Coach</div><textarea id="coachInput" style="margin-top:10px" placeholder="Customer message..."></textarea><button id="coachBtn" class="btn primary" style="margin-top:9px" data-t="ask">Ask AI Coach</button><div id="coachOut" class="chat hidden" style="margin-top:10px"></div></div></section>
-<section class="section" data-page="leads"><div class="card"><div class="title" data-t="newLead">New Lead</div><div class="form" style="margin-top:12px"><select id="source"><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="threads">Threads</option><option value="xiaohongshu">小红书 / RED</option><option value="whatsapp">WhatsApp</option><option value="personal_network">Friends / Network</option><option value="corporate_outreach">Corporate</option></select><input id="leadName" placeholder="Customer name / label"><select id="category"><option value="birthday">Birthday</option><option value="anniversary">Anniversary</option><option value="condolence">Condolence</option><option value="opening">Opening</option><option value="proposal">Proposal</option><option value="graduation">Graduation</option><option value="corporate">Corporate</option><option value="wedding">Wedding</option><option value="general">General</option></select><input id="occasion" placeholder="Occasion / notes"><input id="budget" type="number" placeholder="Budget RM"><button id="saveLead" class="btn primary" data-t="save">Save Lead</button><div id="leadMsg" class="muted"></div></div></div><div class="card"><div class="title" data-t="recent">Recent Leads</div><div id="leadList"></div></div></section>
-<section class="section" data-page="kits"><div class="card"><div class="title" data-t="kits">Selling Kit</div><div class="muted">Choose a kit and the system will turn it into today's platform-specific selling action.</div><div id="dailyContent" class="chat hidden" style="margin-top:10px"></div><div id="kitList"></div></div><div class="card"><div class="title" data-t="channels">Channel Strategy</div><div id="playList"></div></div></section>
-<section class="section" data-page="wallet"><div class="card"><div class="title" data-t="wallet">Wallet</div><div class="grid" style="margin-top:12px"><div><div class="muted" data-t="tierL">Tier</div><div id="walletTier" class="metric"></div></div><div><div class="muted" data-t="score">Score</div><div id="walletScore" class="metric"></div></div></div></div><div class="card"><div class="title" data-t="comm">Commission History</div><div id="commList"></div></div></section>
-</div></main>
-<nav id="nav" class="nav hidden"><button class="active" data-tab="home" data-t="home">Home</button><button data-tab="leads" data-t="leadsTab">Leads</button><button data-tab="kits" data-t="kitsTab">Selling Kit</button><button data-tab="wallet" data-t="wallet">Wallet</button></nav>
-<div id="roleSheet" class="sheet hidden"><div class="sheetbody"><div class="row" style="justify-content:space-between"><div class="title" data-t="role">AI Roleplay</div><button id="closeRole" class="btn small">✕</button></div><div id="scenario" class="chat" style="margin-top:12px"></div><textarea id="roleAnswer" style="margin-top:10px"></textarea><button id="scoreRole" class="btn primary" style="margin-top:9px" data-t="submit">Submit</button><div id="roleResult" class="notice hidden" style="margin-top:10px"></div></div></div>
-<div id="quoteSheet" class="sheet hidden"><div class="sheetbody"><div class="row" style="justify-content:space-between"><div class="title" data-t="quote">Reference Quote</div><button id="closeQuote" class="btn small">✕</button></div><div id="uploadQuoteForm" class="form" style="margin-top:12px"><input id="qBudget" type="number" placeholder="Customer budget RM"><select id="commit"><option value="adapted">Adapted / Similar</option><option value="reference">Closer Reference</option><option value="exact">Exact Required</option></select><input id="refFile" type="file" accept="image/jpeg,image/png,image/webp"><button id="quoteBtn" class="btn primary" data-t="analyze">Upload & Analyze</button></div><div id="readyQuoteForm" class="form hidden" style="margin-top:12px"><div id="readyQuoteText" class="notice"></div><button id="budgetQuoteBtn" class="btn primary">Create Budget Quote</button><button id="recommendedQuoteBtn" class="btn">Create Recommended Quote</button></div><div id="quoteOut" class="notice hidden" style="margin-top:10px"></div></div></div>
-<script type="module" src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173f35">
+  <title>EW VERDORA Agent OS</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="brand">EW VERDORA</div>
+        <div class="sub" data-i18n="appSubtitle"></div>
+      </div>
+      <div class="row">
+        <button id="lang" class="btn btn-secondary btn-small" type="button"></button>
+        <button id="logout" class="btn btn-secondary btn-small hidden" type="button" data-i18n="signOut"></button>
+      </div>
+    </header>
+
+    <section id="login" class="card auth-card">
+      <h1 class="title" data-i18n="loginTitle"></h1>
+      <p class="muted" data-i18n="loginDescription"></p>
+      <div class="form form-top">
+        <input id="email" class="hidden" type="email" autocomplete="email">
+        <button id="loginBtn" class="btn btn-primary hidden" type="button" data-i18n="sendSignIn"></button>
+        <div id="loginMsg" class="muted" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="register" class="card hidden">
+      <h1 class="title" data-i18n="registerTitle"></h1>
+      <p class="muted" data-i18n="registerDescription"></p>
+      <div class="form form-top">
+        <label class="field-label" for="name" data-i18n="displayName"></label>
+        <input id="name" autocomplete="name">
+        <button id="regBtn" class="btn btn-primary" type="button" data-i18n="startTraining"></button>
+        <div id="regMsg" class="muted" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <div id="app" class="hidden">
+      <section class="section active" data-page="home">
+        <div class="card">
+          <div class="row row-between">
+            <div>
+              <div class="eyebrow" data-i18n="today"></div>
+              <div id="hello" class="title"></div>
+            </div>
+            <span id="tier" class="badge"></span>
+          </div>
+          <div class="metric-grid metric-grid-four section-gap">
+            <div><div class="muted" data-i18n="orders"></div><div id="orders" class="metric"></div></div>
+            <div><div class="muted" data-i18n="qualifiedLeads"></div><div id="leadsN" class="metric"></div></div>
+            <div><div class="muted" data-i18n="quotes"></div><div id="quotes" class="metric"></div></div>
+            <div><div class="muted" data-i18n="followUps"></div><div id="follow" class="metric"></div></div>
+          </div>
+          <div id="mission" class="notice section-gap"></div>
+        </div>
+
+        <div id="campaignCard" class="card hidden">
+          <h2 class="title" data-i18n="campaign"></h2>
+          <div id="campaignList"></div>
+        </div>
+
+        <div class="card">
+          <div class="row row-between">
+            <h2 class="title" data-i18n="requiredTraining"></h2>
+            <button id="practice" class="btn btn-secondary btn-small" type="button" data-i18n="aiPractice"></button>
+          </div>
+          <div id="trainingList"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title" data-i18n="aiSalesCoach"></h2>
+          <label class="field-label form-top" for="coachInput" data-i18n="customerMessage"></label>
+          <textarea id="coachInput"></textarea>
+          <button id="coachBtn" class="btn btn-primary button-top" type="button" data-i18n="askCoach"></button>
+          <div id="coachOut" class="chat hidden section-gap" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section" data-page="leads">
+        <div class="card">
+          <h2 class="title" data-i18n="newLead"></h2>
+          <div class="form form-top">
+            <label class="field-label" for="source" data-i18n="source"></label>
+            <select id="source"></select>
+            <label class="field-label" for="leadName" data-i18n="customerLabel"></label>
+            <input id="leadName">
+            <label class="field-label" for="category" data-i18n="category"></label>
+            <select id="category"></select>
+            <label class="field-label" for="occasion" data-i18n="occasionNotes"></label>
+            <input id="occasion">
+            <label class="field-label" for="budget" data-i18n="budgetRm"></label>
+            <input id="budget" type="number" inputmode="decimal">
+            <button id="saveLead" class="btn btn-primary" type="button" data-i18n="saveLead"></button>
+            <div id="leadMsg" class="muted" role="status" aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="title" data-i18n="recentLeads"></h2>
+          <div id="leadList"></div>
+        </div>
+      </section>
+
+      <section class="section" data-page="kits">
+        <div class="card">
+          <h2 class="title" data-i18n="sellingKit"></h2>
+          <p class="muted" data-i18n="sellingKitDescription"></p>
+          <div id="dailyContent" class="chat hidden section-gap"></div>
+          <div id="kitList"></div>
+        </div>
+        <div class="card">
+          <h2 class="title" data-i18n="channelStrategy"></h2>
+          <div id="playList"></div>
+        </div>
+      </section>
+
+      <section class="section" data-page="wallet">
+        <div class="card">
+          <h2 class="title" data-i18n="wallet"></h2>
+          <div class="metric-grid section-gap">
+            <div><div class="muted" data-i18n="tier"></div><div id="walletTier" class="metric"></div></div>
+            <div><div class="muted" data-i18n="score"></div><div id="walletScore" class="metric"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="title" data-i18n="commissionHistory"></h2>
+          <div id="commList"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <nav id="nav" class="nav hidden" aria-label="Primary">
+    <button class="active" type="button" data-tab="home" data-i18n="navHome"></button>
+    <button type="button" data-tab="leads" data-i18n="navLeads"></button>
+    <button type="button" data-tab="kits" data-i18n="navSellingKit"></button>
+    <button type="button" data-tab="wallet" data-i18n="navWallet"></button>
+  </nav>
+
+  <div id="roleSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="roleTitle">
+    <div class="sheet-body">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="row row-between">
+        <h2 id="roleTitle" class="title" data-i18n="roleplay"></h2>
+        <button id="closeRole" class="btn btn-text btn-small" type="button" data-i18n-aria="close" aria-label="Close">×</button>
+      </div>
+      <div id="scenario" class="chat section-gap"></div>
+      <label class="field-label form-top" for="roleAnswer" data-i18n="yourAnswer"></label>
+      <textarea id="roleAnswer"></textarea>
+      <button id="scoreRole" class="btn btn-primary button-top" type="button" data-i18n="submit"></button>
+      <div id="roleResult" class="notice hidden section-gap" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="quoteSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="quoteTitle">
+    <div class="sheet-body">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="row row-between">
+        <h2 id="quoteTitle" class="title" data-i18n="referenceQuote"></h2>
+        <button id="closeQuote" class="btn btn-text btn-small" type="button" data-i18n-aria="close" aria-label="Close">×</button>
+      </div>
+      <div id="uploadQuoteForm" class="form form-top">
+        <label class="field-label" for="qBudget" data-i18n="customerBudget"></label>
+        <input id="qBudget" type="number" inputmode="decimal">
+        <label class="field-label" for="commit" data-i18n="designCommitment"></label>
+        <select id="commit"></select>
+        <label class="field-label" for="refFile" data-i18n="referenceImage"></label>
+        <input id="refFile" type="file" accept="image/jpeg,image/png,image/webp">
+        <button id="quoteBtn" class="btn btn-primary" type="button" data-i18n="uploadAnalyze"></button>
+      </div>
+      <div id="readyQuoteForm" class="form hidden form-top">
+        <div id="readyQuoteText" class="notice"></div>
+        <button id="budgetQuoteBtn" class="btn btn-primary" type="button"></button>
+        <button id="recommendedQuoteBtn" class="btn btn-secondary" type="button"></button>
+      </div>
+      <div id="quoteOut" class="notice hidden section-gap" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <div id="confirmDialog" class="confirm-layer hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="confirm-card">
+      <h2 id="confirmTitle" class="title"></h2>
+      <p id="confirmMessage" class="muted"></p>
+      <div class="row row-end section-gap">
+        <button id="confirmCancel" class="btn btn-secondary" type="button"></button>
+        <button id="confirmOk" class="btn btn-primary" type="button"></button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
