@@ -1,0 +1,123 @@
+name: Phase 3 Live QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/agent-mobile/public/**"
+      - "apps/agent-mobile/tests/phase3-*.mjs"
+      - "apps/agent-mobile/tests/phase2-live.mjs"
+      - "apps/agent-mobile/tests/phase1-live.mjs"
+      - "apps/agent-mobile/tests/draft-user-isolation.mjs"
+      - "supabase/functions/agent-training/**"
+      - "supabase/migrations/20261113_phase3_training_mcq_certification.sql"
+      - "supabase/seed/20261113_phase3_test_questions.sql"
+      - "scripts/training-bank-import.mjs"
+      - ".github/workflows/phase3-live-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase3-live-qa
+  cancel-in-progress: true
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    env:
+      AGENT_URL: https://agent-mobile-production.up.railway.app
+      TRAINING_URL: https://vuibesuahnhlafsfraeo.supabase.co/functions/v1/agent-training
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify deployed Phase 3 health, CSP and training endpoint auth
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -fsS "$AGENT_URL/health" | grep -q '0.6.0-phase3'; then break; fi
+            if [ "$i" -eq 30 ]; then echo "Phase 3 health not live"; exit 1; fi
+            sleep 3
+          done
+          curl -fsS -D /tmp/headers "$AGENT_URL/" -o /tmp/index.html
+          grep -qi '^content-security-policy:' /tmp/headers
+          grep -qi "object-src 'none'" /tmp/headers
+          grep -qi "frame-ancestors 'none'" /tmp/headers
+          for asset in styles.css app.js i18n.js icons.js components.js phase1.js order.js date.js draft.js performance.js training.js; do
+            curl -fsS "$AGENT_URL/$asset" >/dev/null
+          done
+          status="$(curl -sS -o /tmp/training-noauth.json -w '%{http_code}' -X POST             -H 'content-type: application/json' -d '{"action":"today"}' "$TRAINING_URL")"
+          test "$status" = "401"
+          grep -q 'authentication_required' /tmp/training-noauth.json
+
+      - name: Install browser QA tools
+        run: |
+          npm install --no-save playwright lighthouse
+          npx playwright install --with-deps chromium
+
+      - name: Run Phase 3 daily MCQ and certification E2E
+        run: node apps/agent-mobile/tests/phase3-live.mjs
+
+      - name: Re-run Phase 2 performance regression
+        run: node apps/agent-mobile/tests/phase2-live.mjs
+
+      - name: Re-run Phase 1 order regression
+        run: node apps/agent-mobile/tests/phase1-live.mjs
+
+      - name: Re-run shared-device draft privacy
+        run: node apps/agent-mobile/tests/draft-user-isolation.mjs
+
+      - name: Run Lighthouse mobile
+        run: |
+          set -euo pipefail
+          mkdir -p docs/phase3
+          CHROME_PATH="$(node -e "const {chromium}=require('playwright');process.stdout.write(chromium.executablePath())")"
+          "$CHROME_PATH" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage             --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 about:blank >/tmp/p3-chrome.log 2>&1 &
+          CHROME_PID=$!
+          trap 'kill "$CHROME_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9222/json/version >/dev/null; then break; fi
+            sleep 1
+          done
+          npx lighthouse "$AGENT_URL" --config-path=apps/agent-mobile/tests/lighthouse.config.cjs             --port=9222 --output=json --output-path=docs/phase3/lighthouse.json --quiet
+          node - <<'NODE'
+          const fs=require("fs");
+          const j=JSON.parse(fs.readFileSync("docs/phase3/lighthouse.json","utf8"));
+          const c=j.categories,m=j.audits;
+          const s={
+            performance:Math.round(c.performance.score*100),
+            accessibility:Math.round(c.accessibility.score*100),
+            bestPractices:Math.round(c["best-practices"].score*100),
+            interactiveMs:m.interactive.numericValue,
+            cls:m["cumulative-layout-shift"].numericValue,
+            fcpMs:m["first-contentful-paint"].numericValue,
+            lcpMs:m["largest-contentful-paint"].numericValue,
+            totalBlockingTimeMs:m["total-blocking-time"].numericValue
+          };
+          fs.writeFileSync("docs/phase3/lighthouse-summary.json",JSON.stringify(s,null,2));
+          if(s.performance<90||s.accessibility<95||s.bestPractices<95||s.cls>.05||s.interactiveMs>2500||s.lcpMs>2500){
+            console.error(s);process.exit(1);
+          }
+          console.log(s);
+          NODE
+
+      - name: Build Phase 3 GIF
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -y -framerate 1 -pattern_type glob -i 'docs/phase3/gif-*.png'             -vf "fps=8,scale=430:-1:flags=lanczos" -loop 0 docs/phase3/phase3-training.gif >/tmp/p3-ffmpeg.log 2>&1
+          rm -f docs/phase3/gif-*.png
+
+      - name: Commit Phase 3 QA evidence
+        run: |
+          git config user.name "EW VERDORA QA"
+          git config user.email "qa@users.noreply.github.com"
+          git add -f docs/phase3
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Phase 3 QA evidence"
+          git pull --rebase origin main
+          git push
