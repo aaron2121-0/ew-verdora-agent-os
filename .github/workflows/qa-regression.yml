@@ -52,6 +52,14 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           SUPABASE_QA_SECRET_KEY: ${{ secrets.SUPABASE_QA_SECRET_KEY }}
         run: node scripts/qa/run-isolated-integration.mjs
+      - name: Verify and retry exact-ID QA fixture cleanup
+        id: cleanup
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_QA_SECRET_KEY: ${{ secrets.SUPABASE_QA_SECRET_KEY }}
+        run: node scripts/qa/cleanup-fixtures.mjs
       - name: Enforce all P0 checks
         if: always()
         run: |
@@ -60,6 +68,7 @@ jobs:
           test "${{ steps.public.outcome }}" = "success"
           if [ "${{ github.event_name }}" != "pull_request" ] || [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
             test "${{ steps.integration.outcome }}" = "success"
+            test "${{ steps.cleanup.outcome }}" = "success"
           fi
       - name: Publish P0 summary
         if: always()
