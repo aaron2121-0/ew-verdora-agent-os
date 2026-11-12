@@ -197,7 +197,7 @@ begin
     v_best := null;
     if r.status not in('won','lost','archived') then
       if r.next_followup_at is not null then
-        v_best := r.next_followup_at;
+        v_best := case when r.next_followup_at<=now() then now() else r.next_followup_at end;
       else
         v_hour := coalesce(v_active_hour,case
           when r.source='corporate_outreach' then 10
