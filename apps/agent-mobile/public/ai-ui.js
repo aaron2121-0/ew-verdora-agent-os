@@ -61,3 +61,44 @@ export function initAIOrb({onClick,tr,getData}){
 }
 export function refreshAIOrb(tr){if(orb){orb.setAttribute("aria-label",tr("aiOpenChat"));orb.querySelector(".sr-only").textContent=tr("aiOpenChat")}}
 export function resetAIOrb(){orb?.remove();orb=null;document.querySelector(".ai-orb-tip")?.remove();pending=0;state="idle"}
+
+export function createAIProfile({api,tr,getLang}){
+ const backdrop=document.createElement("div");backdrop.className="ai-profile-overlay hidden";
+ const dialog=document.createElement("section");dialog.className="ai-profile-sheet hidden";dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-label",tr("aiProfileTitle"));
+ const head=document.createElement("div");head.className="ai-profile-row";
+ const title=document.createElement("h2");title.textContent=tr("aiProfileTitle");
+ const close=document.createElement("button");close.type="button";close.className="ai-profile-button";close.textContent=tr("close");head.append(title,close);
+ const sub=document.createElement("p");sub.textContent=tr("aiProfileSubtitle");
+ const content=document.createElement("div");content.setAttribute("aria-live","polite");
+ dialog.append(head,sub,content);document.body.append(backdrop,dialog);
+ let focusBefore=null;
+ const dismiss=()=>{dialog.classList.add("hidden");backdrop.classList.add("hidden");focusBefore?.focus?.()};
+ close.addEventListener("click",dismiss);backdrop.addEventListener("click",dismiss);
+ dialog.addEventListener("keydown",e=>{if(e.key==="Escape")dismiss()});
+ const element=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text||"";if(cls)n.className=cls;return n};
+ async function open(){
+  focusBefore=document.activeElement;dialog.classList.remove("hidden");backdrop.classList.remove("hidden");content.replaceChildren(element("p",tr("loading")));close.focus();
+  aiStart();
+  try{
+   const j=await api({action:"my_profile"});const p=j.profile||{};
+   content.replaceChildren(element("p",String(getLang()==="zh"?(p.summary_zh||p.summary_en||""):(p.summary_en||p.summary_zh||""))));
+   const tags=element("div","","ai-profile-tags");
+   for(const [key,items] of [["aiStrengths",p.strengths],["aiWeaknesses",p.weaknesses]]){
+    content.append(element("h3",tr(key)));
+    const list=Array.isArray(items)?items:typeof items==="string"?[items]:[];
+    const wrap=element("div","","ai-profile-tags");
+    for(const item of list)wrap.append(element("span",typeof item==="string"?item:JSON.stringify(item)));
+    content.append(wrap);
+   }
+   content.append(element("h3",tr("aiWritingStyle")),element("p",typeof p.writing_style==="string"?p.writing_style:JSON.stringify(p.writing_style||{})));
+   content.append(element("label",tr("aiNotesLabel")));
+   const notes=document.createElement("textarea");notes.maxLength=500;notes.value=p.agent_notes||"";notes.setAttribute("aria-label",tr("aiNotesLabel"));
+   const status=element("p","");status.setAttribute("role","status");
+   const save=element("button",tr("aiSaveNotes"),"btn btn-primary");save.type="button";
+   save.addEventListener("click",async()=>{save.disabled=true;try{await api({action:"update_notes",notes:notes.value.slice(0,500)});status.textContent=tr("aiNotesSaved")}catch{status.textContent=tr("errorRequestFailed")}finally{save.disabled=false}});
+   content.append(notes,save,status);
+  }catch{content.replaceChildren(element("p",tr("errorRequestFailed")))}
+  finally{aiEnd()}
+ }
+ return {open,close:dismiss,destroy(){dismiss();dialog.remove();backdrop.remove()}};
+}
