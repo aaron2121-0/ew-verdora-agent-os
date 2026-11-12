@@ -1,13 +1,6 @@
 name: Phase 1 Live QA
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/agent-mobile/public/**"
-      - "apps/agent-mobile/tests/phase1-live.mjs"
-      - "apps/agent-mobile/tests/draft-user-isolation.mjs"
-      - ".github/workflows/phase1-live-qa.yml"
   workflow_dispatch:
 
 permissions:
