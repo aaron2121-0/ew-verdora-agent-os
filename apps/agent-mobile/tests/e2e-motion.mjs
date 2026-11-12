@@ -71,5 +71,16 @@ try{
  await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
  assert.equal(new URL(page.url()).hash,"","invite hash consumed");
  await ctx.close();
+ const {default:lighthouse}=await import("lighthouse");
+ const {launch:launchChrome}=await import("chrome-launcher");
+ const lhChrome=await launchChrome({chromePath:process.env.CHROME_PATH,chromeFlags:["--headless","--no-sandbox","--disable-gpu"]});
+ try{
+  const lh=await lighthouse(origin,{port:lhChrome.port,output:"json",logLevel:"error",onlyCategories:["performance","accessibility","best-practices"],settings:{formFactor:"mobile",screenEmulation:{mobile:true,width:360,height:800,deviceScaleFactor:2,disabled:false},throttlingMethod:"simulate"}});
+  const scores=Object.fromEntries(Object.entries(lh.lhr.categories).map(([k,v])=>[k,Math.round(v.score*100)]));
+  const cls=lh.lhr.audits["cumulative-layout-shift"]?.numericValue??null;
+  const report={scores,cls,requested:{performance:90,accessibility:95,"best-practices":95,cls:0.05},mockedBackend:true};
+  await fs.writeFile(path.join(screenshots,"lighthouse-mobile.json"),JSON.stringify(report,null,2));
+  console.log("LIGHTHOUSE_MOBILE "+JSON.stringify(report));
+ }finally{await lhChrome.kill()}
  console.log("PASS: 360/430 EN/ZH light/dark, mocked AI chat, profile, invite");
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
