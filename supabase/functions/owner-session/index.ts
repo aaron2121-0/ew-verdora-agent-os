@@ -98,7 +98,7 @@ Deno.serve(async req=>{
     const {data,error}=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
     if(error)return reply({error:publicError(error)},403);
     const {data:exceptions}=await admin.rpc("owner_list_exceptions_internal",{p_user_id:uid,p_limit:20});
-    return reply({ok:true,dashboard:data,exceptions:exceptions||[]});
+    return reply({ok:true,role,dashboard:data,exceptions:exceptions||[]});
   }
   if(action==="exceptions"){
     const {data,error}=await admin.rpc("owner_list_exceptions_internal",{p_user_id:uid,p_limit:Number(b.limit||50)});
