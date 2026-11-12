@@ -8,6 +8,14 @@ const cors={
   "Content-Type":"application/json"
 };
 const reply=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:cors});
+
+// Pass through short business messages raised by our own SQL functions; hide raw Postgres/internal errors.
+function safeErr(e){
+  const m=String(e?.message||"");
+  if(/^[a-z][a-z0-9 _-]{2,60}$/i.test(m) && !/(violates|relation|column|constraint|syntax|permission|function|duplicate|null value|schema)/i.test(m)) return m;
+  console.error("INTERNAL_ERROR", e?.code||"", m.slice(0,200));
+  return "request_failed";
+}
 const url=Deno.env.get("SUPABASE_URL")||"";
 const pub=JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")||"{}").default||Deno.env.get("SUPABASE_ANON_KEY")||"";
 const sec=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}").default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -91,14 +99,14 @@ Deno.serve(async req=>{
       agent_id:agent.id,lead_id:leadId,customer_budget:budget,design_commitment:commitment,
       needed_at:b.needed_at||null,status:"awaiting_reference"
     }).select("*").single();
-    if(error)return reply({error:error.message},400);
+    if(error)return reply({error: safeErr(error)},400);
 
     const mime=String(b.content_type||"image/jpeg").toLowerCase();
     const ext=mime==="image/png"?"png":mime==="image/webp"?"webp":"jpg";
     if(!["image/jpeg","image/png","image/webp"].includes(mime))return reply({error:"unsupported_image_type"},400);
     const path=u.user.id+"/"+qr.id+"/reference-"+crypto.randomUUID()+"."+ext;
     const {data:up,error:upErr}=await admin.storage.from(bucket).createSignedUploadUrl(path,{upsert:false});
-    if(upErr)return reply({error:upErr.message},400);
+    if(upErr)return reply({error: safeErr(upErr)},400);
     await admin.from("quote_requests").update({reference_object_path:path,updated_at:new Date().toISOString()}).eq("id",qr.id);
     return reply({ok:true,request_id:qr.id,bucket,path,upload_token:up.token,upload_url:up.signedUrl});
   }
@@ -116,7 +124,7 @@ Deno.serve(async req=>{
       p_request_id:qr.id,
       p_option:option
     });
-    if(created.error)return reply({error:created.error.message},400);
+    if(created.error)return reply({error: safeErr(created.error)},400);
     const q=created.data;
     return reply({ok:true,quote:{
       id:q.id,lead_id:q.lead_id,quote_version:q.quote_version,
@@ -139,11 +147,11 @@ Deno.serve(async req=>{
     }
     if(aiKey){
       const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:"reference_analysis"});
-      if(quota.error)return reply({error:quota.error.message},400);
+      if(quota.error)return reply({error: safeErr(quota.error)},400);
       if(!quota.data?.allowed)return reply({error:"ai_daily_limit",quota:quota.data},429);
     }
     const {data:signed,error:signErr}=await admin.storage.from(bucket).createSignedUrl(qr.reference_object_path,300);
-    if(signErr)return reply({error:signErr.message},400);
+    if(signErr)return reply({error: safeErr(signErr)},400);
     const analysis=await visionAnalyze(signed.signedUrl);
     if(!analysis){
       const {data:row}=await admin.from("quote_requests").update({
@@ -160,7 +168,7 @@ Deno.serve(async req=>{
       p_flexibility:analysis.flower_flexibility,p_features:analysis.visual_features||{},
       p_provider:"openai",p_model:model,p_raw:analysis
     });
-    if(finErr)return reply({error:finErr.message},400);
+    if(finErr)return reply({error: safeErr(finErr)},400);
     return reply({ok:true,quote_request:safeResult(row),provider:"openai"});
   }
 

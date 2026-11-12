@@ -11,6 +11,13 @@ const cors = {
 function reply(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: cors });
 }
+// Pass through short business messages raised by our own SQL functions; hide raw Postgres/internal errors.
+function safeErr(e){
+  const m=String(e?.message||"");
+  if(/^[a-z][a-z0-9 _-]{2,60}$/i.test(m) && !/(violates|relation|column|constraint|syntax|permission|function|duplicate|null value|schema)/i.test(m)) return m;
+  console.error("INTERNAL_ERROR", e?.code||"", m.slice(0,200));
+  return "request_failed";
+}
 function clean(v, max = 120) {
   return String(v ?? "").trim().slice(0, max);
 }
@@ -55,7 +62,7 @@ Deno.serve(async (req) => {
       p_display_name: displayName,
       p_language: language
     });
-    if (error) return reply({ error: error.message }, 400);
+    if (error) return reply({ error: safeErr(error) }, 400);
     const { data: agent } = await admin.from("agents").select("id,agent_code").eq("id", data).single();
     return reply({ ok: true, agent_id: data, agent_code: agent?.agent_code || null });
   }
@@ -63,21 +70,21 @@ Deno.serve(async (req) => {
   const { data: agent, error: agentError } = await admin.from("agents")
     .select("id,agent_code,display_name,status,tier,commission_rate,performance_score,preferred_language,primary_channel")
     .eq("user_id", uid).maybeSingle();
-  if (agentError) return reply({ error: agentError.message }, 400);
+  if (agentError) return reply({ error: safeErr(agentError) }, 400);
   if (!agent) return reply({ ok: true, needs_registration: true, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
   if (action === "phase1_overview") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
     const { data, error } = await admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: date });
-    if (error) return reply({ error: error.message }, 400);
+    if (error) return reply({ error: safeErr(error) }, 400);
     return reply({ ok: true, phase1: data });
   }
 
   if (action === "mission") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
     const { data, error } = await admin.rpc("get_or_create_daily_mission_internal", { p_agent_id: agent.id, p_date: date });
-    if (error) return reply({ error: error.message }, 400);
+    if (error) return reply({ error: safeErr(error) }, 400);
     return reply({ ok: true, mission: data });
   }
 
@@ -98,7 +105,7 @@ Deno.serve(async (req) => {
       delivery_time: body.delivery_time || null,
       status: "new"
     }).select("id,status,created_at").single();
-    if (error) return reply({ error: error.message }, 400);
+    if (error) return reply({ error: safeErr(error) }, 400);
     await admin.from("lead_events").insert({ lead_id:data.id, agent_id:agent.id, event_type:"created" });
     return reply({ ok: true, lead: data });
   }
@@ -109,7 +116,7 @@ Deno.serve(async (req) => {
     const { data: ownLead, error: ownErr } = await admin.from("leads").select("id,status").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
     if (ownErr || !ownLead) return reply({ error:"lead_not_found" },404);
     const { error } = await admin.from("leads").update({ status:"qualified", updated_at:new Date().toISOString() }).eq("id",leadId).eq("agent_id",agent.id);
-    if (error) return reply({ error:error.message },400);
+    if (error) return reply({ error: safeErr(error) },400);
     await admin.from("lead_events").insert({ lead_id:leadId, agent_id:agent.id, event_type:"qualified" });
     return reply({ ok:true });
   }
@@ -160,7 +167,7 @@ Deno.serve(async (req) => {
 
   const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req]);
   const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error;
-  if (err) return reply({ error: err.message }, 400);
+  if (err) return reply({ error: safeErr(err) }, 400);
 
   return reply({
     ok: true,
