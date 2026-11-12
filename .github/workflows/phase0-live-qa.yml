@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: phase0-live-qa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   live:
     runs-on: ubuntu-latest
@@ -113,4 +117,5 @@ jobs:
             exit 0
           fi
           git commit -m "Phase 0 QA evidence"
+          git pull --rebase origin main
           git push
