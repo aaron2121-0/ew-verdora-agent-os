@@ -2,6 +2,7 @@ import {clear,element,emptyState,countTo,stagger,toast,vibrate,setupBottomSheet,
 import {createIcon} from "./icons.js";
 import {greetingPeriod,kuchingDateKey,formatKuchingDateTime} from "./date.js";
 import {createOrderWizard} from "./order.js";
+import {createPerformanceDashboard} from "./performance.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -65,6 +66,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     onNavigate:navigate,
     onLocked:showLock,
     onSent:()=>{markLocalTask("kit",true);renderNavBadges()}
+  });
+
+  const performance=createPerformanceDashboard({
+    getUserId,getLang,tr,api
   });
 
   function langText(value){
@@ -571,27 +576,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   }
 
   function renderPerformance(){
-    const host=document.getElementById("performancePage");if(!host)return;
-    clear(host);
-    const D=getData()||{},p=D.phase1||{},tp=p.tier_progress||{},a=D.agent||{},m=p.money||{};
-    const page=element("div",{className:"page-shell"});
-    page.append(screenHeader(tr("performanceTitle"),tr("performanceSubtitle")));
-    const hero=element("section",{className:"performance-hero"});
-    const tier=element("div");tier.append(element("span",{text:tr("tier")}),element("strong",{text:tr(tierKey(tp.current_tier||a.tier))}));
-    const score=element("div");score.append(element("span",{text:tr("score")}),element("strong",{text:String(tp.performance_score??a.performance_score??0)}));
-    const pending=element("div");pending.append(element("span",{text:tr("pendingCommission")}),element("strong",{text:money(m.pending)}));
-    hero.append(tier,score,pending);page.append(hero);
-    const section=element("section",{className:"commission-card",attrs:{id:"commissionPreview"}});
-    const h=element("div",{className:"card-head-title"});h.append(createIcon("wallet",{size:20}),element("h2",{text:tr("commissionPreview")}));
-    section.append(h);
-    const rows=D.commissions||[];
-    if(!rows.length)section.append(emptyState({icon:"wallet",title:tr("noCommissions")}));
-    rows.slice(0,10).forEach(c=>{
-      const row=element("div",{className:"commission-row"});
-      row.append(element("strong",{text:money(c.amount)}),element("span",{text:commissionStatusLabel(c.status,tr)}));
-      section.append(row);
-    });
-    page.append(section);host.append(page);
+    const host=document.getElementById("performancePage");
+    if(!host)return;
+    performance.open(host);
   }
 
   function renderSelling(){
@@ -666,13 +653,18 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   function renderAll(){
     setupNav();
-    renderToday();renderCustomers();renderTraining();renderPerformance();renderSelling();order.render();
+    renderToday();renderCustomers();renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
     renderNavBadges();
   }
 
   function onLanguageChange(){
     renderAll();
     order.onLanguageChange();
+    performance.onLanguageChange();
+  }
+
+  function onForeground(){
+    performance.onForeground();
   }
 
   async function init(){
@@ -683,5 +675,5 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     navigate("today");
   }
 
-  return {init,renderAll,onLanguageChange,navigate,showLock,renderNavBadges,order};
+  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance};
 }
