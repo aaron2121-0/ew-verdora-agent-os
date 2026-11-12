@@ -1,0 +1,46 @@
+name: Agent Motion Live Supabase QA
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-motion-live-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  agent-motion-live:
+    if: (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_QA_SECRET_KEY: ${{ secrets.SUPABASE_QA_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Agent dependencies and browser runner
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          echo "CHROME_PATH=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" >> "$GITHUB_ENV"
+      - name: Build exact Motion assets
+        run: node apps/agent-mobile/build-railway-function.mjs
+      - name: Real Supabase test-only invitation, session refresh, daily briefing and chat
+        run: node apps/agent-mobile/tests/live-supabase-motion.mjs
+      - name: Upload sanitized QA ledger
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motion-live-supabase-${{ github.run_id }}
+          path: apps/agent-mobile/artifacts/ui-motion/live-supabase-qa.json
+          if-no-files-found: ignore
+          retention-days: 7
