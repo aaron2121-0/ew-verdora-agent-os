@@ -13,7 +13,7 @@ assert.ok(!url.includes('localhost'));
 const runTag=(process.env.GITHUB_RUN_ID||Date.now().toString()).replace(/[^0-9]/g,'').slice(-12);
 const runId=randomBytes(5).toString('hex');
 const marker='QA-P0-'+runTag+'-'+runId;
-const created={auth_users:[],agents:[],agent_auth_invites:[],owner_auth_invites:[],leads:[],lead_events:[]};
+const created={auth_users:[],agents:[],agent_auth_invites:[],owner_auth_invites:[],leads:[],quote_requests:[],ai_chat_messages:[],lead_events:[]};
 const deleted={auth_users:[],agents:[],agent_auth_invites:[],leads:[],lead_events:[]};
 const results=[];const errors=[];const intendedEmails=new Set();
 const timeout=15000;
@@ -149,12 +149,61 @@ try{
   prefer:'return=representation',data:{agent_id:b.agentId,source:'referral',
    customer_label:marker+'-fixture',status:'new'}},[201]);
  created.leads.push(lead[0].id);
+
+ const sampleQuote=await expectHttp('/rest/v1/quote_requests?select=id',{admin:true,method:'POST',
+  prefer:'return=representation',data:{agent_id:b.agentId,lead_id:lead[0].id,customer_budget:150,
+  design_commitment:'adapted',status:'awaiting_reference'}},[201]);
+ assert.equal(sampleQuote.length,1);created.quote_requests.push(sampleQuote[0].id);
+ const chat=await expectHttp('/rest/v1/ai_chat_messages?select=id',{admin:true,method:'POST',
+  prefer:'return=representation',data:{agent_id:b.agentId,role:'user',content:marker}},[201]);
+ assert.equal(chat.length,1);created.ai_chat_messages.push(chat[0].id);
+ tests.push(test('Agent cannot fetch another Agent quote request',async()=>{
+  const x=await http('/functions/v1/quote-intake',{method:'POST',token:a.token,
+   data:{action:'status',request_id:sampleQuote[0].id}});
+  assert.equal(x.status,404,'Agent A could access Agent B quote request');
+ }));
+ tests.push(test('Agent B can fetch own quote without internal cost or commission',async()=>{
+  const x=await http('/functions/v1/quote-intake',{method:'POST',token:b.token,
+   data:{action:'status',request_id:sampleQuote[0].id}});
+  assert.equal(x.status,200);
+  assert.doesNotMatch(JSON.stringify(x.data),/"(?:production_cost|safe_cost|profit|commission_rate|commission_amount|supplier)":/i);
+ }));
+ tests.push(test('Agent A cannot read Agent B chat message through AI history',async()=>{
+  const x=await http('/functions/v1/agent-ai',{method:'POST',token:a.token,data:{action:'chat_history'}});
+  assert.equal(x.status,200);
+  assert.ok(!JSON.stringify(x.data).includes(marker),'Cross-agent chat history exposure');
+ }));
+ tests.push(test('Demo AI quota exhaustion returns daily_limit without calling Gemini',async()=>{
+  const first=await expectHttp('/rest/v1/rpc/consume_ai_quota_internal',{
+   admin:true,method:'POST',data:{p_agent_id:a.agentId,p_action:'coach'}},[200]);
+  const limit=Number(first.limit||0);
+  assert.ok(limit>=1&&limit<=40,'Unbounded/disabled QA coach quota: '+limit);
+  for(let n=1;n<limit;n++){
+   const x=await expectHttp('/rest/v1/rpc/consume_ai_quota_internal',{
+    admin:true,method:'POST',data:{p_agent_id:a.agentId,p_action:'coach'}},[200]);
+   assert.equal(x.allowed,true);
+  }
+  const x=await http('/functions/v1/agent-ai',{method:'POST',token:a.token,
+   data:{action:'coach',customer_message:'QA P0 quota probe'}});
+  assert.equal(x.status,429);
+  assert.equal(x.data?.error,'daily_limit');
+ }));
+ tests.push(test('Demo leaderboard excludes demo agents and peer private fields',async()=>{
+  const x=await http('/functions/v1/agent-session',{method:'POST',token:a.token,
+    data:{action:'sales_dashboard'}});
+  assert.equal(x.status,200);
+  const lb=x.data?.sales_dashboard?.leaderboard;
+  assert.ok(lb&&typeof lb==='object','Leaderboard missing');
+  const top=JSON.stringify(lb.top||[]);
+  assert.doesNotMatch(top,/"(?:customer_label|lead_id|order_code|commission_amount|commission_rate|agent_id)":/);
+  assert.ok(!top.includes(a.agentId)&&!top.includes(b.agentId),'Demo Agent is visible in leaderboard');
+ }));
  for(const table of ['leads','quote_requests','training_daily_answers','training_daily_attempts',
-  'training_exam_answers','training_exam_attempts','commissions','ai_chat_messages','agent_ai_profile']){
+  'training_exam_answers','training_exam_attempts','commissions','ai_chat_messages','ai_feedback_events','agent_ai_profile']){
   tests.push(test('Agent A cannot read Agent B '+table,async()=>{
    const r=await http('/rest/v1/'+table+'?select=*&agent_id=eq.'+b.agentId,{token:a.token});
    // The policy-less RLS tables intentionally have zero direct grants.
-   if(['ai_chat_messages','agent_ai_profile'].includes(table)){
+   if(['ai_chat_messages','ai_feedback_events','agent_ai_profile'].includes(table)){
      assert.ok([401,403,404].includes(r.status)||(r.status===200&&Array.isArray(r.data)&&r.data.length===0),
       'Protected table '+table+' exposed B records or unexpected status '+r.status);
    }else{
@@ -184,7 +233,7 @@ finally{
   const r=await http('/rest/v1/agents?id=eq.'+a.agentId,{admin:true,method:'PATCH',data:{status:'active'}});
   if(r.status!==204)errors.push('RESTORE_STATE_FAILURE agent-a status '+r.status);
  }
- for(const [table,key] of [['leads','leads'],['agent_auth_invites','agent_auth_invites'],['owner_auth_invites','owner_auth_invites'],['agents','agents']]){
+ for(const [table,key] of [['ai_chat_messages','ai_chat_messages'],['quote_requests','quote_requests'],['leads','leads'],['agent_auth_invites','agent_auth_invites'],['owner_auth_invites','owner_auth_invites'],['agents','agents']]){
   for(const id of [...created[key]].reverse()){
    try{const r=await http('/rest/v1/'+table+'?id=eq.'+id,{admin:true,method:'DELETE'});
     if(r.status!==204)throw Error('HTTP '+r.status);
