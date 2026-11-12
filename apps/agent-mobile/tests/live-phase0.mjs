@@ -129,7 +129,7 @@ async function testAgent(browser,width,height){
   await page.locator("#coachInput").fill("Customer asks for a bouquet");
   await page.locator("#coachBtn").click();
   await page.waitForFunction(()=>document.querySelector("#coachOut")?.textContent?.includes("Safe coach response"));
-  await page.locator(".train-practice").first().click();
+  await page.locator("#trainingList button").first().click();
   await page.waitForFunction(()=>document.querySelector("#scenario")?.textContent?.includes("Customer asks a question"));
   await page.locator("#roleAnswer").fill("A safe sales reply");
   await page.locator("#scoreRole").click();
