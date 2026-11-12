@@ -116,7 +116,10 @@ if(u.pathname==="/api/review-manifest")return json({
     "Claude handoff: partial-refund commission and paid-clawback accounting fixed",
     "Claude handoff: excess anon/authenticated grants removed",
     "Claude handoff: internal cron helpers no longer client-executable",
-    "Claude handoff: owner-session raw database errors sanitized"
+    "Claude handoff: owner-session raw database errors sanitized",
+    "Agent session dashboard quote-request runtime bug fixed in v11",
+    "Owner/Agent auth bridge implemented without paid services",
+    "Legacy Owner bootstrap endpoint retired"
   ],
   live:{
     supabaseProject:"EW VERDORA Agent OS",
@@ -129,6 +132,7 @@ if(u.pathname==="/api/review-manifest")return json({
     manualQuoteReviewRegressionRuns:100,
     claudeHandoffPaymentOrderRegressionRuns:100,
     result:"PASS",
+    ownerPreloginLiveRuns:100,
     tested:[
       "today progress event timing",
       "commission idempotency",
@@ -147,8 +151,21 @@ if(u.pathname==="/api/review-manifest")return json({
       "partial/full refund state transitions",
       "late payment after refund rejection",
       "partial refund commission reduction",
-      "paid commission event-scoped clawbacks"
+      "paid commission event-scoped clawbacks",
+      "Owner authenticated refresh → owner-session dashboard E2E",
+      "Agent register → 7 training modules + daily mission → dashboard E2E",
+      "Owner pre-login live 100/100 regression",
+      "Owner Magic Link production redirect probe"
     ]
+  },
+  authValidation:{
+    ownerConfirmed:true,
+    ownerRoleBound:true,
+    ownerE2E:"PASS",
+    agentRegistrationDashboardE2E:"PASS",
+    ownerPrelogin100:"PASS",
+    agentRedirectStrategy:"Magic Link returns to allowed Owner Mobile domain; authenticated non-Owner sessions are client-routed to Agent Mobile through URL fragment and immediately restored/cleared",
+    legacyBootstrap:"RETIRED"
   },
   costPolicy:"NO_EXTRA_PAID_SERVICES; external paid AI hard-disabled; fallback/manual only",
   canonicalLocalHead:"818efa43c69638cfad398d9abcc70f308ce2baf6",
