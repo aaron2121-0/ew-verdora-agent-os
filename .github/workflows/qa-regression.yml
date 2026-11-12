@@ -45,7 +45,7 @@ jobs:
       - name: P0 isolated demo identities, one-time invite and RBAC checks
         id: integration
         # Forked PRs never receive QA credentials; no pull_request_target.
-        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
         continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -54,7 +54,7 @@ jobs:
         run: node scripts/qa/run-isolated-integration.mjs
       - name: Verify and retry exact-ID QA fixture cleanup
         id: cleanup
-        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
         continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -66,7 +66,7 @@ jobs:
           echo "source=${{ steps.source.outcome }} public=${{ steps.public.outcome }} integration=${{ steps.integration.outcome }}"
           test "${{ steps.source.outcome }}" = "success"
           test "${{ steps.public.outcome }}" = "success"
-          if [ "${{ github.event_name }}" != "pull_request" ] || [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+          if { [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; } || { [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; }; then
             test "${{ steps.integration.outcome }}" = "success"
             test "${{ steps.cleanup.outcome }}" = "success"
           fi
