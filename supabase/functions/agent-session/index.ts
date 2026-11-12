@@ -27,6 +27,33 @@ const kuchingToday = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().
 // Statuses that may not sell. Must cover every non-selling value of agents.status.
 const SELLING_LOCKED = ["trainee", "restricted", "recovery", "dormant", "suspended"];
 
+const LOSS_REASONS = ["too_expensive","think_about_it","no_reply","chose_other","other"];
+
+function customerSegments(lead){
+  const status=String(lead?.status||"");
+  if(status==="quoted" || lead?.quote_id || ["approved","sent","accepted"].includes(String(lead?.quote_status||""))) return ["quoted"];
+  if(status==="follow_up" || lead?.next_followup_at) return ["follow_up"];
+  if(["new","qualified"].includes(status)) return ["new"];
+  return [];
+}
+function mergeLeadIntelligence(rows,intelligence){
+  const map=new Map((Array.isArray(intelligence)?intelligence:[]).map(x=>[String(x.lead_id),x]));
+  return (Array.isArray(rows)?rows:[]).map(lead=>({
+    ...lead,
+    customer_segments:customerSegments(lead),
+    ...(map.get(String(lead.id))||{})
+  }));
+}
+function enrichPhase1(phase1,intelligence){
+  if(!phase1||typeof phase1!=="object") return phase1;
+  return {
+    ...phase1,
+    recent_leads:mergeLeadIntelligence(phase1.recent_leads,intelligence),
+    due_followups:mergeLeadIntelligence(phase1.due_followups,intelligence)
+  };
+}
+
+
 const url = Deno.env.get("SUPABASE_URL") || "";
 const pubKeys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
 const secKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
@@ -76,9 +103,13 @@ Deno.serve(async (req) => {
 
   if (action === "phase1_overview") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
-    const { data, error } = await admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: date });
+    const [overviewRes,intelRes] = await Promise.all([
+      admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: date }),
+      admin.rpc("agent_lead_intelligence_internal", { p_agent_id: agent.id, p_limit: 50 })
+    ]);
+    const error=overviewRes.error||intelRes.error;
     if (error) return reply({ error: safeErr(error) }, 400);
-    return reply({ ok: true, phase1: data });
+    return reply({ ok: true, phase1: enrichPhase1(overviewRes.data,intelRes.data||[]) });
   }
 
   if (action === "sales_dashboard") {
@@ -162,6 +193,38 @@ Deno.serve(async (req) => {
     return reply({ok:true});
   }
 
+
+  if (action === "set_lead_loss") {
+    if (SELLING_LOCKED.includes(agent.status)) return reply({error:"selling_access_locked"},403);
+    const leadId=clean(body.lead_id,80);
+    const reason=String(body.loss_reason||"").toLowerCase();
+    if(!LOSS_REASONS.includes(reason)) return reply({error:"invalid_loss_reason"},400);
+    const {data:ownLead,error:ownErr}=await admin.from("leads")
+      .select("id,status,loss_reason").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
+    if(ownErr||!ownLead) return reply({error:"lead_not_found"},404);
+    if(["won","archived"].includes(String(ownLead.status))) return reply({error:"lead_cannot_be_lost"},409);
+    if(ownLead.status==="lost" && ownLead.loss_reason===reason){
+      return reply({ok:true,lead_id:leadId,status:"lost",loss_reason:reason,unchanged:true});
+    }
+    const previousReason=ownLead.loss_reason||null;
+
+    const {error:updateErr}=await admin.from("leads").update({
+      status:"lost",
+      loss_reason:reason,
+      next_followup_at:null,
+      updated_at:new Date().toISOString()
+    }).eq("id",leadId).eq("agent_id",agent.id);
+    if(updateErr) return reply({error:safeErr(updateErr)},400);
+
+    await admin.from("lead_events").insert({
+      lead_id:leadId,
+      agent_id:agent.id,
+      event_type:"lost",
+      metadata:{reason,previous_reason:previousReason}
+    });
+    return reply({ok:true,lead_id:leadId,status:"lost",loss_reason:reason});
+  }
+
   const today = kuchingToday();
   const missionReq = admin.rpc("get_or_create_daily_mission_internal", { p_agent_id: agent.id, p_date: today });
   const progressReq = admin.rpc("agent_today_progress_internal", { p_agent_id: agent.id, p_date: today });
@@ -178,14 +241,16 @@ Deno.serve(async (req) => {
   const commReq = admin.from("commissions")
     .select("amount,status,earned_at,paid_at").eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(20);
   const leadsReq = admin.from("leads")
-    .select("id,status,source,sales_category,budget,next_followup_at,created_at").eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(20);
+    .select("id,status,source,customer_label,occasion,sales_category,budget,delivery_date,delivery_time,loss_reason,next_followup_at,created_at,updated_at")
+    .eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(50);
   const quoteRequestsReq = admin.from("quote_requests")
     .select("id,lead_id,status,budget_version_price,recommended_price,customer_note_en,customer_note_zh,created_at")
     .eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(20);
   const phase1Req = admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: today });
+  const intelligenceReq = admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
 
-  const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req]);
-  const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error;
+  const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res, intelligenceRes] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req, intelligenceReq]);
+  const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error || intelligenceRes.error;
   if (err) return reply({ error: safeErr(err) }, 400);
 
   return reply({
@@ -199,8 +264,8 @@ Deno.serve(async (req) => {
     channel_playbooks: playbooksRes.data || [],
     campaigns: campaignRes.data || [],
     commissions: commRes.data || [],
-    recent_leads: leadsRes.data || [],
+    recent_leads: mergeLeadIntelligence(leadsRes.data||[],intelligenceRes.data||[]),
     quote_requests: quoteRequestsRes.data || [],
-    phase1: phase1Res.data || null
+    phase1: enrichPhase1(phase1Res.data||null,intelligenceRes.data||[])
   });
 });
