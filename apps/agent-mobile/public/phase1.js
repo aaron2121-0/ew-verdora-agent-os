@@ -567,6 +567,34 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
        const x=element("div");x.append(element("span",{text:k}),element("strong",{text:v}));meta.append(x);
      });
     body.append(meta,element("h3",{className:"detail-section-title",text:tr("statusProgress")}),renderPipeline(lead));
+    const coach=element("section",{className:"ai-coach-panel"});
+    coach.append(element("h3",{text:tr("aiCoachTitle")}));
+    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
+    input.placeholder=tr("aiCoachInput");coach.append(input);
+    const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
+    coach.append(ask);
+    ask.addEventListener("click",async()=>{
+      const customerMessage=input.value.trim();if(!customerMessage)return;
+      ask.disabled=true;aiStart();
+      const waiting=element("p",{className:"ai-chat-thinking",text:tr("aiThinking2")});coach.append(waiting);
+      try{
+        const j=await api.ai({action:"coach",customer_message:customerMessage});
+        waiting.remove();
+        const suggestion=typeof j.suggestion==="string"?j.suggestion:JSON.stringify(j.suggestion||{});
+        const actions=element("div",{className:"ai-message-actions"});
+        for(const [label,signal] of [[tr("aiHelpful"),"thumbs_up"],[tr("aiNotHelpful"),"thumbs_down"],[tr("copyText"),"copied"]]){
+          const b=element("button",{className:"btn btn-secondary btn-small",text:label,attrs:{type:"button"}});
+          b.addEventListener("click",async()=>{
+            if(signal==="copied")try{await navigator.clipboard.writeText(suggestion)}catch{}
+            api.ai({action:"feedback",ai_action:"coach",output_ref:null,signal}).catch(()=>{});
+          });actions.append(b);
+        }
+        const old=coach.querySelector(".ai-output-card");old?.remove();
+        const out=createAICard({title:tr("aiCoachTitle"),text:suggestion,provider:j.provider||"template",cached:false,tr,actions});coach.append(out.card);
+      }catch(e){waiting.textContent=api.friendlyError(e?.message)}
+      finally{ask.disabled=false;aiEnd()}
+    });
+    body.append(coach);
     sheet.classList.remove("hidden");
   }
 
