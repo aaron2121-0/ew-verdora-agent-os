@@ -363,10 +363,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   async function loadDailyGreeting(){
     if(aiGreetingLoading||aiGreeting)return;
-    aiGreetingLoading=true;aiStart();
-    try{aiGreeting=await api.ai({action:"daily_greeting"});const host=document.getElementById("aiDailyBrief");if(host){host.replaceChildren();const g=aiGreeting.greeting||{};host.append(createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr}).card)}}
+    aiGreetingLoading=true;aiStart();let aiOk=false;
+    try{aiGreeting=await api.ai({action:"daily_greeting"});aiOk=true;const host=document.getElementById("aiDailyBrief");if(host){host.replaceChildren();const g=aiGreeting.greeting||{};host.append(createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!aiGreeting.cached,tr}).card)}}
     catch{document.getElementById("aiDailyBrief")?.replaceChildren(element("p",{className:"ai-chat-thinking",text:tr("aiDailyUnavailable")}))}
-    finally{aiGreetingLoading=false;aiEnd()}
+    finally{aiGreetingLoading=false;aiEnd(aiOk)}
   }
 
   function renderQuickActions(){
@@ -576,10 +576,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     coach.append(ask);
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
-      ask.disabled=true;aiStart();
+      ask.disabled=true;aiStart();let coachOk=false;
       const waiting=element("p",{className:"ai-chat-thinking",text:tr("aiThinking2")});coach.append(waiting);
       try{
-        const j=await api.ai({action:"coach",customer_message:customerMessage});
+        const j=await api.ai({action:"coach",customer_message:customerMessage});coachOk=true;
         waiting.remove();
         const suggestion=typeof j.suggestion==="string"?j.suggestion:JSON.stringify(j.suggestion||{});
         const actions=element("div",{className:"ai-message-actions"});
@@ -593,7 +593,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         const old=coach.querySelector(".ai-output-card");old?.remove();
         const out=createAICard({title:tr("aiCoachTitle"),text:suggestion,provider:j.provider||"template",cached:false,tr,actions});coach.append(out.card);
       }catch(e){waiting.textContent=api.friendlyError(e?.message)}
-      finally{ask.disabled=false;aiEnd()}
+      finally{ask.disabled=false;aiEnd(coachOk)}
     });
     body.append(coach);
     sheet.classList.remove("hidden");
