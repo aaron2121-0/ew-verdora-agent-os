@@ -134,7 +134,9 @@ async function testAgent(browser,width,height){
   await page.locator("#roleAnswer").fill("A safe sales reply");
   await page.locator("#scoreRole").click();
   await page.waitForFunction(()=>document.querySelector("#roleResult")?.textContent?.includes("85"));
+  await page.waitForFunction(()=>!document.querySelector("#scoreRole")?.disabled);
   await page.locator("#closeRole").click();
+  await page.locator("#roleSheet").waitFor({state:"hidden"});
 
   await page.locator('#nav button[data-tab="kits"]').click();
   await page.locator(".btn").filter({hasText:"Today's Action"}).first().click();
