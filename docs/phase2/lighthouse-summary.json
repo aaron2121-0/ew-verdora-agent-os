@@ -1,0 +1,10 @@
+{
+  "performance": 100,
+  "accessibility": 95,
+  "bestPractices": 96,
+  "interactiveMs": 859.5509999999998,
+  "cls": 0.01939010308159722,
+  "fcpMs": 841.5509999999998,
+  "lcpMs": 841.5509999999998,
+  "totalBlockingTimeMs": 0
+}
