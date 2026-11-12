@@ -67,6 +67,13 @@ Deno.serve(async (req) => {
   if (!agent) return reply({ ok: true, needs_registration: true, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
+  if (action === "phase1_overview") {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
+    const { data, error } = await admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: date });
+    if (error) return reply({ error: error.message }, 400);
+    return reply({ ok: true, phase1: data });
+  }
+
   if (action === "mission") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
     const { data, error } = await admin.rpc("get_or_create_daily_mission_internal", { p_agent_id: agent.id, p_date: date });
@@ -149,9 +156,10 @@ Deno.serve(async (req) => {
   const quoteRequestsReq = admin.from("quote_requests")
     .select("id,lead_id,status,budget_version_price,recommended_price,customer_note_en,customer_note_zh,created_at")
     .eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(20);
+  const phase1Req = admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: today });
 
-  const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq]);
-  const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error;
+  const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req]);
+  const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error;
   if (err) return reply({ error: err.message }, 400);
 
   return reply({
@@ -166,6 +174,7 @@ Deno.serve(async (req) => {
     campaigns: campaignRes.data || [],
     commissions: commRes.data || [],
     recent_leads: leadsRes.data || [],
-    quote_requests: quoteRequestsRes.data || []
+    quote_requests: quoteRequestsRes.data || [],
+    phase1: phase1Res.data || null
   });
 });
