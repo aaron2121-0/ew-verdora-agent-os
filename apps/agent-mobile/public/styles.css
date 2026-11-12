@@ -186,3 +186,21 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 :root[data-motion="limited"] .ai-orb,:root[data-motion="limited"] .ai-chat-thinking{animation:none}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.ai-orb{animation:none!important}}
 @media(max-width:380px){.ai-orb{width:52px;height:52px;right:12px}.ai-chat-sheet{padding-left:12px;padding-right:12px}.ai-message{max-width:96%}}
+
+/* Keep legacy semantic tokens mapped to the selected palette. */
+:root:not([data-theme="light"]){
+ --cream-50:#0E1111;--cream-100:#161A1A;--cream-200:#272F2C;
+ --text-950:#ECEFEE;--text-800:#D6DFDA;--text-650:#ADB9B3;--text-500:#91A09A;
+ --line:rgba(255,255,255,.12);--shadow-1:none;--shadow-raised:0 6px 18px rgba(0,0,0,.25);
+ --success-bg:#173829;--warning-bg:#403019;--danger-bg:#3E2226;--blue-bg:#1A2A37;--indigo-bg:#28263C;
+ --gold-100:#382D1D;--gold-300:#D4B47A;--verdora-900:#235E47;--verdora-800:#277A56
+}
+:root[data-theme="light"]{
+ --cream-50:#FAF7F0;--cream-100:#F5EFE4;--cream-200:#EADFCE;
+ --text-950:#173629;--text-800:#283D33;--text-650:#466354;--text-500:#577064;--line:#DADFD6;
+ --shadow-1:0 1px 2px rgba(16,47,39,.03);--success-bg:#E9F6EF;--warning-bg:#FFF4DC;--danger-bg:#FDECEA;
+ --gold-100:#F5EAD3;--gold-300:#D8BD86;--verdora-900:#173F35;--verdora-800:#1F4D3A
+}
+.money-number,.metric-value,.wallet-total,.stat-value{font-variant-numeric:tabular-nums}
+.ai-chat-open{overflow:hidden}
+.ai-profile-button.hidden{display:none!important}
