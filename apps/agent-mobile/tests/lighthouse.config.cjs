@@ -1,0 +1,9 @@
+module.exports={
+  extends:"lighthouse:default",
+  settings:{
+    formFactor:"mobile",
+    screenEmulation:{mobile:true,width:360,height:800,deviceScaleFactor:2,disabled:false},
+    throttlingMethod:"simulate",
+    onlyCategories:["performance","accessibility","best-practices"]
+  }
+};
