@@ -30,12 +30,11 @@ const SELLING_LOCKED = ["trainee", "restricted", "recovery", "dormant", "suspend
 const LOSS_REASONS = ["too_expensive","think_about_it","no_reply","chose_other","other"];
 
 function customerSegments(lead){
-  const out=[];
   const status=String(lead?.status||"");
-  if(status==="new") out.push("new");
-  if(status==="follow_up" || lead?.next_followup_at) out.push("follow_up");
-  if(status==="quoted" || lead?.quote_id || ["approved","sent","accepted"].includes(String(lead?.quote_status||""))) out.push("quoted");
-  return out;
+  if(status==="quoted" || lead?.quote_id || ["approved","sent","accepted"].includes(String(lead?.quote_status||""))) return ["quoted"];
+  if(status==="follow_up" || lead?.next_followup_at) return ["follow_up"];
+  if(["new","qualified"].includes(status)) return ["new"];
+  return [];
 }
 function mergeLeadIntelligence(rows,intelligence){
   const map=new Map((Array.isArray(intelligence)?intelligence:[]).map(x=>[String(x.lead_id),x]));
@@ -204,6 +203,10 @@ Deno.serve(async (req) => {
       .select("id,status,loss_reason").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
     if(ownErr||!ownLead) return reply({error:"lead_not_found"},404);
     if(["won","archived"].includes(String(ownLead.status))) return reply({error:"lead_cannot_be_lost"},409);
+    if(ownLead.status==="lost" && ownLead.loss_reason===reason){
+      return reply({ok:true,lead_id:leadId,status:"lost",loss_reason:reason,unchanged:true});
+    }
+    const previousReason=ownLead.loss_reason||null;
 
     const {error:updateErr}=await admin.from("leads").update({
       status:"lost",
@@ -217,7 +220,7 @@ Deno.serve(async (req) => {
       lead_id:leadId,
       agent_id:agent.id,
       event_type:"lost",
-      metadata:{reason}
+      metadata:{reason,previous_reason:previousReason}
     });
     return reply({ok:true,lead_id:leadId,status:"lost",loss_reason:reason});
   }
