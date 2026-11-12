@@ -589,10 +589,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         const score=Math.max(0,Math.min(100,Number(lead.lead_score)||0));
         const level=score>=70?"aiChanceHigh":score>=40?"aiChanceMedium":"aiChanceLow";
         card.append(element("span",{className:"badge",text:tr(level)}));
-        if(lead.lead_score_reason)card.append(element("p",{className:"ai-priority-why",text:String(lead.lead_score_reason)}));
+        if(intelligenceReason(lead))card.append(element("p",{className:"ai-priority-why",text:intelligenceReason(lead)}));
       }
-      if(lead.best_followup_time)card.append(element("p",{className:"ai-priority-why",text:tr("aiBestFollowup")+": "+String(lead.best_followup_time)}));
-      if(lead.next_best_action)card.append(element("p",{className:"ai-priority-why",text:tr("aiNextAction")+": "+String(lead.next_best_action)}));
+      if(lead.best_followup_time)card.append(element("p",{className:"ai-priority-why",text:tr("aiBestFollowup")+": "+formatKuchingDateTime(lead.best_followup_time,getLang())}));
+      if(lead.next_best_action)card.append(element("p",{className:"ai-priority-why",text:tr("aiNextAction")+": "+nextBestActionLabel(lead.next_best_action)}));
       card.addEventListener("click",()=>openLeadDetail(lead));
       list.append(card);
     });
