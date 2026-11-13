@@ -106,12 +106,18 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
   async function load(){
     if(handbookData)return handbookData;
     if(fetching)return fetching;
-    fetching=api.agent({action:"handbook"}).then(r=>{
-      handbookData={knowledge:(r.knowledge||[]).filter(isReadOnlyRow),photos:(r.photos||[]).filter(p=>p.status==="approved"&&lineById(p.product_line))};
+    fetching=Promise.allSettled([
+      ...["story","product_line","service_rule","script","faq"]
+        .map(section=>api.agent({action:"handbook",section})),
+      api.agent({action:"handbook_portfolio"})
+    ]).then(results=>{
+      const knowledge=results.slice(0,-1).flatMap(x=>
+        x.status==="fulfilled"?(x.value?.entries||[]):[]).filter(isReadOnlyRow);
+      const photos=results.at(-1)?.status==="fulfilled"?(results.at(-1).value?.photos||[]):[];
+      handbookData={knowledge,photos:photos.filter(p=>p.status==="approved"&&lineById(p.product_line))};
       return handbookData;
     }).catch(()=>{
-      handbookData={knowledge:[],photos:[]};
-      return handbookData;
+      handbookData={knowledge:[],photos:[]};return handbookData;
     }).finally(()=>{fetching=null});
     return fetching;
   }
@@ -131,6 +137,15 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
         code:x.code,title:title(x),body:content(x),
         points:(getLang()==="zh"?x.key_points_zh:x.key_points_en)||[]
       }));
+  }
+  function courseSlides(code){
+    const section=sectionForCourse(code);
+    return (handbookData?.knowledge||[]).filter(x=>x.section===section&&
+      (section==="product_line"?x.kind==="card":
+       section==="script"?["script","seed"].includes(x.kind):x.kind==="seed"))
+      .sort((a,b)=>Number(a.sort||0)-Number(b.sort||0))
+      .map(x=>({code:x.code||("SEED-"+x.id),title:title(x),body:content(x),
+        points:(getLang()==="zh"?x.key_points_zh:x.key_points_en)||[]}));
   }
   function handbookCard(line){
     const card=element("button",{className:"handbook-line-card",attrs:{type:"button","data-handbook-line":line.id}});
@@ -152,14 +167,14 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     head.append(element("h1",{className:"screen-title",text:currentCourse?courseLabel(currentCourse):currentLine?(getLang()==="zh"?lineById(currentLine)?.zh:lineById(currentLine)?.en):t(getLang,"Product handbook","产品手册")}));
     if(currentCourse)head.append(element("p",{className:"screen-subtitle",text:t(getLang,"Read every card for at least 4 seconds, then take the course quiz.","每张卡至少阅读 4 秒，全部完成后才可参加课程测验。")}));
     page.append(head);
-    if(!currentLine){
+    if(!currentLine&&!currentCourse){
       page.append(element("p",{className:"screen-subtitle",text:t(getLang,"Only Owner-approved material is shown.","仅显示 Owner 已核准的资料。")}));
       const grid=element("div",{className:"handbook-line-grid"});
       HANDBOOK_LINES.forEach(x=>grid.append(handbookCard(x)));page.append(grid);
       host.append(page);stagger(grid.children);return;
     }
     const line=currentLine;
-    const slides=approvedSlides(line);
+    const slides=currentCourse?courseSlides(currentCourse):approvedSlides(line);
     const course=currentCourse;
     const panel=element("section",{className:"handbook-slides",attrs:{"aria-label":t(getLang,"Getting started cards","上手卡")}});
     const body=element("div",{className:"handbook-slide-body"});
@@ -316,7 +331,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     await load();
     await syncReadState(code);
     if(currentCourse!==code)return;
-    const cards=approvedSlides(currentLine);
+    const cards=courseSlides(code);
     const target=cards.findIndex(x=>x.code===targetCardCode);
     slideIndex=target>=0?target:0;
     renderPage();
