@@ -68,3 +68,59 @@ comment on table public.training_module_quiz_attempts is
  'Server-graded 3-question module checkpoint. A pass is recorded through the existing record_training_result_internal RPC.';
 comment on table public.training_module_quiz_items is
  'Question answers and private question IDs never leave the authenticated server.';
+
+
+-- Private MCQ bank is intentionally NOT exposed via PostgREST. Edge Functions
+-- obtain only the needed rows through restricted SECURITY DEFINER public RPCs.
+create or replace function public.agent_module_quiz_pool_internal(
+  p_agent_id uuid,p_module_code text)
+returns jsonb language plpgsql security definer set search_path to ''
+as $$
+declare v_pool jsonb;
+begin
+ if not exists(select 1 from public.agents where id=p_agent_id) then
+  raise exception 'agent_not_found';
+ end if;
+ if p_module_code not in
+  ('CORE-BRAND','LEAD-FINDING','QUALIFY','REFERENCE','OBJECTION','CLOSING','PAYMENT')
+ then raise exception 'invalid_module'; end if;
+ select coalesce(jsonb_agg(jsonb_build_object('id',z.id,'code',z.code,'skill_code',z.skill_code)),'[]'::jsonb)
+ into v_pool
+ from (
+  select q.id,q.code,q.skill_code from private.training_questions q
+  where q.active=true and q.is_test=false and q.bank_type='daily'
+    and (case when p_module_code='CORE-BRAND' then
+      q.code like 'HB-CORE-BRAND-%'
+      else q.skill_code=p_module_code end)
+  order by (q.code like 'HB-%') desc,md5(p_agent_id::text||':'||q.id::text)
+  limit 250
+ ) z;
+ return v_pool;
+end;
+$$;
+
+create or replace function public.agent_module_quiz_question_internal(
+  p_agent_id uuid,p_question_id uuid)
+returns jsonb language plpgsql security definer set search_path to ''
+as $$
+declare v_question private.training_questions;
+begin
+ if not exists(select 1 from public.agents where id=p_agent_id) then
+  raise exception 'agent_not_found';
+ end if;
+ select * into v_question from private.training_questions
+  where id=p_question_id and active=true and is_test=false and bank_type='daily';
+ if v_question.id is null then raise exception 'question_not_found'; end if;
+ return jsonb_build_object(
+  'id',v_question.id,'question_en',v_question.question_en,
+  'question_zh',v_question.question_zh,'options_en',v_question.options_en,
+  'options_zh',v_question.options_zh,'correct_index',v_question.correct_index,
+  'explanation_en',v_question.explanation_en,'explanation_zh',v_question.explanation_zh
+ );
+end;
+$$;
+
+revoke all on function public.agent_module_quiz_pool_internal(uuid,text),
+ public.agent_module_quiz_question_internal(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.agent_module_quiz_pool_internal(uuid,text),
+ public.agent_module_quiz_question_internal(uuid,uuid) to service_role;
