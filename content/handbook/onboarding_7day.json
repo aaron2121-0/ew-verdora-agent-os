@@ -1,0 +1,215 @@
+{
+ "source_version": "grok-onboarding-2026-11-13-claude-reviewed",
+ "days": [
+  {
+   "day": 1,
+   "title_en": "Know EW VERDORA",
+   "title_zh": "认识 EW VERDORA",
+   "goal_en": "Understand who we are and the five product lines.",
+   "goal_zh": "认识公司与五大业务线。",
+   "handbook_focus": "story",
+   "tasks": [
+    {
+     "code": "D1-T1",
+     "type": "read",
+     "text_en": "Read the company introduction and five business lines.",
+     "text_zh": "阅读公司介绍与五大业务线。",
+     "minutes": 8
+    },
+    {
+     "code": "D1-T2",
+     "type": "quiz",
+     "text_en": "Complete the short quiz on product lines.",
+     "text_zh": "完成业务线小测验。",
+     "minutes": 5
+    },
+    {
+     "code": "D1-T3",
+     "type": "share",
+     "text_en": "Tell your AI partner (the orb) one thing you learned today.",
+     "text_zh": "用一句话告诉 AI 搭档（光球）你今天学到什么。",
+     "minutes": 3
+    }
+   ],
+   "done_message_en": "Great start! You now know our five lines.",
+   "done_message_zh": "好的开始！你已认识五大业务。"
+  },
+  {
+   "day": 2,
+   "title_en": "Condolence Wreaths",
+   "title_zh": "帛事花圈",
+   "goal_en": "Learn when and how to handle condolence orders with care.",
+   "goal_zh": "学习如何温和处理帛事花圈。",
+   "handbook_focus": "condolence",
+   "tasks": [
+    {
+     "code": "D2-T1",
+     "type": "read",
+     "text_en": "Read the four cards for condolence wreaths.",
+     "text_zh": "阅读帛事花圈四张上手卡。",
+     "minutes": 6
+    },
+    {
+     "code": "D2-T2",
+     "type": "practice",
+     "text_en": "Practice a soft opening message that starts with condolences.",
+     "text_zh": "练习先慰问的温和开场。",
+     "minutes": 5
+    },
+    {
+     "code": "D2-T3",
+     "type": "quiz",
+     "text_en": "Quiz on occasions and same-day conditions.",
+     "text_zh": "测验场合与当日送达条件。",
+     "minutes": 4
+    }
+   ],
+   "done_message_en": "You handled this with the right care.",
+   "done_message_zh": "你处理得温和得体。"
+  },
+  {
+   "day": 3,
+   "title_en": "Opening Baskets",
+   "title_zh": "开张花篮",
+   "goal_en": "Know the occasions and how to recommend festive baskets.",
+   "goal_zh": "掌握开张花篮的场合与推荐方式。",
+   "handbook_focus": "opening",
+   "tasks": [
+    {
+     "code": "D3-T1",
+     "type": "read",
+     "text_en": "Read the opening basket cards.",
+     "text_zh": "阅读开张花篮上手卡。",
+     "minutes": 6
+    },
+    {
+     "code": "D3-T2",
+     "type": "practice",
+     "text_en": "Write a short WhatsApp message for a new shop opening.",
+     "text_zh": "写一条开幕祝贺的WhatsApp。",
+     "minutes": 5
+    }
+   ],
+   "done_message_en": "Nice work on festive recommendations.",
+   "done_message_zh": "喜庆推荐做得好。"
+  },
+  {
+   "day": 4,
+   "title_en": "Refined Bouquets",
+   "title_zh": "精致花束",
+   "goal_en": "Match bouquets to personal occasions and handle photo requests.",
+   "goal_zh": "把花束匹配到个人场合并处理参考图。",
+   "handbook_focus": "bouquet",
+   "tasks": [
+    {
+     "code": "D4-T1",
+     "type": "read",
+     "text_en": "Read the bouquet cards.",
+     "text_zh": "阅读精致花束上手卡。",
+     "minutes": 6
+    },
+    {
+     "code": "D4-T2",
+     "type": "practice",
+     "text_en": "Practice explaining that a photo is style reference only.",
+     "text_zh": "练习说明图片仅风格参考。",
+     "minutes": 5
+    },
+    {
+     "code": "D4-T3",
+     "type": "quiz",
+     "text_en": "Quiz on suitable flowers and occasions.",
+     "text_zh": "测验适合花材与场合。",
+     "minutes": 4
+    }
+   ],
+   "done_message_en": "You can now match the right bouquet.",
+   "done_message_zh": "你已能匹配合适花束。"
+  },
+  {
+   "day": 5,
+   "title_en": "Weddings and Events",
+   "title_zh": "婚礼与活动",
+   "goal_en": "Understand full design and on-site setup offers.",
+   "goal_zh": "了解全案设计与现场布置。",
+   "handbook_focus": "wedding_event",
+   "tasks": [
+    {
+     "code": "D5-T1",
+     "type": "read",
+     "text_en": "Read the wedding and event cards.",
+     "text_zh": "阅读婚礼与活动上手卡。",
+     "minutes": 7
+    },
+    {
+     "code": "D5-T2",
+     "type": "practice",
+     "text_en": "Practice asking about the date and needs without pressure.",
+     "text_zh": "练习温和确认日期与需求。",
+     "minutes": 5
+    }
+   ],
+   "done_message_en": "Full design thinking is clear now.",
+   "done_message_zh": "全案思路已清楚。"
+  },
+  {
+   "day": 6,
+   "title_en": "Wholesale Flowers",
+   "title_zh": "鲜花批发",
+   "goal_en": "Identify trade customers and the pre-order process.",
+   "goal_zh": "识别行业客户与预订流程。",
+   "handbook_focus": "wholesale",
+   "tasks": [
+    {
+     "code": "D6-T1",
+     "type": "read",
+     "text_en": "Read the wholesale cards.",
+     "text_zh": "阅读鲜花批发上手卡。",
+     "minutes": 6
+    },
+    {
+     "code": "D6-T2",
+     "type": "quiz",
+     "text_en": "Quiz on who buys wholesale and pre-order rules.",
+     "text_zh": "测验批发对象与预订规则。",
+     "minutes": 4
+    }
+   ],
+   "done_message_en": "You can spot wholesale opportunities.",
+   "done_message_zh": "你已能发现批发商机。"
+  },
+  {
+   "day": 7,
+   "title_en": "Rules and Practice",
+   "title_zh": "规则与综合练习",
+   "goal_en": "Master reference photo rules and common objections, then prepare for certification.",
+   "goal_zh": "掌握参考图规则与异议处理，准备认证考试。",
+   "handbook_focus": "service_rule",
+   "tasks": [
+    {
+     "code": "D7-T1",
+     "type": "read",
+     "text_en": "Review photo reference rules and objection answers.",
+     "text_zh": "复习参考图规则与异议回答。",
+     "minutes": 8
+    },
+    {
+     "code": "D7-T2",
+     "type": "practice",
+     "text_en": "Handle three sample situations: photo, freshness, and negative review.",
+     "text_zh": "处理三个情境：参考图、新鲜度、负评。",
+     "minutes": 7
+    },
+    {
+     "code": "D7-T3",
+     "type": "share",
+     "text_en": "Remind yourself to take the certification exam (85% required to unlock orders).",
+     "text_zh": "提醒自己完成认证考试（85%才能解锁接单）。",
+     "minutes": 2
+    }
+   ],
+   "done_message_en": "Ready for the exam. Go for it!",
+   "done_message_zh": "准备好了，去考认证吧！"
+  }
+ ]
+}
