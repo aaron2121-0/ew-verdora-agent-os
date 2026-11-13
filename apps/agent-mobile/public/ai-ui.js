@@ -16,7 +16,7 @@ export function contextTips(data={},now=Date.now(),tr=k=>k){
  else if(hour<12)tips.push({key:"aiTipMorning",prompt:"aiPromptPlan"});
  else if(hour<14)tips.push({key:"aiTipLunch",prompt:"aiPromptPlan"});
  else tips.push({key:"aiTipEvening",prompt:"aiPromptPlan"});
- if(p.training_pending)tips.push({key:"aiTipTraining",prompt:"aiPromptPlan"});
+
  return tips;
 }
 function canShowTipNow(profile,now){
@@ -34,12 +34,12 @@ export function adaptToProfile(profile){
 export function prioritizeCards(data,container,tr){
  if(!container)return;
  const due=(data?.phase1?.due_followups||[]).length;
- const training=!!data?.phase1?.training_pending;
+
  const cards=[...container.children].filter(n=>n.dataset.priorityCard);
- const rank=n=>n.dataset.priorityCard==="followup"?(due?0:5):n.dataset.priorityCard==="training"?(training?1:6):n.dataset.priorityCard==="brief"?2:3;
+ const rank=n=>n.dataset.priorityCard==="followup"?(due?0:5):n.dataset.priorityCard==="tasks"?1:n.dataset.priorityCard==="brief"?2:3;
  const ordered=cards.slice().sort((a,b)=>rank(a)-rank(b));
  flipReorder(container,()=>ordered.forEach(n=>container.append(n)));
- for(const node of ordered){const why=node.querySelector("[data-priority-why]");if(why)why.textContent=tr(node.dataset.priorityCard==="followup"&&due?"aiWhyFollowup":node.dataset.priorityCard==="training"&&training?"aiWhyTraining":"aiWhyToday")}
+ for(const node of ordered){const why=node.querySelector("[data-priority-why]");if(why)why.textContent=tr(node.dataset.priorityCard==="followup"&&due?"aiWhyFollowup":"aiWhyToday")}
 }
 export function createAICard({title,text="",provider="gemini",cached=false,tr,actions=null}){
  const card=document.createElement("section");card.className="ai-output-card "+(provider==="gemini"?"ai-live":"ai-template");
