@@ -24,7 +24,7 @@ const rows=quote(JSON.stringify(validated.entries));
 // Use the real reviewed content and codes, unmodified, inside a rollback transaction.
 // A fresh test schema is preferred; existing matching codes are temporarily deleted
 // inside this transaction so reruns also exercise the new-entry path.
-const sql=\`
+const sql=`
 begin;
 do $qa$
 declare
@@ -38,8 +38,8 @@ begin
  if v_owner is null then raise exception 'QA requires an existing Owner role in staging'; end if;
 
  delete from public.company_knowledge
-   where code in (select x->>'code' from pg_catalog.jsonb_array_elements(\${rows}::jsonb) x);
- v_first:=public.handbook_import_internal(v_owner,\${version},\${rows}::jsonb);
+   where code in (select x->>'code' from pg_catalog.jsonb_array_elements(${rows}::jsonb) x);
+ v_first:=public.handbook_import_internal(v_owner,${version},${rows}::jsonb);
  v_batch:=(v_first->>'batch_id')::uuid;
  if (v_first->>'inserted')::int<>47 or (v_first->>'updated')::int<>0 then
    raise exception 'initial import counts mismatch: %',v_first; end if;
@@ -59,7 +59,7 @@ begin
    and visible_to_agent=true and needs_owner_confirm=false;
  if n<>0 then raise exception 'Agent sees pending import'; end if;
 
- v_again:=public.handbook_import_internal(v_owner,\${version},\${rows}::jsonb);
+ v_again:=public.handbook_import_internal(v_owner,${version},${rows}::jsonb);
  if (v_again->>'inserted')::int<>0 or (v_again->>'updated')::int<>0 or
     (v_again->>'unchanged')::int<>47 or (v_again->>'batch_id') is not null then
    raise exception 'duplicate import must produce zero changes: %',v_again; end if;
@@ -86,7 +86,7 @@ begin
 
  -- Reimport after Owner edit is a real content change; no new codes but
  -- the changed item must become hidden/pending again until approved.
- v_changed:=public.handbook_import_internal(v_owner,\${version},\${rows}::jsonb);
+ v_changed:=public.handbook_import_internal(v_owner,${version},${rows}::jsonb);
  if (v_changed->>'inserted')::int<>0 or (v_changed->>'updated')::int<>1
      or (v_changed->>'unchanged')::int<>46 then
    raise exception 'changed reimport mismatch: %',v_changed; end if;
@@ -101,7 +101,7 @@ begin
  raise notice 'HANDBOOK_ROLLBACK_QA_PASS: 20 cards + 15 scripts + 12 FAQ, 47 pending/hidden, bulk, duplicate=0, edit/reapproval';
 end $qa$;
 rollback;
-\`;
+`;
 const proc=spawnSync("psql",[process.env.DATABASE_URL,"-X","-v","ON_ERROR_STOP=1","-q"],{
   input:sql,encoding:"utf8",stdio:["pipe","pipe","pipe"]
 });
