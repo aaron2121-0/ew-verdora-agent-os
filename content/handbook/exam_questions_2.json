@@ -1,0 +1,465 @@
+{
+ "source_version": "grok-exam-2026-11-13-claude-reviewed",
+ "questions": [
+  {
+   "code": "HB-EXAM-01",
+   "bank_type": "exam",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A guest says: \"My uncle passed away yesterday. We need something for the wake hall.\" What should you do first?",
+   "question_zh": "客人说：「我叔叔昨天去世了，治丧处需要东西。」你首先该怎么做？",
+   "options_en": [
+    "Offer condolences first, then ask if they need a standing wreath for the wake.",
+    "Suggest a refined bouquet of roses.",
+    "Tell them to check Google reviews before ordering.",
+    "Immediately recommend the largest wreath and ask for budget."
+   ],
+   "options_zh": [
+    "先慰问，再询问是否需要治丧处的庄重花圈。",
+    "建议玫瑰精致花束。",
+    "叫他们先看Google评价再下单。",
+    "马上推荐最大花圈并问预算。"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Always start with condolences for funeral matters. Then qualify for standing wreaths or mourning baskets.",
+   "explanation_zh": "丧事一律先慰问。再确认是否需要庄重立式花圈或哀悼花篮。"
+  },
+  {
+   "code": "HB-EXAM-02",
+   "bank_type": "exam",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A local florist messages: \"I need a lot of foliage for next week's event.\" Which line fits?",
+   "question_zh": "本地花店说：「下周活动我需要很多叶材。」适合哪条业务线？",
+   "options_en": [
+    "Opening baskets",
+    "Wholesale flowers by pre-order",
+    "Condolence wreaths",
+    "Refined bouquets"
+   ],
+   "options_zh": [
+    "开张花篮",
+    "预订制鲜花批发",
+    "帛事花圈",
+    "精致花束"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Bulk flowers and foliage for florists and event teams are wholesale by pre-order.",
+   "explanation_zh": "花店与活动团队的散装鲜花与叶材属于预订制批发。"
+  },
+  {
+   "code": "HB-EXAM-03",
+   "bank_type": "exam",
+   "skill_code": "QUALIFY",
+   "difficulty": 3,
+   "question_en": "A couple says they need bridal bouquet, car flowers, an arch and full on-site setup. What do you recommend?",
+   "question_zh": "新人说需要手捧花、婚车、拱门和全案现场布置。你推荐什么？",
+   "options_en": [
+    "Wholesale bulk only",
+    "Only a refined bouquet",
+    "Wedding and event full design with on-site installation",
+    "Opening basket with money tree"
+   ],
+   "options_zh": [
+    "只做批发",
+    "只做精致花束",
+    "婚礼与活动全案设计与现场布置",
+    "开张花篮加发财树"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Bridal items, arches and on-site setup belong to wedding and event full design.",
+   "explanation_zh": "手捧花、拱门与现场布置属于婚礼与活动全案设计。"
+  },
+  {
+   "code": "HB-EXAM-04",
+   "bank_type": "exam",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "Someone is moving to a new house and wants a congratulatory arrangement with a ribbon. Best match?",
+   "question_zh": "有人乔迁，想要带祝贺布条的摆设。最合适？",
+   "options_en": [
+    "Wholesale foliage",
+    "Only table flowers for a wedding",
+    "Condolence wreath",
+    "Opening basket that can include money tree or lucky bamboo"
+   ],
+   "options_zh": [
+    "批发叶材",
+    "只做婚礼桌花",
+    "帛事花圈",
+    "可搭配发财树或开运竹的开张花篮"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Housewarmings and openings use large festive baskets with optional ribbons and trees.",
+   "explanation_zh": "乔迁与开幕使用大型喜庆花篮，可加祝贺布条与树。"
+  },
+  {
+   "code": "HB-EXAM-05",
+   "bank_type": "exam",
+   "skill_code": "REFERENCE",
+   "difficulty": 2,
+   "question_en": "Guest sends a photo and says \"Make it exactly like this.\" Correct reply?",
+   "question_zh": "客人发图说「照这张做」。正确回复？",
+   "options_en": [
+    "This is for style reference only. Flower types and colours will adjust to seasonal supply. I will confirm with you first.",
+    "We cannot accept any photos.",
+    "The price will be higher if we follow the photo.",
+    "Yes, we will copy it exactly with the same flowers."
+   ],
+   "options_zh": [
+    "仅供风格参考。花材与颜色依当季供应调整，我会先跟你确认。",
+    "我们不接受任何图片。",
+    "照图做价格会更高。",
+    "可以，花材会完全一样。"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Photos are style reference only. Must inform that materials adjust by season.",
+   "explanation_zh": "图片仅风格参考。必须告知花材依当季调整。"
+  },
+  {
+   "code": "HB-EXAM-06",
+   "bank_type": "exam",
+   "skill_code": "REFERENCE",
+   "difficulty": 3,
+   "question_en": "Guest asks for blue hydrangeas shown in their photo. What do you do?",
+   "question_zh": "客人要求图里的蓝色绣球。你怎么做？",
+   "options_en": [
+    "Promise blue hydrangeas without checking.",
+    "Explain that colour depends on seasonal supply and say you will confirm with the company.",
+    "Say the company never uses hydrangeas.",
+    "Invent that blue is in stock."
+   ],
+   "options_zh": [
+    "不确认就承诺蓝色绣球。",
+    "说明颜色视当季供应，并说你帮跟公司确认。",
+    "说公司从不用绣球。",
+    "虚构有蓝色库存。"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Never invent stock. Inform about seasonal adjustment and confirm when needed.",
+   "explanation_zh": "绝不虚构库存。告知当季调整，需要时帮确认。"
+  },
+  {
+   "code": "HB-EXAM-07",
+   "bank_type": "exam",
+   "skill_code": "REFERENCE",
+   "difficulty": 2,
+   "question_en": "Which statement about customer photos is correct?",
+   "question_zh": "关于客人图片，哪句正确？",
+   "options_en": [
+    "Ignore the photo and suggest something else immediately.",
+    "We always match them exactly.",
+    "Use as style reference only and must tell the guest about seasonal changes.",
+    "Photos guarantee the flowers are in stock."
+   ],
+   "options_zh": [
+    "忽略图片马上建议别的。",
+    "我们一定一模一样。",
+    "仅作风格参考，必须告知当季调整。",
+    "图片保证有库存。"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Style reference only; finished product follows seasonal supply; inform first.",
+   "explanation_zh": "仅风格参考；成品依当季花材；必须先告知。"
+  },
+  {
+   "code": "HB-EXAM-08",
+   "bank_type": "exam",
+   "skill_code": "REFERENCE",
+   "difficulty": 3,
+   "question_en": "You are about to send a quote. The guest earlier sent a reference photo. What must you include?",
+   "question_zh": "你准备申请报价，客人之前发了参考图。必须包含什么？",
+   "options_en": [
+    "A fixed price you invented.",
+    "Nothing about the photo.",
+    "A promise of exact match.",
+    "A clear note that the photo is style reference and flowers may differ by season."
+   ],
+   "options_zh": [
+    "你自己编的固定价格。",
+    "完全不提图片。",
+    "一模一样的承诺。",
+    "明确说明图片仅风格参考，花材可能因当季不同。"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Must inform about style reference and seasonal adjustment before proceeding.",
+   "explanation_zh": "进行前必须告知风格参考与当季调整。"
+  },
+  {
+   "code": "HB-EXAM-09",
+   "bank_type": "exam",
+   "skill_code": "OBJECTION",
+   "difficulty": 2,
+   "question_en": "Guest says: \"I saw negative reviews on Google.\" Best reply?",
+   "question_zh": "客人说：「我在Google看到负评。」最好回复？",
+   "options_en": [
+    "We take feedback seriously and focus on fresh flowers and on-time delivery. If you have a specific concern, I can help confirm with the company.",
+    "Change the subject quickly.",
+    "Badmouth the people who left reviews.",
+    "Those reviews are all fake."
+   ],
+   "options_zh": [
+    "我们重视反馈，专注新鲜与准时。如有具体问题我帮你跟公司确认。",
+    "马上转移话题。",
+    "贬低写评价的人。",
+    "那些评价都是假的。"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Be honest, do not badmouth others, offer to confirm if needed.",
+   "explanation_zh": "诚实，不贬低他人，需要时帮确认。"
+  },
+  {
+   "code": "HB-EXAM-10",
+   "bank_type": "exam",
+   "skill_code": "OBJECTION",
+   "difficulty": 2,
+   "question_en": "Guest worries the flowers will not be fresh. Correct explanation?",
+   "question_zh": "客人担心花不新鲜。正确说明？",
+   "options_en": [
+    "They stay fresh forever.",
+    "The company handles import documents and uses air freight to Kuching airport with clearance. Pre-order and inventory checks help reduce waste, but actual condition still needs confirmation.",
+    "We only use local flowers that never travel.",
+    "Ignore and talk about price."
+   ],
+   "options_zh": [
+    "永远新鲜。",
+    "公司自行处理进口文件，古晋机场空运清关。预订与盘点减少损耗，但实际花况仍要确认。",
+    "只用从不运输的本地花。",
+    "忽略并谈价格。"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Explain the process honestly; do not guarantee; confirm actual condition when needed.",
+   "explanation_zh": "诚实说明流程；不保证；需要时确认实际花况。"
+  },
+  {
+   "code": "HB-EXAM-11",
+   "bank_type": "exam",
+   "skill_code": "OBJECTION",
+   "difficulty": 3,
+   "question_en": "Guest asks \"How much?\" What do you say?",
+   "question_zh": "客人问「多少钱？」你怎么说？",
+   "options_en": [
+    "Offer a discount without checking.",
+    "Give a number you think is fair.",
+    "Price is based on the current quote. Tell me the date and your budget, and I will apply for you.",
+    "Say it is free for new customers."
+   ],
+   "options_zh": [
+    "不确认就给折扣。",
+    "报一个你觉得合理的数字。",
+    "价格以当下报价为准。告诉我日期和预算，我帮你申请。",
+    "说新客户免费。"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Never invent price. Agent applies for current quote after asking date and budget.",
+   "explanation_zh": "绝不编造价格。问日期和预算后由Agent申请当下报价。"
+  },
+  {
+   "code": "HB-EXAM-12",
+   "bank_type": "exam",
+   "skill_code": "OBJECTION",
+   "difficulty": 3,
+   "question_en": "Guest says the delivery area is too far. What is appropriate?",
+   "question_zh": "客人说配送太远。合适做法？",
+   "options_en": [
+    "Refuse immediately.",
+    "Invent a closer pickup point.",
+    "Promise same-day delivery anywhere.",
+    "Check if the place is in the listed areas (Kuching, Matang, Batu Kawa, etc.) and say you will confirm stock and schedule with the company."
+   ],
+   "options_zh": [
+    "马上拒绝。",
+    "虚构一个更近的取货点。",
+    "承诺任何地方当日送达。",
+    "确认是否在配送区域（古晋、Matang、Batu Kawa等），并说帮跟公司确认库存与排期。"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Delivery is subject to stock and schedule in the listed areas. Confirm when uncertain.",
+   "explanation_zh": "配送视库存与排期，仅限所列区域。不确定就帮确认。"
+  },
+  {
+   "code": "HB-EXAM-13",
+   "bank_type": "exam",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 2,
+   "question_en": "You hear a neighbour is cutting the ribbon for a new shop tomorrow. What opportunity is this?",
+   "question_zh": "你听到邻居明天新店剪彩。这是什么商机？",
+   "options_en": [
+    "Opening basket with possible ribbon and money tree",
+    "Condolence wreath",
+    "Wholesale only",
+    "Refined bouquet for birthday"
+   ],
+   "options_zh": [
+    "可加祝贺布条与发财树的开张花篮",
+    "帛事花圈",
+    "只做批发",
+    "生日精致花束"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Ribbon-cuttings and openings are leads for festive baskets.",
+   "explanation_zh": "剪彩与开幕是开张花篮商机。"
+  },
+  {
+   "code": "HB-EXAM-14",
+   "bank_type": "exam",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 2,
+   "question_en": "A friend mentions their daughter is graduating next month. Suitable lead?",
+   "question_zh": "朋友提到女儿下个月毕业。适合的商机？",
+   "options_en": [
+    "Opening basket",
+    "Refined bouquet (graduation occasion)",
+    "Wholesale foliage",
+    "Funeral wreath"
+   ],
+   "options_zh": [
+    "开张花篮",
+    "精致花束（毕业场合）",
+    "批发叶材",
+    "帛事花圈"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Graduation is one of the occasions for refined bouquets.",
+   "explanation_zh": "毕业属于精致花束的场合。"
+  },
+  {
+   "code": "HB-EXAM-15",
+   "bank_type": "exam",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 3,
+   "question_en": "You meet an event planner who regularly needs bulk flowers. What should you note?",
+   "question_zh": "你遇到经常需要大量花材的活动策划。应该记下什么？",
+   "options_en": [
+    "Ignore because they are not a couple",
+    "Offer only small bouquets",
+    "This is a wholesale pre-order opportunity",
+    "Suggest condolence wreaths"
+   ],
+   "options_zh": [
+    "因为不是情侣就忽略",
+    "只提供小花束",
+    "这是预订制批发商机",
+    "建议帛事花圈"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Event teams and planners needing volume are wholesale leads.",
+   "explanation_zh": "需要大量的活动团队与策划是批发商机。"
+  },
+  {
+   "code": "HB-EXAM-16",
+   "bank_type": "exam",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 3,
+   "question_en": "Which of the following is a lead for condolence wreaths?",
+   "question_zh": "以下哪项是帛事花圈的商机？",
+   "options_en": [
+    "Mother's Day gift",
+    "Wedding car decoration",
+    "A new shop opening",
+    "A family preparing for a memorial service"
+   ],
+   "options_zh": [
+    "母亲节礼物",
+    "婚车装饰",
+    "新店开幕",
+    "家庭准备追悼会"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Memorials and wake halls are the occasions for condolence wreaths.",
+   "explanation_zh": "追悼会与治丧处是帛事花圈场合。"
+  },
+  {
+   "code": "HB-EXAM-17",
+   "bank_type": "exam",
+   "skill_code": "CLOSING",
+   "difficulty": 2,
+   "question_en": "Guest has not replied for two days after you sent information. Polite follow-up?",
+   "question_zh": "客人两天没回你发的信息。礼貌跟进？",
+   "options_en": [
+    "\"Just checking if you still need help with the arrangement. Let me know the date and budget when you are ready.\"",
+    "\"I will apply for the quote now without your confirmation.\"",
+    "\"Why haven't you replied? Are you not interested?\"",
+    "\"You must decide today or the flowers will be gone.\""
+   ],
+   "options_zh": [
+    "「看看你是否还需要帮忙。准备好时告诉我日期和预算就好。」",
+    "「我现在不确认就帮你申请报价。」",
+    "「为什么不回？是不是没兴趣？」",
+    "「今天不决定花就没了。」"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Follow up politely, confirm needs, no pressure, no impossible promises.",
+   "explanation_zh": "礼貌跟进、确认需求、不施压、不承诺做不到的事。"
+  },
+  {
+   "code": "HB-EXAM-18",
+   "bank_type": "exam",
+   "skill_code": "CLOSING",
+   "difficulty": 3,
+   "question_en": "Guest says \"Maybe next week.\" How do you close the conversation?",
+   "question_zh": "客人说「也许下周」。你怎么结束对话？",
+   "options_en": [
+    "Push them to order today.",
+    "\"No problem. When you have the date and budget, just message me and I will help apply for the quote.\"",
+    "Promise same-day delivery next week without checking.",
+    "Stop replying."
+   ],
+   "options_zh": [
+    "逼他们今天下单。",
+    "「没问题。有日期和预算时告诉我，我帮你申请报价。」",
+    "不确认就承诺下周当日送达。",
+    "不再回复。"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Leave the door open politely without pressure or unconfirmed promises.",
+   "explanation_zh": "礼貌留门，不施压，也不做未确认的承诺。"
+  },
+  {
+   "code": "HB-EXAM-19",
+   "bank_type": "exam",
+   "skill_code": "CLOSING",
+   "difficulty": 2,
+   "question_en": "After explaining the photo is style reference, the guest is still thinking. Best next step?",
+   "question_zh": "解释完图片仅风格参考后，客人还在考虑。最好下一步？",
+   "options_en": [
+    "Tell them the flowers will be exactly as the photo.",
+    "Keep sending more photos to pressure them.",
+    "Ask if they have a preferred date and budget so you can apply when ready.",
+    "Invent a discount to close faster."
+   ],
+   "options_zh": [
+    "告诉他们会跟图片完全一样。",
+    "继续发图施压。",
+    "询问是否有日期和预算，准备好时你帮申请。",
+    "虚构折扣加快成交。"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Confirm needs gently and offer to apply for quote; do not pressure or promise exact match.",
+   "explanation_zh": "温和确认需求并提议帮申请报价；不施压也不承诺一模一样。"
+  },
+  {
+   "code": "HB-EXAM-20",
+   "bank_type": "exam",
+   "skill_code": "CLOSING",
+   "difficulty": 3,
+   "question_en": "Guest asks if you can guarantee same-day delivery for a non-condolence order. Correct closing reply?",
+   "question_zh": "客人问非帛事订单能否保证当天送达。正确结束回复？",
+   "options_en": [
+    "No, we never deliver same day.",
+    "Give them a fixed delivery time you are not sure about.",
+    "Yes, we always deliver same day.",
+    "For non-condolence items it depends on stock and schedule. I can help confirm with the company. Tell me the date and budget if you want me to apply."
+   ],
+   "options_zh": [
+    "不行，我们从不当天送达。",
+    "给你一个你不确定的固定时间。",
+    "可以，我们总是当天送达。",
+    "非帛事视库存与排期。我帮你跟公司确认。如果你要申请，告诉我日期和预算。"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Do not promise what cannot be guaranteed. Offer to confirm and ask for date and budget.",
+   "explanation_zh": "不承诺做不到的事。提议帮确认，并问日期和预算。"
+  }
+ ]
+}

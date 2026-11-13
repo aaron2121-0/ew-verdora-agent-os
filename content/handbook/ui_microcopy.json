@@ -1,0 +1,234 @@
+{
+ "source_version": "grok-ui-2026-11-13-claude-reviewed",
+ "tour": [
+  {
+   "code": "TOUR-01",
+   "title_en": "Who We Are",
+   "title_zh": "公司是谁",
+   "body_en": "EW VERDORA is a Kuching flower company with five lines: condolence, opening, bouquets, weddings and wholesale.",
+   "body_zh": "EW VERDORA 是古晋花店，有五大业务线。"
+  },
+  {
+   "code": "TOUR-02",
+   "title_en": "Five Product Lines",
+   "title_zh": "五大业务",
+   "body_en": "Condolence wreaths, opening baskets, refined bouquets, wedding & events, and wholesale flowers.",
+   "body_zh": "帛事花圈、开张花篮、精致花束、婚礼活动、鲜花批发。"
+  },
+  {
+   "code": "TOUR-03",
+   "title_en": "How You Earn",
+   "title_zh": "怎么赚佣金",
+   "body_en": "You earn commission after a completed order. No need to discuss rates here.",
+   "body_zh": "完成订单后可获得佣金。"
+  },
+  {
+   "code": "TOUR-04",
+   "title_en": "Unlock Orders",
+   "title_zh": "怎么解锁接单",
+   "body_en": "Finish the 7 required courses and pass the certification exam with 85% or higher.",
+   "body_zh": "完成7个必修课＋认证考试85%以上。"
+  }
+ ],
+ "coach_marks": [
+  {
+   "screen": "home",
+   "code": "CM-HOME-1",
+   "target_en": "Today's tasks",
+   "target_zh": "今日任务",
+   "tip_en": "Finish these to progress.",
+   "tip_zh": "完成这些就能进步。"
+  },
+  {
+   "screen": "home",
+   "code": "CM-HOME-2",
+   "target_en": "AI orb",
+   "target_zh": "AI 光球",
+   "tip_en": "Tap for quick suggestions.",
+   "tip_zh": "点它看建议问题。"
+  },
+  {
+   "screen": "training",
+   "code": "CM-TRAIN-1",
+   "target_en": "7-day path",
+   "target_zh": "7日路径",
+   "tip_en": "One focus each day.",
+   "tip_zh": "每天一个重点。"
+  },
+  {
+   "screen": "training",
+   "code": "CM-TRAIN-2",
+   "target_en": "Certification button",
+   "target_zh": "认证按钮",
+   "tip_en": "85% unlocks orders.",
+   "tip_zh": "85%就能解锁接单。"
+  },
+  {
+   "screen": "handbook",
+   "code": "CM-HAND-1",
+   "target_en": "Product cards",
+   "target_zh": "上手卡",
+   "tip_en": "Read before talking to guests.",
+   "tip_zh": "跟客人聊前先看。"
+  },
+  {
+   "screen": "handbook",
+   "code": "CM-HAND-2",
+   "target_en": "Scripts section",
+   "target_zh": "话术区",
+   "tip_en": "Copy and adjust the tone.",
+   "tip_zh": "可复制再调整语气。"
+  },
+  {
+   "screen": "quote",
+   "code": "CM-QUOTE-1",
+   "target_en": "Request quote",
+   "target_zh": "申请报价",
+   "tip_en": "You apply; tell guest date and budget.",
+   "tip_zh": "你来申请，问客人日期预算。"
+  },
+  {
+   "screen": "quote",
+   "code": "CM-QUOTE-2",
+   "target_en": "Status list",
+   "target_zh": "状态列表",
+   "tip_en": "Check replies from company.",
+   "tip_zh": "查看公司回复。"
+  },
+  {
+   "screen": "ai",
+   "code": "CM-AI-1",
+   "target_en": "Suggestion chips",
+   "target_zh": "建议问题",
+   "tip_en": "Tap one to start.",
+   "tip_zh": "点一个就开始。"
+  },
+  {
+   "screen": "ai",
+   "code": "CM-AI-2",
+   "target_en": "Chat input",
+   "target_zh": "输入框",
+   "tip_en": "Ask in your own words.",
+   "tip_zh": "用自己的话问。"
+  }
+ ],
+ "empty_states": [
+  {
+   "screen": "customers",
+   "code": "ES-CUST",
+   "title_en": "No customers yet",
+   "title_zh": "还没有客户",
+   "body_en": "Start conversations on WhatsApp. When you have a lead, add it here.",
+   "body_zh": "先在WhatsApp跟客人聊。有线索再加进来。",
+   "cta_en": "Add first customer",
+   "cta_zh": "添加第一个客户"
+  },
+  {
+   "screen": "orders",
+   "code": "ES-ORD",
+   "title_en": "No orders yet",
+   "title_zh": "还没有订单",
+   "body_en": "Orders appear here once a customer confirms. Start with today's follow-ups.",
+   "body_zh": "客人确认后，订单会出现在这里。先从今日跟进开始。",
+   "cta_en": "Today's follow-ups",
+   "cta_zh": "看今日跟进"
+  },
+  {
+   "screen": "quotes",
+   "code": "ES-QUOTE",
+   "title_en": "No quote requests",
+   "title_zh": "还没有报价",
+   "body_en": "When a guest is ready, ask for date and budget, then apply here.",
+   "body_zh": "客人准备好时，问日期和预算，再来申请。",
+   "cta_en": "Request a quote",
+   "cta_zh": "申请报价"
+  },
+  {
+   "screen": "handbook",
+   "code": "ES-HAND",
+   "title_en": "Handbook is empty",
+   "title_zh": "手册还没内容",
+   "body_en": "Content will appear after it is published. Check back soon.",
+   "body_zh": "内容发布后就会显示。稍后再看。",
+   "cta_en": "Refresh",
+   "cta_zh": "刷新"
+  },
+  {
+   "screen": "home",
+   "code": "ES-TASKS",
+   "title_en": "All tasks done today",
+   "title_zh": "今天任务全完成",
+   "body_en": "Well done. Rest or review the handbook if you like.",
+   "body_zh": "做得好。可以休息或再复习手册。",
+   "cta_en": "Review handbook",
+   "cta_zh": "复习手册"
+  }
+ ],
+ "ai_suggestions": [
+  {
+   "screen": "home",
+   "prompts_en": [
+    "What should I do today?",
+    "How do I unlock orders?",
+    "Remind me of the five product lines."
+   ],
+   "prompts_zh": [
+    "今天该做什么？",
+    "怎么解锁接单？",
+    "提醒我五大业务线。"
+   ]
+  },
+  {
+   "screen": "training",
+   "prompts_en": [
+    "What is the focus for Day 2?",
+    "How do I practice a condolence message?",
+    "What score do I need for certification?"
+   ],
+   "prompts_zh": [
+    "第2天学什么？",
+    "怎么练习帛事开场？",
+    "认证要考到多少分？"
+   ]
+  },
+  {
+   "screen": "handbook",
+   "prompts_en": [
+    "Who is suitable for opening baskets?",
+    "How should I reply to a photo request?",
+    "What areas do we deliver to?"
+   ],
+   "prompts_zh": [
+    "开张花篮适合推荐给谁？",
+    "客人发图我该怎么回？",
+    "我们送到哪些地区？"
+   ]
+  },
+  {
+   "screen": "quote",
+   "prompts_en": [
+    "What do I ask the guest before applying?",
+    "How do I explain current quote?",
+    "What if stock is uncertain?"
+   ],
+   "prompts_zh": [
+    "申请报价前要问客人什么？",
+    "怎么解释当下报价？",
+    "库存不确定怎么说？"
+   ]
+  },
+  {
+   "screen": "ai",
+   "prompts_en": [
+    "Give me a soft opening for a funeral.",
+    "How do I handle a negative review mention?",
+    "Is Samarahan in the delivery area?"
+   ],
+   "prompts_zh": [
+    "给我一条温和的丧事开场。",
+    "客人提到负评怎么回？",
+    "Samarahan送得到吗？"
+   ]
+  }
+ ]
+}
