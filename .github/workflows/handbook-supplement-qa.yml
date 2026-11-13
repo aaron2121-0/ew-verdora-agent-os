@@ -38,7 +38,7 @@ jobs:
       - name: Core and validator tests
         run: |
           npm run check
-          node --test apps/agent-mobile/tests/handbook-content.test.mjs
+          node --test apps/agent-mobile/tests/handbook-content.test.mjs apps/agent-mobile/tests/module-cards.test.mjs
       - name: Syntax checks
         run: |
           node --check apps/agent-mobile/public/training.js
