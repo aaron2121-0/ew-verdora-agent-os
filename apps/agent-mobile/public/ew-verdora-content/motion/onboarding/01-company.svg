@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" fill="none" role="img" aria-label="Meet Verdora Botanical Craft and Heritage">
+  <style>
+    .ob-1-root {
+      --c-bg: var(--surface-2, #F5EFE4);
+      --c-card: var(--surface, #FFFFFF);
+      --c-brand: var(--brand, #1F4D3A);
+      --c-brand-soft: var(--verdora-700, #2d6b52);
+      --c-gold: var(--gold, #9D783D);
+      --c-gold-soft: var(--gold-300, #D8BD86);
+      --c-ink: var(--text, #173629);
+      --c-line: var(--border, rgba(31,77,58,0.16));
+    }
+    @media (prefers-color-scheme: dark) {
+      .ob-1-root {
+        --c-bg: var(--surface-2, #1D2222);
+        --c-card: var(--surface, #161A1A);
+        --c-brand: var(--brand, #2E7D5B);
+        --c-brand-soft: var(--verdora-800, #277A56);
+        --c-gold: var(--gold, #D4B47A);
+        --c-gold-soft: var(--gold-300, #D4B47A);
+        --c-ink: var(--text, #ECEFEE);
+        --c-line: var(--border, rgba(255,255,255,0.12));
+      }
+    }
+    .ob-1-s1 { animation: ob-1-rise .55s cubic-bezier(.2,.8,.2,1) .04s both; transform-box: fill-box; transform-origin: center bottom; }
+    .ob-1-s2 { animation: ob-1-rise .55s cubic-bezier(.2,.8,.2,1) .16s both; transform-box: fill-box; transform-origin: center bottom; }
+    .ob-1-s3 { animation: ob-1-stem .6s cubic-bezier(.2,.9,.28,1.04) .28s both; transform-box: fill-box; transform-origin: center bottom; }
+    .ob-1-s4 { animation: ob-1-bloom .55s cubic-bezier(.2,.9,.28,1.04) .40s both; transform-box: fill-box; transform-origin: center; }
+    .ob-1-s5 { animation: ob-1-bloom .55s cubic-bezier(.2,.9,.28,1.04) .52s both; transform-box: fill-box; transform-origin: center; }
+    .ob-1-float { animation: ob-1-bob 3.6s ease-in-out 1.1s infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes ob-1-rise {
+      from { opacity: 0; transform: translateY(14px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes ob-1-stem {
+      from { opacity: 0; transform: scaleY(0.4) translateY(10px); }
+      to { opacity: 1; transform: scaleY(1) translateY(0); }
+    }
+    @keyframes ob-1-bloom {
+      from { opacity: 0; transform: scale(0.72) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes ob-1-bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ob-1-s1, .ob-1-s2, .ob-1-s3, .ob-1-s4, .ob-1-s5, .ob-1-float {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+  </style>
+  <g class="ob-1-root">
+    <rect x="8" y="8" width="344" height="204" rx="22" fill="var(--c-bg)" stroke="var(--c-line)" stroke-width="1.2"/>
+    <g class="ob-1-s1">
+      <circle cx="180" cy="108" r="74" fill="var(--c-gold-soft)" fill-opacity="0.16"/>
+      <path d="M108 186V102C108 62.2 140.2 30 180 30C219.8 30 252 62.2 252 102V186" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.5"/>
+      <path d="M126 186V104C126 74.2 150.2 50 180 50C209.8 50 234 74.2 234 104V186" stroke="var(--c-brand)" stroke-opacity="0.22" stroke-width="1.2" stroke-dasharray="3 4"/>
+    </g>
+    <g class="ob-1-s2">
+      <rect x="74" y="180" width="212" height="10" rx="5" fill="var(--c-brand)" fill-opacity="0.16"/>
+      <path d="M150 180C150 164 163.4 152 180 152C196.6 152 210 164 210 180H150Z" fill="var(--c-brand)" fill-opacity="0.22" stroke="var(--c-brand)" stroke-width="1.5"/>
+    </g>
+    <g class="ob-1-s3">
+      <path d="M180 152V82" stroke="var(--c-brand)" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M180 132C160 130 148 117 150 102C165 104 176 116 180 132Z" fill="var(--c-brand-soft)" fill-opacity="0.26" stroke="var(--c-brand)" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M180 120C200 118 212 105 210 90C195 92 184 104 180 120Z" fill="var(--c-brand-soft)" fill-opacity="0.26" stroke="var(--c-brand)" stroke-width="1.6" stroke-linejoin="round"/>
+    </g>
+    <g class="ob-1-s4">
+      <g class="ob-1-float">
+        <path d="M180 86C165 84 156 72 159 58C171 60 179 71 180 86Z" fill="var(--c-gold-soft)" fill-opacity="0.34" stroke="var(--c-gold)" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M180 86C195 84 204 72 201 58C189 60 181 71 180 86Z" fill="var(--c-gold-soft)" fill-opacity="0.34" stroke="var(--c-gold)" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M180 46C188 57 188 73 180 86C172 73 172 57 180 46Z" fill="var(--c-brand)" fill-opacity="0.24" stroke="var(--c-brand)" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="180" cy="68" r="3.5" fill="var(--c-gold)"/>
+      </g>
+    </g>
+    <g class="ob-1-s5">
+      <rect x="44" y="64" width="54" height="34" rx="10" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.2"/>
+      <circle cx="58" cy="81" r="5" fill="var(--c-brand)" fill-opacity="0.25" stroke="var(--c-brand)" stroke-width="1.4"/>
+      <path d="M69 78H87M69 84H82" stroke="var(--c-ink)" stroke-opacity="0.55" stroke-width="1.8" stroke-linecap="round"/>
+      <rect x="262" y="114" width="56" height="36" rx="10" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.2"/>
+      <circle cx="277" cy="132" r="5.5" fill="var(--c-gold-soft)" fill-opacity="0.45" stroke="var(--c-gold)" stroke-width="1.4"/>
+      <path d="M288 129H306M288 135H301" stroke="var(--c-ink)" stroke-opacity="0.55" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
