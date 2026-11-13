@@ -115,7 +115,7 @@ try{
   await page.screenshot({path:path.join(screenshots,`unlock-${width}-${lang}-sheet.png`),fullPage:true});
   await page.locator("#lockChecklist .unlock-step-action").first().click();
   await page.locator("#trainingPage.section.active").waitFor({timeout:15000});
-  await page.locator("#lockSheet.hidden").waitFor({timeout:5000});
+  await page.locator("#lockSheet").waitFor({state:"hidden",timeout:5000});
   await page.locator('[data-course="CORE-BRAND"] .training3-course-content').waitFor({timeout:15000});
   assert.match(await page.locator(".training3-daily-note").textContent(),lang==="zh"?/不计入解锁/:/does not count toward unlocking/);
   assert.equal(await page.locator("#trainingPage .unlock-progress-count").textContent(),"0/7");
