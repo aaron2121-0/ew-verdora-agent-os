@@ -39,7 +39,7 @@ function cardsFromBody(value){
   if(Array.isArray(value))return value.map(String);
   if(value&&typeof value==="object"&&Array.isArray(value.cards))return value.cards.map(String);
   if(typeof value!=="string")return [];
-  try{const p=JSON.parse(value);if(Array.isArray(p))return p.map(String);if(Array.isArray(p.cards))return p.cards.map(String)}catch{}
+  try{const p=JSON.parse(value);if(Array.isArray(p))return p.map(String);if(p&&Array.isArray(p.cards))return p.cards.map(String)}catch{}
   return value.trim()?[value.trim()]:[];
 }
 function iconAsset(line){
@@ -393,5 +393,5 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     }
     start();
   }
-  return {journey,open,openQuiz,spotlight,showWelcome,refresh:()=>{handbookData=null}};
+  return {journey,open,openQuiz,spotlight,showWelcome,openForCourse:code=>open(sectionForCourse(code)),reRender:renderPage,refresh:()=>{handbookData=null}};
 }
