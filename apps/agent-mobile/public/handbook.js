@@ -11,8 +11,8 @@ export const HANDBOOK_LINES=Object.freeze([
   {id:"wholesale",en:"Flower Wholesale",zh:"鲜切花批发",icon:"users"}
 ]);
 const DEFAULT_SECTIONS=Object.freeze({
-  "CORE-BRAND":"bouquet","LEAD-FINDING":"wholesale","QUALIFY":"opening",
-  "REFERENCE":"wedding_event","OBJECTION":"condolence","CLOSING":"bouquet","PAYMENT":"wholesale"
+  "CORE-BRAND":"story","LEAD-FINDING":"product_line","QUALIFY":"product_line",
+  "REFERENCE":"service_rule","OBJECTION":"script","CLOSING":"script","PAYMENT":"service_rule"
 });
 const t=(getLang,en,zh)=>getLang()==="zh"?zh:en;
 const lineById=id=>HANDBOOK_LINES.find(x=>x.id===id);
@@ -89,7 +89,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
   function sectionForCourse(code){
     const row=(getData()?.training||[]).find(x=>x.training_modules?.code===code);
     const section=row?.training_modules?.handbook_section;
-    return lineById(section)?section:DEFAULT_SECTIONS[code];
+    return ["story","product_line","service_rule","script"].includes(section)?section:DEFAULT_SECTIONS[code];
   }
   function courseRow(code){return (getData()?.training||[]).find(x=>x.training_modules?.code===code)}
   function firstOpenCode(){
