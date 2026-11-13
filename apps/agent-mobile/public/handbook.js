@@ -136,17 +136,21 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     const card=element("button",{className:"handbook-line-card",attrs:{type:"button","data-handbook-line":line.id}});
     card.append(iconAsset(line),element("strong",{text:getLang()==="zh"?line.zh:line.en}),
       element("span",{text:t(getLang,"Open the approved handbook","查看已核准手册")}));
-    card.addEventListener("click",()=>{currentLine=line.id;slideIndex=0;renderPage()});
+    card.addEventListener("click",()=>{currentCourse=null;currentLine=line.id;slideIndex=0;renderPage()});
     return card;
   }
   function renderPage(){
     const host=document.getElementById("handbookPage");if(!host)return;
+    clearSlideTimer();
     clear(host);
+    if(!handbookData){host.append(element("p",{text:t(getLang,"Loading approved handbook…","正在载入核准手册…")}));return}
     const page=element("div",{className:"page-shell handbook-shell"});
     const head=element("div",{className:"handbook-head"});
-    if(currentLine)head.append(btn(t(getLang,"All product lines","全部业务线"),()=>{currentLine=null;renderPage()},"btn btn-text btn-small"));
+    if(currentCourse)head.append(btn(t(getLang,"Back to required courses","返回必修课"),()=>{currentCourse=null;currentLine=null;clearSlideTimer();onNavigate("training")},"btn btn-text btn-small"));
+    else if(currentLine)head.append(btn(t(getLang,"All product lines","全部业务线"),()=>{currentLine=null;clearSlideTimer();renderPage()},"btn btn-text btn-small"));
     else head.append(btn(t(getLang,"Back to home","返回首页"),()=>onNavigate("today"),"btn btn-text btn-small"));
-    head.append(element("h1",{className:"screen-title",text:currentLine?(getLang()==="zh"?lineById(currentLine)?.zh:lineById(currentLine)?.en):t(getLang,"Product handbook","产品手册")}));
+    head.append(element("h1",{className:"screen-title",text:currentCourse?courseLabel(currentCourse):currentLine?(getLang()==="zh"?lineById(currentLine)?.zh:lineById(currentLine)?.en):t(getLang,"Product handbook","产品手册")}));
+    if(currentCourse)head.append(element("p",{className:"screen-subtitle",text:t(getLang,"Read every card for at least 4 seconds, then take the course quiz.","每张卡至少阅读 4 秒，全部完成后才可参加课程测验。")}));
     page.append(head);
     if(!currentLine){
       page.append(element("p",{className:"screen-subtitle",text:t(getLang,"Only Owner-approved material is shown.","仅显示 Owner 已核准的资料。")}));
@@ -156,29 +160,90 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     }
     const line=currentLine;
     const slides=approvedSlides(line);
+    const course=currentCourse;
     const panel=element("section",{className:"handbook-slides",attrs:{"aria-label":t(getLang,"Getting started cards","上手卡")}});
     const body=element("div",{className:"handbook-slide-body"});
-    const draw=()=>{
-      body.replaceChildren();
-      if(slides.length)body.append(element("span",{className:"handbook-count",text:(slideIndex+1)+" / "+slides.length}),
-        element("h2",{text:slides[slideIndex].title}),element("p",{text:slides[slideIndex].body}));
-      else body.append(element("p",{text:t(getLang,"The four starter cards are awaiting Owner approval.","4 张上手卡正在等待 Owner 核准。")}));
-      prev.disabled=!slides.length||slideIndex===0;
-      next.disabled=!slides.length||slideIndex===slides.length-1;
-    };
-    const prev=btn("‹",()=>{slideIndex=Math.max(0,slideIndex-1);draw()},"btn btn-secondary btn-small");
-    const next=btn("›",()=>{slideIndex=Math.min(slides.length-1,slideIndex+1);draw()},"btn btn-secondary btn-small");
+    const progress=element("p",{className:"handbook-read-status",attrs:{"role":"status","aria-live":"polite"}});
+    const action=element("div",{className:"handbook-lesson-action"});
+    const prev=btn("‹",()=>move(-1),"btn btn-secondary btn-small");
+    const next=btn("›",()=>move(1),"btn btn-secondary btn-small");
     prev.setAttribute("aria-label",t(getLang,"Previous card","上一张"));
     next.setAttribute("aria-label",t(getLang,"Next card","下一张"));
+
+    function move(direction){
+      if(direction>0&&next.disabled)return;
+      if(direction<0&&prev.disabled)return;
+      slideIndex=Math.max(0,Math.min(slides.length-1,slideIndex+direction));
+      draw();
+    }
+    function draw(){
+      clearSlideTimer();
+      body.replaceChildren();action.replaceChildren();
+      if(!slides.length){
+        body.append(element("p",{text:t(getLang,"The four starter cards are awaiting Owner approval.","四张上手卡正在等待 Owner 核准。")}));
+        progress.textContent=t(getLang,"Quiz unavailable until handbook approval.","手册核准前暂不开放小测验。");
+        prev.disabled=true;next.disabled=true;return;
+      }
+      const current=slides[slideIndex];
+      body.append(element("span",{className:"handbook-count",text:(slideIndex+1)+" / "+slides.length}),
+        element("h2",{text:current.title}),element("p",{text:current.body}));
+      if(Array.isArray(current.points)&&current.points.length){
+        const ul=element("ul",{className:"handbook-key-points"});
+        current.points.forEach(point=>ul.append(element("li",{text:String(point)})));
+        body.append(ul);
+      }
+      prev.disabled=slideIndex===0;
+      const state=course?readStatus(course):null;
+      const expected=state?.required_card_codes||[];
+      const read=new Set(state?.read_card_codes||[]);
+      const validCards=expected.length===slides.length&&slides.every(x=>expected.includes(x.code));
+      const isRead=read.has(current.code);
+      const complete=Boolean(course&&validCards&&state?.ready_for_quiz&&slides.every(x=>read.has(x.code)));
+      next.disabled=slideIndex===slides.length-1||(!!course&&!isRead);
+      if(!course){progress.textContent="";return}
+      if(courseRow(course)?.status==="passed"){
+        progress.textContent=t(getLang,"Course passed — review cards anytime.","课程已通过，可随时复习。");
+        next.disabled=slideIndex===slides.length-1;return;
+      }
+      if(!validCards){
+        progress.textContent=t(getLang,"Waiting for approved course cards and reading status.","正在等待核准的课程卡片与阅读记录。");
+        next.disabled=true;return;
+      }
+      if(isRead)progress.textContent=t(getLang,"Card saved to your learning progress.","本张卡片已保存至服务器阅读记录。");
+      else{
+        progress.textContent=t(getLang,"Reading this card · 4 seconds","正在阅读本张卡 · 4 秒");
+        const token=slideToken,atIndex=slideIndex;
+        slideTimer=setTimeout(async()=>{
+          if(slideToken!==token||currentCourse!==course||slideIndex!==atIndex)return;
+          if(document.visibilityState==="hidden"){
+            const resume=()=>{if(document.visibilityState==="visible"){document.removeEventListener("visibilitychange",resume);if(currentCourse===course&&slideIndex===atIndex)draw()}};
+            document.addEventListener("visibilitychange",resume,{once:false});
+            return;
+          }
+          progress.textContent=t(getLang,"Saving reading progress…","正在保存阅读进度…");
+          try{
+            const result=await api.training({action:"module_read",module_code:course,card_codes:[current.code]});
+            if(currentCourse!==course||slideIndex!==atIndex)return;
+            readStates.set(course,result);onJourneyChange?.();draw();
+          }catch{
+            progress.textContent=t(getLang,"Couldn't save. Select Retry after reading.","无法保存，请重试记录本张卡。");
+            action.replaceChildren(btn(t(getLang,"Retry saving","重试保存"),()=>draw(),"btn btn-secondary btn-small"));
+          }
+        },4000);
+      }
+      if(slideIndex===slides.length-1&&complete){
+        const start=btn(t(getLang,"I've finished reading — start quiz","我看完了，开始小测验"),()=>openQuiz(course),"btn btn-primary btn-large");
+        start.dataset.readingComplete="true";action.replaceChildren(start);
+      }
+    }
     let startX=null;
     body.addEventListener("touchstart",e=>{startX=e.changedTouches[0]?.clientX??null},{passive:true});
-    body.addEventListener("touchend",e=>{if(startX===null)return;const dx=(e.changedTouches[0]?.clientX??startX)-startX;startX=null;if(Math.abs(dx)>45&&slides.length){slideIndex=Math.max(0,Math.min(slides.length-1,slideIndex+(dx<0?1:-1)));draw()}},{passive:true});
+    body.addEventListener("touchend",e=>{
+      if(startX===null)return;const dx=(e.changedTouches[0]?.clientX??startX)-startX;startX=null;
+      if(Math.abs(dx)>45)move(dx<0?1:-1);
+    },{passive:true});
     const controls=element("div",{className:"handbook-slide-controls"});controls.append(prev,next);
-    panel.append(body,controls);page.append(panel);draw();
-    if(slides.length){
-      safeStore(readKey(line),"1");
-      const tips=element("p",{className:"handbook-read-status",text:t(getLang,"Handbook opened. Complete your course MCQ to unlock the next day.","已阅读手册。完成课程 MCQ 才能解锁下一天。")});page.append(tips);
-    }
+    panel.append(body,progress,controls,action);page.append(panel);draw();
 
     const gallery=element("section",{className:"handbook-group"});
     gallery.append(element("h2",{text:t(getLang,"Approved portfolio","已核准作品")}));
@@ -207,15 +272,13 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
 
     const faq=element("section",{className:"handbook-group"});
     faq.append(element("h2",{text:"FAQ"}));
-    const faqs=rows(line,"service_rule").flatMap(r=>cardsFromBody(content(r)).map(a=>({q:title(r),a})));
+    const faqs=rows(line,"faq").map(r=>({q:title(r),a:content(r)}));
     if(!faqs.length)faq.append(element("p",{className:"handbook-muted",text:t(getLang,"FAQ pending Owner approval.","FAQ 尚待 Owner 核准。")}));
     faqs.forEach(x=>{
       const d=element("details",{className:"handbook-faq"});
       d.append(element("summary",{text:x.q}),element("p",{text:x.a}));faq.append(d);
     });page.append(faq);
 
-    const linked=REQUIRED_COURSE_CODES.find(c=>sectionForCourse(c)===line&&courseRow(c)?.status!=="passed");
-    if(linked&&slides.length)page.append(btn(t(getLang,"Start 3-question course MCQ","开始课程 3 题测验"),()=>openQuiz(linked),"btn btn-primary btn-large"));
     host.append(page);
   }
   async function showPhoto(p){
