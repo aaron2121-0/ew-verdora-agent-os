@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
+import {createHash} from "node:crypto";
 import subsetFont from "subset-font";
 import {fileURLToPath} from "node:url";
 
@@ -95,3 +96,4 @@ const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const jsBytes=jsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 if(jsBytes>150*1024)throw new Error(`JS gzip budget exceeded: ${jsBytes} bytes`);
 console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; JS gzip ${jsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
+console.log("BUNDLE_SHA256 "+createHash("sha256").update(output,"utf8").digest("hex"));
