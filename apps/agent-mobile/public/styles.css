@@ -294,3 +294,5 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 :root[data-theme="dark"] .training3-course-content{background:#273e34;border-color:#4f6b5a;color:#e8f1ea}
 @media(max-width:380px){.unlock-progress-card{padding:11px 9px}.unlock-step-heading{gap:3px}.unlock-step-action{width:100%}.unlock-progress-label small{font-size:.59rem}}
 @media(prefers-reduced-motion:reduce){.unlock-step-action,.unlock-progress-fill{transition:none}}
+/* Keep TRAINEE unlock sheet above interactive AI orb and its dismissible tip. */
+#lockSheet{z-index:100}
