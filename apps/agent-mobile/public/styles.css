@@ -414,3 +414,22 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .ai-orb-suggestions button:active{transform:scale(.98)}
 .ai-orb-tip:has(.ai-orb-suggestions){max-width:min(88vw,310px);max-height:min(320px,50dvh);overflow:auto}
 @media(prefers-reduced-motion:reduce){.ai-orb-suggestions button{transition:none}}
+
+
+/* Owner-approved lesson prerequisites (course pages) */
+.handbook-key-points{padding-left:20px;margin:10px 0 14px;line-height:1.55;font-size:.79rem}
+.handbook-key-points li{margin:5px 0;overflow-wrap:anywhere}
+.handbook-slide-body{min-height:206px}
+.handbook-lesson-action{display:grid;margin-top:10px}
+.handbook-lesson-action .btn{white-space:normal;min-height:48px}
+.handbook-read-status{display:block;margin:8px 0 13px;color:var(--text,#173f35);font-size:.76rem;line-height:1.5}
+.journey-stage{font-weight:700;color:var(--text,#173f35);opacity:1!important}
+.journey-current-status{font-size:.79rem;font-weight:700;margin:12px 0 2px}
+.training-review-details{margin:16px 0 24px;padding:14px;background:var(--surface,#fff);border:1px solid var(--border,rgba(23,63,53,.12));border-radius:16px}
+.training-review-details>summary{cursor:pointer;font-size:.88rem;font-weight:750}
+.training-review-details .training3-hero{margin-top:14px}
+.handbook-empty-orders{background:var(--surface,#fff);border:1px solid var(--border,rgba(23,63,53,.12));border-radius:15px;padding:13px;margin:10px 0;display:grid;gap:8px}
+.handbook-empty-orders strong{font-size:.86rem}
+.handbook-empty-orders p{font-size:.76rem;line-height:1.5;margin:0}
+.handbook-empty-orders .btn{justify-self:start}
+:root[data-theme="dark"] .training-review-details,:root[data-theme="dark"] .handbook-empty-orders{--surface:#1e352b;--text:#f0f7f2;--border:#3c5949}
