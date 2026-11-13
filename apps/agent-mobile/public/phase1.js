@@ -83,7 +83,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
   }});
 
-  const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate});
+  const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate,onJourneyChange:()=>{if(active==="today")renderToday()}});
 
   function langText(value){
     const key=categoryKey(value);
@@ -290,14 +290,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const local=localTaskState().data;
     return {
       followup:(p.due_followups||[]).length===0,
-      kit:Boolean(local.kit),
-      training:!p.training_pending
+      kit:Boolean(local.kit)
     };
   }
 
   function celebrateIfNeeded(){
     const facts=taskFacts();
-    const all=facts.followup&&facts.kit&&facts.training;
+    const all=facts.followup&&facts.kit;
     if(all&&!lastAllDone){
       const date=getData()?.phase1?.kuching_date||kuchingDateKey();
       const key="ew_phase1_celebrated_"+date;
@@ -439,7 +438,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       empty.append(go);page.append(empty);
     }
     const priorities=element("div",{className:"ai-priority-list"});
-    for(const [name,card] of [["training",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
+    for(const [name,card] of [["tasks",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
       card.dataset.priorityCard=name;
       const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
       card.prepend(why);priorities.append(card);
@@ -481,7 +480,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       {icon:"plus",title:"tileOrder",sub:"tileOrderSub",tone:"primary",action:()=>isLocked()?showLock():navigate("order"),status:tr("readyBadge"),locked:isLocked()},
       {icon:"phoneCall",title:"tileFollowup",sub:"tileFollowupSub",tone:"amber",action:()=>navigate("today",{scrollTo:"dueFollowups"}),status:tr("dueBadge",{count:(p.due_followups||[]).length})},
       {icon:"megaphone",title:"tileSelling",sub:"tileSellingSub",tone:"blue",action:()=>isLocked()?showLock():navigate("selling"),status:taskFacts().kit?tr("completedBadge"):tr("readyBadge"),locked:isLocked()},
-      {icon:"graduationCap",title:"tileTraining",sub:"tileTrainingSub",tone:"green",action:()=>navigate("training"),status:p.training_pending?tr("trainingPendingBadge"):tr("completedBadge")},
+      {icon:"graduationCap",title:"tileTraining",sub:"tileTrainingSub",tone:"green",action:()=>navigate("training"),status:getUnlockProgress(getData(),unlockSummary).completed<7?tr("trainingPendingBadge"):tr("completedBadge")},
       {icon:"flower2",title:"handbookTitle",sub:"handbookSubtitle",tone:"green",action:()=>handbook.open(),status:tr("readyBadge")},
       {icon:"trendingUp",title:"tilePerformance",sub:"tilePerformanceSub",tone:"indigo",action:()=>navigate("performance"),status:tr(tierKey(p.tier_progress?.current_tier||getData()?.agent?.tier))},
       {icon:"wallet",title:"tileWallet",sub:"tileWalletSub",tone:"gold",action:()=>navigate("performance",{scrollTo:"commissionPreview"}),status:money(m.pending)}
@@ -504,15 +503,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const facts=taskFacts();
     const doneCount=Object.values(facts).filter(Boolean).length;
     const head=element("div",{className:"card-head"});
-    const title=element("div",{className:"card-head-title"});title.append(createIcon("listChecks",{size:20}),element("h2",{text:tr("todayThreeTitle")}));
-    head.append(title,element("span",{className:"task-count",text:doneCount+" / 3"}));
+    const title=element("div",{className:"card-head-title"});title.append(createIcon("listChecks",{size:20}),element("h2",{text:getLang()==="zh"?"今日销售待办":"Today’s selling tasks"}));
+    head.append(title,element("span",{className:"task-count",text:doneCount+" / 2"}));
     section.append(head);
     const tasks=[
       {id:"followup",title:"taskFollowupTitle",desc:"taskFollowupDesc",done:facts.followup,go:()=>navigate("today",{scrollTo:"dueFollowups"})},
-      {id:"kit",title:"taskKitTitle",desc:"taskKitDesc",done:facts.kit,go:()=>isLocked()?showLock():navigate("selling")},
-      {id:"training",title:"taskTrainingTitle",desc:"taskTrainingDesc",done:facts.training,go:()=>navigate("training")}
+      {id:"kit",title:"taskKitTitle",desc:"taskKitDesc",done:facts.kit,go:()=>isLocked()?showLock():navigate("selling")}
     ].sort((a,b)=>Number(a.done)-Number(b.done));
-    if(doneCount===3){
+    if(doneCount===2){
       const all=element("div",{className:"all-done"});
       all.append(createIcon("sparkles",{size:18}),element("span",{text:tr("allDoneText")}));
       section.append(all);
