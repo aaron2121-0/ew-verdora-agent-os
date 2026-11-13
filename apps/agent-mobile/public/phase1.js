@@ -7,7 +7,8 @@ import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
-import {dailyActions,emptyCopy,localized} from "./approved-content.js";
+import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
+import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -191,7 +192,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       target.classList.add("active");
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if(document.startViewTransition&&!reduced){
+    const vm=vendorMotion();
+    if(old&&old!==target&&vm?.runSharedSwap){
+      vm.runSharedSwap(old,swap,()=>target);
+    }else if(document.startViewTransition&&!reduced){
       document.startViewTransition(swap);
     }else{
       swap();
@@ -445,7 +449,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     host.append(page);
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
-    celebrateIfNeeded();
+    // The 3-action vendor component owns the completion celebration.
   }
 
   function renderDailyBrief(response){
@@ -497,28 +501,62 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   }
 
   function renderEarningActions(){
-    const section=element("section",{className:"earning-actions",attrs:{id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"Three ways to earn today"}});
-    const heading=element("h2",{className:"earning-title",text:getLang()==="zh"?"今天赚钱 3 件事":"3 things to earn today"});
-    const cards=element("div",{className:"earning-action-list"});
-    const icons=["users","phoneCall","megaphone"];
-    dailyActions(getData()||{},getLang()).forEach((action,index)=>{
-      const b=element("button",{className:"earning-action",attrs:{type:"button","data-earning-action":action.key}});
-      b.append(createIcon(icons[index],{size:22}));
-      const copy=element("span",{className:"earning-action-copy"});
-      copy.append(element("strong",{text:action.title}),element("small",{text:action.detail}));
-      b.append(copy,createIcon("arrowRight",{size:18}));
-      b.addEventListener("click",()=>{
-        const target=action.target;
-        if(target==="order"||target==="selling"){
-          if(isLocked())return showLock();
-          navigate(target);return;
-        }
-        if(target==="today")navigate("today",{scrollTo:"dueFollowups"});
-        else navigate(["customers","training"].includes(target)?target:"customers");
+    const section=element("section",{className:"earning-actions",attrs:{
+      id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"
+    }});
+    const vm=vendorMotion();
+    // All customer-facing action text comes from Claude-reviewed daily_actions.json
+    // when present, otherwise from the already-approved dashboard/Selling Kits.
+    const zh=dailyActions(getData()||{},"zh");
+    const en=dailyActions(getData()||{},"en");
+    const kinds=["lead","followup","post"];
+    const data={actions:zh.slice(0,3).map((row,i)=>({
+      id:"earning-"+i,type:kinds[i],
+      title_zh:String(row.title||""),title_en:String(en[i]?.title||""),
+      detail_zh:String(row.detail||""),detail_en:String(en[i]?.detail||"")
+    })),tip:null};
+    // Demo package copy is never displayed.
+    applyReviewedMotionCopy(reviewed()?.ui);
+    const date=String(getData()?.phase1?.kuching_date||kuchingDateKey()).replace(/[^0-9-]/g,"");
+    const user=String(getUserId()||"unknown").replace(/[^a-zA-Z0-9-]/g,"");
+    const storeKey="ew_motion_actions_"+user+"_"+date;
+    let completed=[];
+    try{const stored=JSON.parse(localStorage.getItem(storeKey)||"[]");
+      if(Array.isArray(stored))completed=stored.filter(x=>data.actions.some(a=>a.id===x));
+    }catch{}
+    if(vm?.mountHomeToday){
+      const instance=trackMotion("home-today",vm.mountHomeToday(section,data,{
+        lang:getLang(),doneIds:completed,
+        onChange:(_status,done)=>{try{localStorage.setItem(storeKey,JSON.stringify(done))}catch{}}
+      }));
+      const cards=section.querySelectorAll(".vd-ht-item");
+      cards.forEach((card,i)=>{
+        const row=getLang()==="zh"?zh[i]:en[i];
+        const copy=element("p",{className:"vd-ht-action-detail",text:String(row?.detail||"")});
+        const go=element("button",{className:"vd-ht-go btn btn-secondary btn-small",
+          text:getLang()==="zh"?"前往处理":"Open action",attrs:{type:"button"}});
+        go.addEventListener("click",()=>{
+          const target=row?.target;
+          if(target==="order"||target==="selling"){
+            if(isLocked())return showLock();
+            navigate(target);
+          }else if(target==="today")navigate("today",{scrollTo:"dueFollowups"});
+          else navigate(["customers","training"].includes(target)?target:"customers");
+        });
+        card.append(copy,go);
       });
-      cards.append(b);
+      // Retain the actual UI with interactive buttons, not any sample data.
+      if(instance)return section;
+    }
+    // The base application remains usable if a vendor script cannot load.
+    const list=element("div",{className:"earning-action-list"});
+    data.actions.forEach((action,i)=>{
+      const row=getLang()==="zh"?zh[i]:en[i];
+      const button=element("button",{className:"earning-action",text:row?.title||action["title_"+getLang()]});
+      button.addEventListener("click",()=>navigate("customers"));list.append(button);
     });
-    section.append(heading,cards);return section;
+    section.append(element("h2",{text:getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"}),list);
+    return section;
   }
 
   function renderDueFollowups(){
@@ -859,10 +897,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   }
 
   function onLanguageChange(){
+    setMotionLanguage(getLang());
     renderAll();
     order.onLanguageChange();
     performance.onLanguageChange();
     training.onLanguageChange();
+    handbook.onLanguageChange?.();
     if(active==="handbook")handbook.reRender();
   }
 
