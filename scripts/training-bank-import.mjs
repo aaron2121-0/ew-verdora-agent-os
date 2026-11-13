@@ -32,6 +32,7 @@ export function validateQuestion(q,index){
     options_en:options(q.options_en,"question["+index+"].options_en"),
     options_zh:options(q.options_zh,"question["+index+"].options_zh"),
     correct_index,
+    related_card_code:q.related_card_code==null?null:str(q.related_card_code,"question["+index+"].related_card_code"),
     explanation_en:str(q.explanation_en,"question["+index+"].explanation_en"),
     explanation_zh:str(q.explanation_zh,"question["+index+"].explanation_zh")
   };
@@ -68,12 +69,12 @@ export function buildSql(bank,{test=false}={}){
     "('"+esc(q.code)+"','"+q.bank_type+"','"+q.skill_code+"',"+q.difficulty+
     ",'"+esc(q.question_en)+"','"+esc(q.question_zh)+"','"+js(q.options_en)+"'::jsonb,'"+
     js(q.options_zh)+"'::jsonb,"+q.correct_index+",'"+esc(q.explanation_en)+"','"+
-    esc(q.explanation_zh)+"',true,"+(test?"true":"false")+",'"+esc(bank.source_version)+"')"
+    esc(q.explanation_zh)+"',"+(q.related_card_code==null?"NULL":"'"+esc(q.related_card_code)+"'")+",true,"+(test?"true":"false")+",'"+esc(bank.source_version)+"')"
   ).join(",\n");
   return "begin;\n"+
     "insert into private.training_questions(\n"+
     "  code,bank_type,skill_code,difficulty,question_en,question_zh,options_en,options_zh,\n"+
-    "  correct_index,explanation_en,explanation_zh,active,is_test,source_version\n"+
+    "  correct_index,explanation_en,explanation_zh,related_card_code,active,is_test,source_version\n"+
     ") values\n"+rows+"\n"+
     "on conflict(code) do update set\n"+
     "  bank_type=excluded.bank_type,\n"+
@@ -84,6 +85,7 @@ export function buildSql(bank,{test=false}={}){
     "  options_en=excluded.options_en,\n"+
     "  options_zh=excluded.options_zh,\n"+
     "  correct_index=excluded.correct_index,\n"+
+    "  related_card_code=excluded.related_card_code,\n"+
     "  explanation_en=excluded.explanation_en,\n"+
     "  explanation_zh=excluded.explanation_zh,\n"+
     "  active=excluded.active,\n"+
@@ -93,13 +95,14 @@ export function buildSql(bank,{test=false}={}){
 }
 
 function parseArgs(argv){
-  const args={formal:false,apply:false,test:false,out:null,file:null};
+  const args={formal:false,apply:false,test:false,out:null,file:null,relatedCards:null};
   for(let i=0;i<argv.length;i++){
     const x=argv[i];
     if(x==="--formal")args.formal=true;
     else if(x==="--apply")args.apply=true;
     else if(x==="--test")args.test=true;
     else if(x==="--out")args.out=argv[++i]||null;
+    else if(x==="--related-cards")args.relatedCards=argv[++i]||null;
     else if(!args.file)args.file=x;
     else fail("Unexpected argument: "+x);
   }
@@ -112,6 +115,17 @@ if(import.meta.url===new URL("file://"+process.argv[1]).href){
     const args=parseArgs(process.argv.slice(2));
     const input=JSON.parse(fs.readFileSync(args.file,"utf8"));
     const bank=validateBank(input,{formal:args.formal});
+    if(args.relatedCards){
+      const doc=JSON.parse(fs.readFileSync(args.relatedCards,"utf8"));
+      const links=doc.links||{};
+      if(!links||typeof links!=="object"||Array.isArray(links))fail("related-cards requires a links object");
+      const known=new Set(bank.questions.map(x=>x.code));
+      for(const [question,card] of Object.entries(links)){
+        if(!known.has(question))fail("Unknown question card link: "+question);
+        if(card!==null&&!/^[A-Z0-9-]{3,60}$/.test(String(card)))fail("Invalid related card for "+question);
+      }
+      for(const q of bank.questions)if(Object.hasOwn(links,q.code))q.related_card_code=links[q.code];
+    }
     const sql=buildSql(bank,{test:args.test});
     if(args.out)fs.writeFileSync(args.out,sql);
     if(args.apply){
