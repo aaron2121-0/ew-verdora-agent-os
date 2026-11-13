@@ -138,7 +138,10 @@ try{
  dashboard.phase1.training_pending=true;
  dashboard.training=[
   "CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"
- ].map(code=>({status:"assigned",best_score:0,training_modules:{code,title_en:code,title_zh:code==="CORE-BRAND"?"品牌与代理规则":code,
+ ].map(code=>({status:"assigned",best_score:0,training_modules:{code,handbook_section:({
+    "CORE-BRAND":"story","LEAD-FINDING":"product_line","QUALIFY":"product_line",
+    "REFERENCE":"service_rule","OBJECTION":"script","CLOSING":"script","PAYMENT":"service_rule"
+   })[code],title_en:code,title_zh:code==="CORE-BRAND"?"品牌与代理规则":code,
    content_en:{lesson:["Read and follow EW VERDORA approved pricing and payment rules."]},
    content_zh:{lesson:["请遵守 EW VERDORA 核准的定价与收款规定。"]}}}));
  for(const width of [360,430])for(const lang of ["en","zh"]){
