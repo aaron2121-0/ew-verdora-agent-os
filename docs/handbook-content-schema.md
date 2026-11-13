@@ -1,90 +1,112 @@
-# EW VERDORA — Grok Handbook Content JSON Schema (v1.0)
+# EW VERDORA — Reviewed Grok Handbook Import Contract
 
-This contract defines the **handbook_content.json** produced by Grok and imported by the Owner. It is not the MCQ question-bank schema.
+**Source of truth:** `content/handbook/handbook_content.json` on `main`, already reviewed by Claude. **Never rewrite this file** to match the importer. The importer must accept it directly.
 
-## Example
+## Production JSON shape
 
 ```json
 {
-  "schema_version": "1.0",
-  "source": "grok",
-  "entries": [
+  "source_version": "grok-2026-11-13-claude-reviewed",
+  "cards": [
     {
-      "section": "product_line",
-      "title_en": "Condolence",
-      "title_zh": "帛事花圈",
-      "body_en": "Describe only Owner-confirmed services; ask the team to confirm availability, price and delivery.",
-      "body_zh": "仅描述 Owner 已确认的服务；库存、价格及配送必须向团队核实。",
-      "sort": 20
+      "code": "COND-1",
+      "product_line": "condolence",
+      "order": 1,
+      "title_en": "What it is",
+      "title_zh": "这是什么",
+      "body_en": "Use the exact source text in the reviewed JSON.",
+      "body_zh": "以已审核的 JSON 原文为准",
+      "key_points_en": ["Point one", "Point two", "Point three"],
+      "key_points_zh": ["重点一", "重点二", "重点三"],
+      "icon_hint": "wreath"
+    }
+  ],
+  "scripts": [
+    {
+      "code": "SCR-COND-1",
+      "product_line": "condolence",
+      "situation_en": "Hearing of a funeral",
+      "situation_zh": "听到丧事",
+      "text_en": "Use the exact source text.",
+      "text_zh": "使用原文件的已审核内容"
+    }
+  ],
+  "faqs": [
+    {
+      "code": "FAQ-01",
+      "q_en": "Question",
+      "q_zh": "问题",
+      "a_en": "Owner-reviewed answer.",
+      "a_zh": "Owner 已审核的答案"
     }
   ]
 }
 ```
 
-This is a structural example, **not an authorization to publish product claims**. Production imports must use Owner-confirmed source facts.
+The JSON above is a **shape illustration**, not a substitute for the full reviewed JSON. The original file contains **20 cards, 15 scripts and 12 FAQs**; it must be imported without textual modification.
 
-## Root object
+The root has exactly `source_version`, `cards`, `scripts`, `faqs`. Other root keys are rejected. JSON is UTF-8 and limited to 256 KiB. Each array has 1–100 items (the reviewed source has 20/15/12). Duplicate `code` values across all arrays are rejected. Titles and situation/question strings are required in both English and Chinese (1–120 chars); bodies/answers in both languages are required (1–10,000 chars). Card key-point arrays each contain **exactly three nonempty strings** (1–240 chars each). `order` is an integer 1–100, `icon_hint` is a nonempty string (max 60), and `code` uses uppercase letters/numbers/dashes (max 64). Unknown entry keys are rejected.
 
-| Field | Type | Required | Rule |
-| --- | --- | --- | --- |
-| schema_version | string | Yes | Exactly `"1.0"` |
-| source | string | Yes | Exactly `"grok"` |
-| entries | array | Yes | 1–100 handbook entries |
-| generated_at | string | No | ISO 8601 UTC timestamp (e.g. `2026-11-13T06:00:00Z`) |
+`product_line` is one of `condolence`, `opening`, `bouquet`, `wedding_event`, `wholesale`; FAQs have no `product_line` and are stored as null.
 
-No unknown root fields are accepted. UTF-8 JSON payload is limited to **256 KiB**.
+## Mapping to company_knowledge
 
-## Entry object
+| JSON source | kind | section | title fields | body fields | key points | sort |
+| --- | --- | --- | --- | --- | --- | --- |
+| cards | card | product_line | title_en / title_zh | body_en / body_zh | key_points_en / key_points_zh | order |
+| scripts | script | script | situation_en / situation_zh | text_en / text_zh | [] / [] | source array position |
+| faqs | faq | faq | q_en / q_zh | a_en / a_zh | [] / [] | source array position |
 
-| Field | Type | Required | Rule |
-| --- | --- | --- | --- |
-| section | enum | Yes | `story`, `product_line`, `service_rule`, `delivery`, `script`, `announcement` |
-| title_en / title_zh | string | Yes | Non-empty, trim whitespace, max 120 characters each |
-| body_en / body_zh | string | Yes | Non-empty, trim whitespace, max 10,000 characters each |
-| sort | integer | No | From -10,000 to 10,000; default `0` |
+`icon_hint` is stored only for cards. `code` is a globally unique stable key for imported handbook entries. Old Phase A confirmed seeds remain `kind='seed'` with a null code, preserving their content. All imports require Owner authentication, and the **client cannot set published flags**.
 
-No unknown entry fields. In particular, Grok must **not** submit `id`, `active`, `visible_to_agent`, `needs_owner_confirm`, `updated_by`, approval states or authorisation fields. These are server-controlled.
+Migration order, all in separate committed transactions:
 
-## Import API and security
+1. `20261113145300_product_handbook.sql` — Claude-approved Phase A knowledge tables, seed, private bucket.
+2. `20261113145900_product_handbook_faq_enum.sql` — isolated `ALTER TYPE public.handbook_section ADD VALUE 'faq'`.
+3. `20261113150100_handbook_training_links.sql` — seven required courses mapped to sections.
+4. `20261113150200_handbook_import_workflow.sql` — `code`, `kind`, `product_line`, key-point fields, `icon_hint`, import batches and atomic RPCs.
 
-The existing authenticated `owner-session` Edge Function accepts:
+**Do not execute any migration until Owner grants deployment approval.**
+
+## API operations and confirmation
+
+All actions use the authenticated `owner-session` Edge Function, which checks the DB Owner role on **every action**, and the database RPC checks Owner role again. Agent/admin/unassigned users cannot import or approve.
 
 ```json
-{"action":"handbook_import","content":{"schema_version":"1.0","source":"grok","entries":[]}}
+{"action":"handbook_import","content":{"source_version":"grok-2026-11-13-claude-reviewed","cards":[],"scripts":[],"faqs":[]}}
 ```
 
-The example above shows the API envelope only; an **empty entries array is invalid**.
+The envelope above describes request routing; empty arrays are invalid. Send the **complete source JSON** for an actual import.
 
-- Only `owner` may import, review or publish; `admin`, `agent`, unassigned and anonymous users receive **403/401** as appropriate.
-- Validate the whole payload **before** database writes. Reject the entire batch on malformed JSON, unsupported schema, oversized input or bad fields. Never trust the source label as authority.
-- Imported entries are created with `active=false`, `visible_to_agent=false`, `needs_owner_confirm=true`. They are **not** included in Agent handbook responses or AI retrieval.
-- Owner reviews `handbook_pending` and sends `{"action":"handbook_review","id":"<uuid>","decision":"approve"}` or `"reject"`.
-- Approval requires explicit Owner action and an audit event; only then set `active=true`, `visible_to_agent=true`, `needs_owner_confirm=false`.
-- Rejection stays invisible to Agents. Every Agent read must filter **all three flags**, independently of any UI visibility state.
-- For the Owner UI, upload a local `.json` file and send its parsed content in the above request. No secret key or service role credential is exposed to the client.
+- `handbook_import`: strict validate first, then transactional code-key upsert. Return `{batch_id,inserted,updated,unchanged,pending_owner_review,counts}`. New or changed rows are set to `active=false,visible_to_agent=false,needs_owner_confirm=true`. **Identical rows are skipped** (no new batch); updated rows are unpublished and require fresh approval. All operations and audit events share one database transaction.
+- `handbook_pending`: list pending rows, `import_batch_id` and grouped batch metadata. Owner UI displays by batch then product line (plus a general FAQ group).
+- `handbook_update`: `{"action":"handbook_update","id":"<uuid>","title_en":"...","title_zh":"...","body_en":"...","body_zh":"..."}`. Edit only a pending entry; validates bilingual nonempty strings; stays hidden until approved.
+- `handbook_bulk_approve`: `{"action":"handbook_bulk_approve","batch_id":"<uuid>","confirm":true}`. One batch button, then explicit Owner confirmation. Atomically approve **all currently pending items of that batch**, recording the batch UUID as audit entity ID.
+- `handbook_review`: `{"action":"handbook_review","id":"<uuid>","decision":"approve"}` or `reject`, both audited atomically.
 
-**Owner review checklist:** verify every product/service and geographic claim, no invented stock, flower quality, price, delivery promises, testimonials, ratings, or addresses. The file is draft knowledge until approved.
+Agent uses authenticated `agent-session`:
+`{"action":"handbook","section":"product_line","product_line":"condolence"}`. Section **or** product_line may be supplied; filters may be combined. Always enforce server-side:
 
-## Required course linkage
+```text
+active = true AND visible_to_agent = true AND needs_owner_confirm = false
+```
 
-`public.training_modules.handbook_section` is a `public.handbook_section` enum. Required active courses must have a non-null section. Agent training displays a bilingual “Read handbook first / 先看手册” button and loads only approved entries in the linked section.
+Response includes `code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint`. No client direct grants to `company_knowledge` or `handbook_import_batches`; service_role remains server-only.
 
-Existing seven required modules are linked without creating or changing any MCQ `skill_code`:
+## Review tests (no production DDL)
 
-| training_modules.code | handbook_section |
-| --- | --- |
-| CORE-BRAND | story |
-| LEAD-FINDING | product_line |
-| QUALIFY | product_line |
-| REFERENCE | service_rule |
-| OBJECTION | script |
-| CLOSING | script |
-| PAYMENT | service_rule |
+- Unit test loads **the original** `content/handbook/handbook_content.json`, validates 20+15+12 and confirms source file hash is unchanged.
+- Integration test script `scripts/handbook-import-integration-test.mjs` uses `DATABASE_URL` only **after migrations have been approved and applied** in a suitable test database. Within a single rollback transaction it asserts 47 pending, hidden from Agent filters, batch approval reveals all 47, repeated import inserts/updates zero, and Owner-edited content survives approval.
+- Authenticated Agent/Owner API and 403 role matrix should be tested in staging once Edge Functions are deployed, not against the production schema now.
 
-## MCQ is separate
+## Training MCQ: unchanged importer
 
-Product-handbook MCQs use the **existing** `scripts/training-bank-import.mjs` and its existing `bank_type`, `skill_code` and question format. Valid `skill_code` values remain exactly `LEAD-FINDING`, `QUALIFY`, `REFERENCE`, `OBJECTION`, `CLOSING`, `PAYMENT`; `CORE-BRAND` is a required **course**, not a new MCQ skill code. Do not change the exam/pass/unlock rules. Run validation before importing, and do not apply a formal bank unless its required question counts pass existing checks.
+The six `skill_code` values are exactly `LEAD-FINDING`, `QUALIFY`, `REFERENCE`, `OBJECTION`, `CLOSING`, `PAYMENT`; `CORE-BRAND` is a required course but **not a seventh MCQ skill_code**. Do not modify `scripts/training-bank-import.mjs`.
 
-## Review gate
+Only after explicit deployment approval, run:
 
-This supplement is review-only. Keep the existing Phase A → Claude approval → Phase B → Claude approval → Phase C delivery flow. Do not apply migrations, deploy Edge Functions, build/redeploy Railway bundles or publish Agent UI before explicit approval.
+```bash
+node scripts/training-bank-import.mjs content/handbook/training_questions_handbook.json --apply
+```
+
+No PR #10 migration/deploy/Phase B/Phase C action is authorized yet.
