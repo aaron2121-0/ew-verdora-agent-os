@@ -1,11 +1,6 @@
--- Seven-day onboarding: use the EXISTING seven training modules and the EXISTING
--- private.training_questions bank (no new skill_code values).
--- Applying this migration does not publish content or grant client-table access.
--- Course -> handbook section mapping is owned by
--- 20261113150100_handbook_training_links.sql on main.
--- Preserve that enum mapping (story/product_line/service_rule/script).
--- Do NOT substitute floral product-line names into the handbook_section enum.
-
+-- Agent self-onboarding module quizzes. Apply only AFTER PR #10 handbook migrations.
+-- Course→content focus comes from reviewed onboarding_7day.json (not another column).
+-- No change to PR #10 training_modules.handbook_section / handbook action.
 create table if not exists public.training_module_quiz_attempts(
  id uuid primary key default gen_random_uuid(),
  agent_id uuid not null references public.agents(id) on delete cascade,
@@ -26,7 +21,7 @@ create table if not exists public.training_module_quiz_items(
  id uuid primary key default gen_random_uuid(),
  attempt_id uuid not null references public.training_module_quiz_attempts(id) on delete cascade,
  agent_id uuid not null references public.agents(id) on delete cascade,
- position smallint not null check(position between 1 and 3),
+ position smallint not null check(position between 1 and 5),
  question_id uuid not null references private.training_questions(id),
  option_order smallint[] not null check(cardinality(option_order)=4),
  selected_index smallint check(selected_index between 0 and 3),
@@ -43,7 +38,7 @@ revoke all on public.training_module_quiz_attempts,public.training_module_quiz_i
 grant select,insert,update,delete on public.training_module_quiz_attempts,public.training_module_quiz_items to service_role;
 
 comment on table public.training_module_quiz_attempts is
- 'Server-graded 3-question module checkpoint. A pass is recorded through the existing record_training_result_internal RPC.';
+ 'Server-graded 5-question module checkpoint. A pass is recorded through the existing record_training_result_internal RPC.';
 comment on table public.training_module_quiz_items is
  'Question answers and private question IDs never leave the authenticated server.';
 
@@ -109,7 +104,8 @@ create table if not exists public.training_module_reads(
  agent_id uuid not null references public.agents(id) on delete cascade,
  module_code text not null,
  card_code text not null check(length(btrim(card_code))>0),
- read_at timestamptz not null default now(),
+ first_seen_at timestamptz not null default now(),
+ read_at timestamptz,
  primary key(agent_id,module_code,card_code)
 );
 create index if not exists training_module_reads_agent_idx
@@ -118,7 +114,7 @@ alter table public.training_module_reads enable row level security;
 revoke all on public.training_module_reads from public,anon,authenticated;
 grant select,insert,update,delete on public.training_module_reads to service_role;
 comment on table public.training_module_reads is
- 'Server-persisted course reading checkpoints, submitted after >=4s per card in UI. Codes must be validated against current Owner-approved handbook before insertion.';
+ 'Server-persisted course reading checkpoints, must be started and completed after >=4s; backend validates elapsed time. Codes must be validated against current Owner-approved handbook before insertion.';
 
 -- Optional card reference for a wrong answer. No fallback card data is fabricated.
 alter table private.training_questions

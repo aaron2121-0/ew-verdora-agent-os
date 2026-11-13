@@ -1,5 +1,6 @@
 import {aiStart,aiEnd,setAIState,contextTips,createAICard} from "./ai-ui.js";
 import {typeText} from "./motion.js";
+import {suggestions as reviewedSuggestions} from "./approved-content.js";
 let instance=null;
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n};
 export function createAIChat({api,tr,getData,getLang}){
@@ -42,10 +43,13 @@ export function createAIChat({api,tr,getData,getLang}){
   aiStart();try{const j=await api({action:"chat_history"});for(const m of j.messages||[])message(m.role,m.content,m.provider,m.id)}catch{history.append(el("p","ai-muted",tr("aiHistoryUnavailable")))}finally{aiEnd()}
  }
  function renderSuggestions(){
-  suggestions.replaceChildren();const tips=contextTips(getData(),Date.now(),tr);
-  const prompts=[...new Set([tips[0]?.prompt,"aiPromptPlan","aiPromptObjection","aiPromptFestival","aiPromptFollowup"].filter(Boolean))].slice(0,4);
-  for(const key of prompts){const btn=el("button","ai-suggest",tr(key));btn.type="button";btn.addEventListener("click",()=>sendText(tr(key)));suggestions.append(btn)}
+  suggestions.replaceChildren();
+  for(const prompt of suggestionsForChat()){
+   const b=el("button","ai-suggest",prompt);b.type="button";
+   b.addEventListener("click",()=>sendText(prompt));suggestions.append(b);
+  }
  }
+ function suggestionsForChat(){return reviewedSuggestions("ai",getLang())}
  async function sendText(text){
   const value=String(text||"").trim();if(!value||busy)return;
   busy=true;send.disabled=true;input.value="";message("user",value);aiStart();

@@ -11,11 +11,11 @@ const screenshots=path.join(root,"artifacts","ui-motion");
 await fs.mkdir(screenshots,{recursive:true});
 const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2e-token\",refresh_token:\"e2e-refresh\",user:{id:\"e2e-agent\"}};return {auth:{onAuthStateChange(cb){window.__testAuthChange=cb;return {data:{subscription:{unsubscribe(){}}}}},async getSession(){return {data:{session}}},async setSession(value){session={...value,user:{id:\"e2e-agent\"}};return {error:null}},async signInWithOtp(){return {error:null}},async signOut(){session=null;return {error:null}}},storage:{from(){return {uploadToSignedUrl:async()=>({error:null})}}}}}};";
 const dashboard={agent:{id:"e2e-agent",display_name:"Test Agent",agent_code:"T001",status:"active",tier:"starter"},phase1:{can_sell:true,due_followups:[],recent_leads:[{id:"mock-lead",customer_label:"𠮷野 · 龘龖",status:"new",budget:200,source:"instagram",lead_score:78,lead_score_reason:{zh:"今天可以优先联系",en:"Prioritize today"},next_best_action:"follow_up",best_followup_time:"2026-11-13T02:00:00+08:00"}],tier_progress:{commission_rate:0.1},money:{today_earned:0,pending:0,month_earned:0},training_pending:false},selling_kits:[],campaigns:[],channel_playbooks:[],training:[]};
-const mockReads=new Map();
+const mockReads=new Map(),mockSeen=new Map();
 const requiredBouquet=["BOUQ-1","BOUQ-2","BOUQ-3","BOUQ-4"];
-const requiredStory=["SEED-story-fixture-1","SEED-story-fixture-2","SEED-story-fixture-3","SEED-story-fixture-4"];
-const courseRequired=code=>code==="CORE-BRAND"?requiredStory:requiredBouquet;
-const mime={".html":"text/html",".css":"text/css",".js":"text/javascript",".woff2":"font/woff2",".svg":"image/svg+xml"};
+const requiredCondolence=["COND-1","COND-2","COND-3","COND-4"];
+const courseRequired=code=>code==="LEAD-FINDING"?requiredCondolence:[];
+const mime={".html":"text/html",".css":"text/css",".js":"text/javascript",".json":"application/json",".woff2":"font/woff2",".svg":"image/svg+xml"};
 const server=createServer(async(req,res)=>{
  const u=new URL(req.url,"http://localhost");
  const json=(value)=>{res.writeHead(200,{"content-type":"application/json","access-control-allow-origin":"*","access-control-allow-headers":"*"});res.end(JSON.stringify(value))};
@@ -33,42 +33,35 @@ const server=createServer(async(req,res)=>{
   }
   if(body.action==="handbook"){
     const section=body.section;
-    const product=requiredBouquet.map((code,index)=>({
-      id:"h-"+code,code,kind:"card",product_line:"bouquet",section:"product_line",
-      title_en:"Approved test card "+(index+1),title_zh:"核准测试卡 "+(index+1),
-      body_en:"Fixture content for "+code,body_zh:"测试资料 "+code,
-      key_points_en:["Test example"],key_points_zh:["测试内容"],
-      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:index+1
+    const cards=(line,codes)=>codes.map((code,index)=>({
+      id:"mock-"+code,code,kind:"card",product_line:line,section:"product_line",
+      title_en:"Approved fixture "+(index+1),title_zh:"审核测试卡 "+(index+1),
+      body_en:"Fixture "+code,body_zh:"测试资料 "+code,
+      key_points_en:["Test only"],key_points_zh:["仅测试"],sort:index+1
     }));
-    const story=requiredStory.map((code,index)=>({
-      id:code.slice(5),code:null,kind:"seed",product_line:null,section:"story",
-      title_en:"Story fixture "+(index+1),title_zh:"品牌故事测试卡 "+(index+1),
-      body_en:"Owner approved story fixture",body_zh:"核准品牌故事测试资料",
-      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:index+1
-    }));
-    const extras=[
-      {id:"h-script",code:"S-1",kind:"script",product_line:"bouquet",section:"script",
-        title_en:"Test script",title_zh:"测试话术",body_en:"Example script",body_zh:"仅作测试的话术",
-        active:true,visible_to_agent:true,needs_owner_confirm:false,sort:5},
-      {id:"h-faq",code:"F-1",kind:"faq",product_line:"bouquet",section:"faq",
-        title_en:"Is stock guaranteed?",title_zh:"保证有现货吗？",
-        body_en:"No, confirm with Owner.",body_zh:"不保证，请先向 Owner 确认。",
-        active:true,visible_to_agent:true,needs_owner_confirm:false,sort:6}
-    ];
-    return json({ok:true,entries:([...story,...product,...extras]).filter(x=>x.section===section)});
+    const scripts=[{id:"mock-script",code:"S1",kind:"script",product_line:"bouquet",section:"script",
+      title_en:"Test script",title_zh:"测试话术",body_en:"Fixture reply",body_zh:"测试回复",sort:1}];
+    const faq=[{id:"mock-faq",code:"F1",kind:"faq",product_line:"bouquet",section:"faq",
+      title_en:"Test FAQ",title_zh:"测试 FAQ",body_en:"Fixture answer",body_zh:"测试答案",sort:1}];
+    return json({ok:true,entries:[...cards("bouquet",requiredBouquet),
+      ...cards("condolence",requiredCondolence),...scripts,...faq].filter(x=>x.section===section)});
   }
-  if(body.action==="handbook_portfolio")return json({ok:true,photos:[]});
   if(body.action==="module_read"){
-    const code=String(body.module_code||""),read=mockReads.get(code)||new Set();
-    const required=courseRequired(code),incoming=body.card_codes||[];
-    if(incoming.some(x=>!required.includes(x))){
-      res.writeHead(400,{"content-type":"application/json","access-control-allow-origin":"*"});
-      res.end(JSON.stringify({error:"invalid_card_codes"}));return;
+    const code=String(body.module_code||""),required=courseRequired(code),read=mockReads.get(code)||new Set();
+    if(body.phase==="start"){
+      mockSeen.set(code+"|"+body.card_code,Date.now());
+    }else if(body.phase==="complete"){
+      const age=Date.now()-(mockSeen.get(code+"|"+body.card_code)||Date.now());
+      if(age<4000){
+        res.writeHead(409,{"content-type":"application/json","access-control-allow-origin":"*"});
+        res.end(JSON.stringify({error:"card_view_too_short"}));return;
+      }
+      if(required.includes(body.card_code))read.add(body.card_code);
     }
-    incoming.forEach(x=>read.add(x));mockReads.set(code,read);
+    mockReads.set(code,read);
     return json({ok:true,module_code:code,required_card_codes:required,
       read_card_codes:required.filter(x=>read.has(x)),remaining_card_codes:required.filter(x=>!read.has(x)),
-      ready_for_quiz:required.every(x=>read.has(x))});
+      ready_for_quiz:required.every(x=>read.has(x)),no_approved_cards:required.length===0});
   }
   if(body.action==="module_quiz_start"){
     const read=mockReads.get(String(body.module_code||""))||new Set();
@@ -82,7 +75,7 @@ const server=createServer(async(req,res)=>{
   }
   if(body.action==="module_quiz_answer")return json({ok:true,correct:false,
     explanation_en:"Check the approved occasions card.",explanation_zh:"请查阅核准的适用场合卡片。",
-    related_card_code:"BOUQ-2",quiz:{attempt_id:"e2e-attempt",completed:false,question:{
+    related_card_code:"COND-2",quiz:{attempt_id:"e2e-attempt",completed:false,question:{
       position:2,question_en:"Fixture question two",question_zh:"测试第二题",
       options_en:["One","Two","Three","Four"],options_zh:["一","二","三","四"]}}});
  if(body.action==="dashboard")return json(dashboard);
@@ -91,7 +84,9 @@ const server=createServer(async(req,res)=>{
  let pathname=decodeURIComponent(u.pathname);if(pathname==="/")pathname="/index.html";
  if(pathname==="/vendor/supabase-2.119.0.js"){res.writeHead(200,{"content-type":"text/javascript"});if(u.searchParams.get("real")==="1"){const sdkPath=path.join(root,"..","..","node_modules","@supabase","supabase-js","dist","umd","supabase.js");res.end(await fs.readFile(sdkPath))}else res.end(sdkMock);return}
  if(pathname.includes("..")){res.writeHead(404);res.end();return}
- try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\bgzip\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
+ try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):
+   pathname.startsWith("/content/handbook/")?path.join(root,"..","..",pathname.slice(1)):
+   path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\bgzip\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
  catch{res.writeHead(404);res.end("Not found")}
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
@@ -112,6 +107,8 @@ try{
   if(lang==="zh")await page.locator("#lang").click();
   assert.equal(await page.locator("html").getAttribute("lang"),lang==="zh"?"zh-CN":"en");
   assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
+  assert.equal(await page.locator("#todayPage .earning-action").count(),3);
+  assert.ok(await page.locator("#todayPage .earning-actions").evaluate(el=>!!(el.compareDocumentPosition(document.querySelector(".journey-card"))&Node.DOCUMENT_POSITION_FOLLOWING)),"earning actions must come before learning");
   const dims=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
   assert.ok(dims.scroll<=dims.view+1,"horizontal overflow "+width+" "+lang+" "+theme+": "+JSON.stringify(dims));
   await page.screenshot({path:path.join(screenshots,width+"-"+lang+"-"+theme+".png"),fullPage:true});
@@ -177,90 +174,78 @@ try{
   await ctx.close();
  }
 
- // New-agent 4-slide tour, bilingual and full responsive handbook.
+ // Reviewed four-slide onboarding and 360/430 EN/ZH light/dark screenshots.
  for(const width of [360,430])for(const lang of ["en","zh"])for(const theme of ["dark","light"]){
   const ctx=await browser.newContext({viewport:{width,height:850},colorScheme:theme});
   await ctx.addInitScript(({lang,theme})=>{
-    localStorage.setItem("ew_lang",lang);
-    localStorage.setItem("ew_theme",theme);
-    for(const p of ["today","customers","training","handbook","order","performance"])
-      localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+   localStorage.setItem("ew_lang",lang);localStorage.setItem("ew_theme",theme);
+   for(const p of ["today","customers","training","handbook","order","performance"])
+    localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
   },{lang,theme});
-  const page=await ctx.newPage(),errors=[];
-  page.on("pageerror",e=>errors.push(e.message));
+  const page=await ctx.newPage(),errors=[];page.on("pageerror",e=>errors.push(e.message));
   await page.goto(origin);
   await page.locator(".onboarding-layer").waitFor({timeout:15000});
+  const copy=await page.evaluate(()=>fetch("/content/handbook/ui_microcopy.json").then(r=>r.json()));
+  assert.equal(await page.locator(".onboarding-panel h2").textContent(),copy.tour[0]["title_"+lang]);
   await page.screenshot({path:path.join(screenshots,"onboarding-"+width+"-"+lang+"-"+theme+".png")});
   for(let i=0;i<4;i++)await page.locator(".onboarding-panel > .btn-primary").click();
-  assert.equal(await page.locator(".onboarding-layer").count(),0,"tour closed");
-  assert.equal(await page.evaluate(()=>localStorage.getItem("ew_onboarding_v1_e2e-agent")),"1");
-  await page.locator(".journey-card").waitFor();
-  assert.match(await page.locator(".journey-ring").innerText(),/0\/7/);
+  assert.equal(await page.locator(".onboarding-layer").count(),0);
   await page.locator(".quick-tile").filter({hasText:lang==="zh"?"产品手册":"Product handbook"}).click();
   await page.locator(".handbook-line-card").first().waitFor();
   await page.screenshot({path:path.join(screenshots,"handbook-overview-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.locator('[data-handbook-line="bouquet"]').click();
-  await page.locator(".handbook-slide-body h2").waitFor({timeout:15000});
+  await page.locator(".handbook-slide-body h2").waitFor();
   assert.match(await page.locator(".handbook-slide-body").innerText(),/1 \/ 4/);
   await page.screenshot({path:path.join(screenshots,"handbook-detail-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
-  await page.locator(".handbook-slide-controls button").last().click();
-  assert.match(await page.locator(".handbook-slide-body").innerText(),/2 \/ 4/);
   await page.locator(".handbook-head button").click();
   await page.locator(".handbook-head button").click();
-  await page.locator(".journey-day.current button").click();
-  await page.locator(".handbook-slide-body h2").waitFor();
-  assert.equal(await page.locator('[data-reading-complete="true"]').count(),0);
-  await page.screenshot({path:path.join(screenshots,"course-reading-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
+  await page.locator("#todayPage .journey-card > button").click();
+  await page.locator(".handbook-lesson-action .btn-primary").waitFor();
+  assert.match(await page.locator(".handbook-read-status").textContent(),lang==="zh"?/没有核准卡片/:/No approved cards/);
+  await page.screenshot({path:path.join(screenshots,"no-approved-cards-"+width+"-"+lang+"-"+theme+".png")});
+  await page.locator(".handbook-lesson-action .btn-primary").click();
+  await page.locator(".handbook-quiz-options .handbook-quiz-option").first().waitFor();
+  assert.match(await page.locator(".handbook-quiz-panel small").textContent(),/1 \/ 5/);
+  await page.screenshot({path:path.join(screenshots,"five-question-"+width+"-"+lang+"-"+theme+".png")});
   const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
-  assert.ok(size.scroll<=size.view+1,"handbook horizontal overflow "+width+"/"+lang+"/"+theme);
-  assert.deepEqual(errors,[],"onboarding/handbook page errors "+width+"/"+lang+"/"+theme);
+  assert.ok(size.scroll<=size.view+1,"overflow "+width+"/"+lang+"/"+theme);
+  assert.deepEqual(errors,[],"onboarding/handbook errors "+width+"/"+lang+"/"+theme);
   await ctx.close();
  }
-
- // Reading must be persisted server-side and block early quiz requests.
- mockReads.clear();
+ // Day 2 has approved cards; quiz is server-blocked until all four are read.
+ dashboard.training=["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"].map((code,i)=>({
+  status:i===0?"passed":"assigned",best_score:0,training_modules:{code,title_en:code,title_zh:code,
+   handbook_section:i===0?"story":"product_line",content_en:{lesson:["Fixture lesson"]},content_zh:{lesson:["测试课程"]}}
+ }));
+ mockReads.clear();mockSeen.clear();
  const lessonCtx=await browser.newContext({viewport:{width:360,height:850}});
  await lessonCtx.addInitScript(()=>{
   localStorage.setItem("ew_onboarding_v1_e2e-agent","1");
   for(const p of ["today","customers","training","handbook","order","performance"])
-    localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+   localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
  });
- const lesson=await lessonCtx.newPage();
+ const lesson=await lessonCtx.newPage(),errors=[];lesson.on("pageerror",e=>errors.push(e.message));
  await lesson.goto(origin);
- await lesson.locator(".journey-day.current button").click();
+ await lesson.locator("#todayPage .journey-card > button").click();
  await lesson.locator(".handbook-slide-body h2").waitFor();
  const early=await lesson.evaluate(async()=>{
-  const response=await fetch("/functions/v1/agent-training",{method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({action:"module_quiz_start",module_code:"CORE-BRAND"})});
-  return {status:response.status,body:await response.json()};
+  const r=await fetch("/functions/v1/agent-training",{method:"POST",headers:{"content-type":"application/json"},
+   body:JSON.stringify({action:"module_quiz_start",module_code:"LEAD-FINDING"})});
+  return {status:r.status,body:await r.json()};
  });
- assert.equal(early.status,403);
- assert.equal(early.body.error,"must_read_handbook_first");
- assert.equal(await lesson.locator('[data-reading-complete="true"]').count(),0);
- assert.ok(await lesson.locator(".handbook-slide-controls button").last().isDisabled(),"fast swipe blocked");
+ assert.equal(early.status,403);assert.equal(early.body.error,"must_read_handbook_first");
  for(let i=0;i<4;i++){
-  await lesson.locator(".handbook-read-status").filter({hasText:/saved to your learning progress/}).waitFor({timeout:7500});
+  await lesson.locator(".handbook-read-status").filter({hasText:/saved to your learning progress/}).waitFor({timeout:12000});
   if(i<3)await lesson.locator(".handbook-slide-controls button").last().click();
  }
- assert.equal((mockReads.get("CORE-BRAND")||new Set()).size,4);
- await lesson.locator('[data-reading-complete="true"]').waitFor();
- await lesson.screenshot({path:path.join(screenshots,"course-read-complete-360-en.png"),fullPage:true});
- await lesson.reload();
- await lesson.locator(".journey-current-status").filter({hasText:/Quiz ready/}).waitFor({timeout:15000});
- await lesson.locator(".journey-day.current button").click();
- await lesson.locator(".handbook-slide-body h2").waitFor();
- for(let i=0;i<3;i++)await lesson.locator(".handbook-slide-controls button").last().click();
- await lesson.locator('[data-reading-complete="true"]').click();
- await lesson.locator(".handbook-quiz-option").first().click();
- await lesson.locator(".handbook-quiz-feedback").filter({hasText:/Check the approved occasions card/}).waitFor();
+ assert.equal((mockReads.get("LEAD-FINDING")||new Set()).size,4);
+ await lesson.locator("[data-reading-complete=true]").click();
+ await lesson.locator(".handbook-quiz-options .handbook-quiz-option").first().click();
  await lesson.locator(".handbook-quiz-options button").filter({hasText:"Review this handbook card"}).click();
  await lesson.locator(".handbook-slide-body").filter({hasText:/2 \/ 4/}).waitFor();
- await lesson.screenshot({path:path.join(screenshots,"wrong-answer-related-card.png"),fullPage:true});
+ await lesson.screenshot({path:path.join(screenshots,"wrong-answer-back-to-card.png"),fullPage:true});
+ assert.deepEqual(errors,[]);
  await lessonCtx.close();
-
- dashboard.agent.status="active";
- dashboard.phase1.can_sell=true;
- dashboard.phase1.training_pending=false;
  dashboard.training=[];
  const sdkContext=await browser.newContext();
  const sdkPage=await sdkContext.newPage();

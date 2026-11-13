@@ -305,6 +305,35 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 .training3-handbook-entry p{white-space:pre-line;overflow-wrap:anywhere;font-size:.75rem;line-height:1.6;margin:0}
 
 
+/* Owner direction: this is a sales/order platform first, training second. */
+.earning-actions{margin:9px 0 13px;padding:15px;border-radius:20px;background:linear-gradient(140deg,#184635,#24664b);color:#fff;box-shadow:0 9px 25px rgba(20,63,45,.13)}
+.earning-title{font-size:1.08rem;letter-spacing:-.02em;font-weight:900;margin-bottom:12px;color:#fff}
+.earning-action-list{display:grid;gap:8px}
+.earning-action{display:flex;align-items:center;gap:10px;border-radius:13px;padding:10px 11px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);min-height:64px;text-align:left;color:#fff;cursor:pointer;transition:transform 120ms ease,opacity 120ms ease}
+.earning-action:active{transform:scale(.985);opacity:.9}
+.earning-action>.icon:last-child{margin-left:auto;opacity:.7}
+.earning-action-copy{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.earning-action-copy strong{font-size:.83rem;line-height:1.25}
+.earning-action-copy small{font-size:.7rem;line-height:1.4;color:rgba(255,255,255,.82);overflow-wrap:anywhere}
+.today-shell>.journey-card{margin-top:12px;margin-bottom:15px}
+.journey-next-label{display:block;margin-top:5px;font-size:.87rem;color:var(--verdora-900)}
+.journey-details{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+.journey-details>summary{cursor:pointer;color:var(--verdora-700);font-size:.75rem;font-weight:850;min-height:39px;display:flex;align-items:center}
+.journey-day-tasks{margin:5px 0 3px;padding-left:16px;font-size:.69rem;line-height:1.5;color:var(--text-650)}
+.journey-day-tasks li{margin:2px 0}
+.training-optional-review{border:1px solid var(--line);border-radius:16px;background:var(--surface);margin-top:15px;padding:14px}
+.training-optional-review>summary{font-size:.78rem;font-weight:800;line-height:1.45;cursor:pointer;min-height:39px;color:var(--text-650)}
+.training-optional-review>.training3-hero{margin-top:12px}
+.training3-approved-handbook{display:inline-flex;align-items:center;gap:5px;margin:7px 11px 10px;min-height:40px}
+:root[data-theme="dark"] .earning-actions{background:linear-gradient(140deg,#164130,#215642);box-shadow:0 10px 26px rgba(0,0,0,.2)}
+:root[data-theme="dark"] .journey-next-label{color:#d7eddd}
+:root[data-theme="dark"] .training-optional-review{border-color:#496156}
+:root[data-theme="dark"] .journey-day-tasks{color:#bbcec0}
+@media(max-width:380px){.earning-actions{padding:12px}.earning-action{padding:9px;min-height:60px}.earning-action-copy small{font-size:.67rem}}
+@media(prefers-reduced-motion:reduce){.earning-action{transition:none}}
+
+
+
 
 /* Seven-day onboarding + Owner-approved product handbook */
 .journey-card,.handbook-group,.handbook-slides{

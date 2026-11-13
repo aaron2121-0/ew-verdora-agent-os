@@ -7,8 +7,19 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
+// Bundle only the actual Claude-reviewed JSON from the repository.
+// No duplicate or rewritten onboarding/microcopy strings in frontend code.
+const reviewedRoot=path.resolve(root,"..","..","content","handbook");
+const reviewedNames=["onboarding_7day.json","ui_microcopy.json"];
+const optionalAction=path.join(reviewedRoot,"daily_actions.json");
+if(fs.existsSync(optionalAction))reviewedNames.push("daily_actions.json");
+const reviewedAssets=reviewedNames.map(name=>{
+ const target="content/handbook/"+name;
+ files[target]=fs.readFileSync(path.join(reviewedRoot,name),"utf8");
+ return target;
+});
 // Bundle the actual EW Verdora animation assets when the content package is
 // supplied. Missing assets are not replaced with invented imagery.
 const contentRoot=path.join(publicDir,"ew-verdora-content","motion");
@@ -72,7 +83,7 @@ const CSP=[
 
 const encoded={"/":gzip(files["index.html"]),"/index.html":gzip(files["index.html"])};
 const types={"/":"text/html; charset=utf-8","/index.html":"text/html; charset=utf-8"};
-for(const name of [...names.slice(1),...optionalAssets,"vendor/supabase-2.119.0.js"]){
+for(const name of [...names.slice(1),...optionalAssets,...reviewedAssets,"vendor/supabase-2.119.0.js"]){
   encoded["/"+name]=gzip(files[name]);
   types["/"+name]=name.endsWith(".css")?"text/css; charset=utf-8":
     name.endsWith(".svg")?"image/svg+xml":name.endsWith(".json")?"application/json":

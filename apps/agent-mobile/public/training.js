@@ -28,6 +28,10 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
   let clockOffset=0;
   let timeoutSubmitting=false;
   let expandedModule=null;
+  let handbookModuleOpen=null;
+  let handbookLoading=false;
+  let handbookError=null;
+  const handbookCache=new Map();
 
   function lang(en,zh){return getLang()==="zh"?zh:en}
   function stopTimer(){if(timer){clearInterval(timer);timer=null}}
@@ -150,7 +154,7 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
     card.append(top,streak);
     const meta=element("div",{className:"training3-meta"});
     meta.append(element("span",{text:tr("dailyPassRule")}),element("span",{text:tr("serverTimed45")}));
-    card.append(meta,element("small",{className:"training3-daily-note",text:getLang()==="zh"?"复习用，不计入解锁":"Optional review · does not count toward unlocking"}));
+    card.append(meta,element("small",{className:"training3-daily-note",text:tr("unlockDailyNote")}));
     return card;
   }
 
@@ -182,6 +186,28 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
     });
   }
 
+
+  async function toggleHandbook(code,section){
+    if(handbookLoading)return;
+    if(handbookModuleOpen===code){handbookModuleOpen=null;render();return}
+    handbookModuleOpen=code;handbookError=null;
+    if(handbookCache.has(section)){render();return}
+    handbookLoading=true;render();
+    try{
+      const j=await api.agent({action:"handbook",section});
+      handbookCache.set(section,Array.isArray(j.entries)?j.entries:[]);
+    }catch(e){
+      handbookError=section;
+      toast(api.friendlyError(e?.message),{tone:"danger"});
+    }finally{handbookLoading=false;render()}
+  }
+
+  const sectionName=section=>tr(({
+    story:"handbookSectionStory",product_line:"handbookSectionProductLine",
+    service_rule:"handbookSectionServiceRule",delivery:"handbookSectionDelivery",
+    script:"handbookSectionScript",announcement:"handbookSectionAnnouncement",faq:"handbookSectionFaq"
+  })[section]||"handbookSectionProductLine");
+
   function modules(){
     const card=element("section",{className:"training3-card"});
     const head=element("div",{className:"training3-section-head"});
@@ -198,22 +224,17 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
         element("small",{text:moduleStatus(x.status,tr)+" · "+Number(x.best_score||0)+"/100"}));
       r.append(left);
       if(x.status==="passed")r.append(element("span",{className:"badge badge-success",text:tr("passed")}));
-      else{
-        const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button","aria-expanded":expandedModule===code?"true":"false"}});
-        b.append(createIcon("graduationCap",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
-        b.addEventListener("click",()=>expandModule(code));
-        r.append(b);
-      }
+      // Passed courses also remain readable as handbook reference.
+      const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button","aria-expanded":expandedModule===code?"true":"false"}});
+      b.append(createIcon("graduationCap",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
+      b.addEventListener("click",()=>expandModule(code));
+      r.append(b);
       item.append(r);
-      const sectionName={
-        condolence:["Condolence","慰问花圈"],opening:["Opening","开张花礼"],
-        bouquet:["Bouquets","花束"],wedding_event:["Weddings & Events","婚礼与活动"],
-        wholesale:["Wholesale","鲜切花批发"]
-      }[mod.handbook_section]||[tr("handbookTitle"),tr("handbookTitle")];
-      const hb=element("button",{className:"btn btn-text btn-small course-handbook-link",attrs:{type:"button"}});
-      hb.append(createIcon("flower2",{size:16}),element("span",{text:(getLang()==="zh"?"进入课程 · 先读手册：":"Open course · handbook first: ")+sectionName[getLang()==="zh"?1:0]}));
-      hb.addEventListener("click",()=>onHandbook?.(code));
-      item.append(hb);
+      if(onHandbook){
+        const open=element("button",{className:"btn btn-secondary btn-small training3-approved-handbook",attrs:{type:"button"}});
+        open.append(createIcon("bookOpen",{size:16}),element("span",{text:getLang()==="zh"?"先读上手卡／开始测验":"Read cards / start quiz"}));
+        open.addEventListener("click",()=>onHandbook(code));item.append(open);
+      }
       if(expandedModule===code){
         const detail=element("div",{className:"training3-course-content"});
         const content=(getLang()==="zh"?mod.content_zh:mod.content_en)||{};
@@ -230,6 +251,37 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
           practice.append(createIcon("graduationCap",{size:16}),element("span",{text:tr("practice")}));
           practice.addEventListener("click",()=>api.openPractice(code));
           detail.append(practice);
+        }
+        const section=String(mod.handbook_section||"");
+        if(section){
+          const handbookButton=element("button",{className:"btn btn-secondary btn-small training3-handbook-button",
+            attrs:{type:"button","aria-expanded":handbookModuleOpen===code?"true":"false",disabled:handbookLoading}});
+          handbookButton.append(createIcon("bookOpen",{size:16}),
+            element("span",{text:tr("handbookReadFirst",{section:sectionName(section)})}));
+          handbookButton.addEventListener("click",()=>toggleHandbook(code,section));
+          detail.append(handbookButton);
+          if(handbookModuleOpen===code){
+            const panel=element("section",{className:"training3-handbook-panel",attrs:{"aria-live":"polite"}});
+            if(handbookLoading)panel.append(element("p",{text:tr("handbookLoading")}));
+            else if(handbookError===section)panel.append(element("p",{text:tr("handbookLoadError")}));
+            else{
+              const entries=handbookCache.get(section)||[];
+              if(!entries.length)panel.append(element("p",{text:tr("handbookEmpty")}));
+              entries.forEach(row=>{
+                const article=element("article",{className:"training3-handbook-entry"});
+                article.append(element("h3",{text:getLang()==="zh"?row.title_zh:row.title_en}),
+                  element("p",{text:getLang()==="zh"?row.body_zh:row.body_en}));
+                const points=getLang()==="zh"?row.key_points_zh:row.key_points_en;
+                if(Array.isArray(points)&&points.length){
+                  const list=element("ul",{className:"training3-course-list"});
+                  points.forEach(p=>list.append(element("li",{text:String(p)})));
+                  article.append(list);
+                }
+                panel.append(article);
+              });
+            }
+            detail.append(panel);
+          }
         }
         item.append(detail);
       }
@@ -334,28 +386,26 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
     const state=getUnlockProgress(getData(),today);
     if(state.agentStatus==="trainee"||state.agentStatus==="recovery"||state.showRestriction||state.completed<state.total){
       page.append(buildUnlockChecklist({data:getData(),summary:today,tr,
-        onCourse:code=>onHandbook?.(code),
+        onCourse:code=>expandModule(code),
         onExam:()=>document.getElementById("training-exam-entry")?.scrollIntoView({behavior:"smooth",block:"center"})
       }));
     }
-    // Required lessons come first. Daily MCQ is an optional review aid.
-    page.append(modules(),examCard());
-    const review=element("details",{className:"training-review-details"});
-    review.append(element("summary",{text:getLang()==="zh"?"每日训练 · 选做复习":"Daily training · optional review"}));
-    review.append(dailyHero(),skills());
+    const optional=element("details",{className:"training-optional-review"});
+    optional.append(element("summary",{text:getLang()==="zh"?"每日练习（选做） · 复习用，不计入解锁":"Optional daily practice · review only, not counted toward unlocking"}));
+    optional.append(dailyHero(),skills());
     if(today?.status==="completed"){
       const done=element("section",{className:"training3-daily-done"});
       done.append(createIcon(today?.passed?"circleCheck":"target",{size:22}),
         element("div",{className:"training3-done-copy"}));
       done.lastChild.append(element("strong",{text:tr("todayScore",{score:Math.round(Number(today.score||0))})}),
         element("span",{text:today?.passed?tr("dailyPassText"):tr("dailyFailText")}));
-      review.append(done);
+      optional.append(done);
     }else{
       const start=element("button",{className:"btn btn-primary btn-wide training3-start",attrs:{type:"button",disabled:loading}});
       start.append(createIcon("target",{size:19}),element("span",{text:today?.status==="active"?tr("resumeDaily"):tr("startDaily")}));
-      start.addEventListener("click",startDaily);review.append(start);
+      start.addEventListener("click",startDaily);optional.append(start);
     }
-    page.append(review);
+    page.append(examCard(),modules(),optional);
     return page;
   }
 

@@ -218,8 +218,6 @@ export const I18N={
     navCustomers:"Customers",
     navOrder:"New Order",
     navTraining:"Training",
-    handbookTitle:"Product handbook",
-    handbookSubtitle:"Approved product lines, photos and scripts",
     navPerformance:"Performance",
     refreshNow:"Refresh",
     kuchingLive:"Kuching time",
@@ -728,8 +726,6 @@ export const I18N={
     navCustomers:"客户",
     navOrder:"接单",
     navTraining:"训练",
-    handbookTitle:"产品手册",
-    handbookSubtitle:"五大业务线 · 核准作品 · 客户话术",
     navPerformance:"业绩",
     refreshNow:"刷新",
     kuchingLive:"古晋时间",
@@ -1020,6 +1016,13 @@ export const I18N={
     commissionWaived:"已豁免",
   }
 };
+
+/* Agent handbook navigation labels retained from the #11 UI; all onboarding,
+   spotlight, empty-state and AI suggestion sentences come from reviewed JSON. */
+I18N.en.handbookTitle="Product handbook";
+I18N.en.handbookSubtitle="Approved product lines, photos and scripts";
+I18N.zh.handbookTitle="产品手册";
+I18N.zh.handbookSubtitle="五大业务线 · 核准作品 · 客户话术";
 
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}

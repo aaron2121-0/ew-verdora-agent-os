@@ -119,7 +119,7 @@ async function refresh(){
       const aiCall=body=>fn("agent-ai",body);
       aiChat=createAIChat({api:aiCall,tr,getData:()=>D,getLang:()=>lang});
       aiProfile=createAIProfile({api:aiCall,tr,getLang:()=>lang});
-      initAIOrb({onClick:()=>aiChat?.open(),tr,getData:()=>D});
+      initAIOrb({onClick:()=>aiChat?.open(),tr,getData:()=>D,getLang:()=>lang});
     }
     return result;
   })();

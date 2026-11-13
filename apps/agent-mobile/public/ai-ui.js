@@ -1,4 +1,5 @@
 import {typeText,flipReorder,motionBudget} from "./motion.js";
+import {suggestions} from "./approved-content.js";
 import {kuchingHour,kuchingDateKey} from "./date.js";
 let state="idle",pending=0,orb=null,promptUsed=false,agentProfile=null;
 export function setAgentProfile(value){agentProfile=value&&typeof value==="object"?value:null}
@@ -51,7 +52,7 @@ export function createAICard({title,text="",provider="gemini",cached=false,tr,ac
  if(cached||provider!=="gemini")body.textContent=String(text||"");else typeText(body,text,{duration:16});
  return {card,body};
 }
-export function initAIOrb({onClick,tr,getData}){
+export function initAIOrb({onClick,tr,getData,getLang}){
  if(orb)return orb;
  orb=document.createElement("button");orb.type="button";orb.className="ai-orb";orb.dataset.aiState=state;orb.setAttribute("aria-label",tr("aiOpenChat"));
  const ring=document.createElement("span");ring.className="ai-orb-core";ring.setAttribute("aria-hidden","true");
@@ -64,21 +65,15 @@ export function initAIOrb({onClick,tr,getData}){
   const msg=document.createElement("span");msg.textContent=tr(tips[0].key,tips[0].params||{});
   const close=document.createElement("button");close.type="button";close.textContent="×";close.setAttribute("aria-label",tr("close"));close.addEventListener("click",()=>tip.remove());
   tip.append(msg,close);
-  const questions=tr("languageName")==="EN"?[
-    "开张花篮适合推荐给谁？","客户还没确定预算时，我应该先问什么？","客户要慰问花圈，我该怎么开始沟通？"
-  ]:[
-    "Who should I recommend opening flower stands to?",
-    "What should I ask when a customer has no budget?",
-    "How do I start a condolence wreath enquiry?"
-  ];
-  const suggestions=document.createElement("div");suggestions.className="ai-orb-suggestions";
+  const questions=suggestions("home",getLang?.()||"en");
+  const promptList=document.createElement("div");promptList.className="ai-orb-suggestions";
   for(const prompt of questions){
     const b=document.createElement("button");b.type="button";b.textContent=prompt;
     b.addEventListener("click",()=>{
       document.dispatchEvent(new CustomEvent("ew-open-ai-question",{detail:{text:prompt}}));
       tip.remove();
     });
-    suggestions.append(b);
+    promptList.append(b);
   }
   tip.append(suggestions);orb.before(tip);
   orb.addEventListener("click",()=>tip.remove(),{once:true});

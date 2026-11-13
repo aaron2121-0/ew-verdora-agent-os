@@ -15,7 +15,7 @@ function safeErr(e){
   const allowed=[
     "agent_not_found","attempt_not_found","attempt_already_finished","all_questions_answered",
     "question_not_current","duplicate_answer","question_not_served","invalid_answer","questions_remaining",
-    "question_bank_not_ready","handbook_not_ready","must_read_handbook_first","previous_module_incomplete","exam_attempt_not_found","exam_prerequisites_incomplete","exam_bank_not_ready"
+    "question_bank_not_ready","module_question_bank_not_ready","card_view_too_short","handbook_not_ready","must_read_handbook_first","previous_module_incomplete","exam_attempt_not_found","exam_prerequisites_incomplete","exam_bank_not_ready"
   ];
   const found=allowed.find(x=>m.includes(x));
   if(found)return found;
@@ -25,7 +25,7 @@ function safeErr(e){
 function statusFor(code){
   if(["duplicate_answer","question_not_current","attempt_already_finished","all_questions_answered"].includes(code))return 409;
   if(["attempt_not_found","exam_attempt_not_found","agent_not_found"].includes(code))return 404;
-  if(["invalid_answer","question_not_served","questions_remaining","exam_prerequisites_incomplete","question_bank_not_ready","handbook_not_ready","must_read_handbook_first","exam_bank_not_ready"].includes(code))return 400;
+  if(["invalid_answer","question_not_served","questions_remaining","exam_prerequisites_incomplete","question_bank_not_ready","module_question_bank_not_ready","card_view_too_short","handbook_not_ready","must_read_handbook_first","exam_bank_not_ready"].includes(code))return 400;
   return 400;
 }
 function kuchingToday(){return new Date(Date.now()+8*3600*1000).toISOString().slice(0,10)}
@@ -52,34 +52,37 @@ function uuid(v){const s=clean(v,80);return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a
 
 const COURSE_CODES=["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"];
 
+// Focus is taken from the seven Owner-reviewed days, not another
+// training_modules.handbook_section field. PR #10 owns that field.
+const DAY_FOCUS={
+  "CORE-BRAND":"story","LEAD-FINDING":"condolence","QUALIFY":"opening",
+  "REFERENCE":"bouquet","OBJECTION":"wedding_event","CLOSING":"wholesale","PAYMENT":"service_rule"
+};
 async function requiredReadState(admin,agentId,moduleCode){
   const {data:module,error:moduleError}=await admin.from("training_modules")
-    .select("code,handbook_section,required,active")
-    .eq("code",moduleCode).eq("required",true).eq("active",true).maybeSingle();
-  if(moduleError||!module?.handbook_section)throw new Error("handbook_not_ready");
-  // Needs the separately Owner-reviewed handbook metadata migration.
-  // Fail closed: legacy seed entries or unapproved cards do NOT count.
-  const section=String(module.handbook_section);
-  if(!["story","product_line","service_rule","script"].includes(section))
-    throw new Error("handbook_not_ready");
-  const {data:cards,error:cardsError}=await admin.from("company_knowledge")
-    .select("id,code,kind,sort").eq("section",section)
+    .select("code,required,active").eq("code",moduleCode)
+    .eq("required",true).eq("active",true).maybeSingle();
+  if(moduleError||!module)throw new Error("invalid_module");
+  const focus=DAY_FOCUS[moduleCode],productLine=["condolence","opening","bouquet","wedding_event","wholesale"].includes(focus);
+  let query=admin.from("company_knowledge").select("code,updated_at,sort")
+    .eq("section",productLine?"product_line":focus).eq("kind","card")
     .eq("active",true).eq("visible_to_agent",true)
-    .eq("needs_owner_confirm",false).order("sort",{ascending:true}).limit(200);
+    .eq("needs_owner_confirm",false);
+  if(productLine)query=query.eq("product_line",focus);
+  const {data:cards,error:cardsError}=await query.order("sort",{ascending:true});
   if(cardsError)throw new Error("handbook_not_ready");
-  const approved=(cards||[]).filter(x=>section==="product_line"?x.kind==="card":
-    section==="script"?["script","seed"].includes(x.kind):x.kind==="seed");
-  // Phase-A Owner-reviewed story/rules entries have a stable UUID but no
-  // code; use the same deterministic surrogate on client and server.
-  const required=[...new Set(approved.map(x=>String(x.code||("SEED-"+x.id)).trim()).filter(Boolean))];
-  if(!required.length)throw new Error("handbook_not_ready");
+  const required=(cards||[]).filter(x=>x.code).map(x=>({code:x.code,updated_at:x.updated_at}));
+  // No approved cards is not a training dead-end: quiz is immediately available.
+  if(!required.length)return {required:[],read:[],remaining:[],ready_for_quiz:true};
+  const codes=required.map(x=>x.code);
   const {data:reads,error:readError}=await admin.from("training_module_reads")
-    .select("card_code").eq("agent_id",agentId).eq("module_code",moduleCode)
-    .in("card_code",required);
+    .select("card_code,read_at").eq("agent_id",agentId).eq("module_code",moduleCode)
+    .in("card_code",codes);
   if(readError)throw readError;
-  const readSet=new Set((reads||[]).map(x=>x.card_code));
-  const read=required.filter(x=>readSet.has(x));
-  return {required,read,remaining:required.filter(x=>!readSet.has(x))};
+  const published=new Map(required.map(x=>[x.code,Date.parse(x.updated_at||"")||0]));
+  const readSet=new Set((reads||[]).filter(r=>r.read_at&&Date.parse(r.read_at)>=published.get(r.card_code)).map(r=>r.card_code));
+  return {required:codes,read:codes.filter(x=>readSet.has(x)),remaining:codes.filter(x=>!readSet.has(x)),
+    ready_for_quiz:codes.every(x=>readSet.has(x))};
 }
 
 function shuffle(list){
@@ -130,38 +133,52 @@ Deno.serve(async req=>{
     if(action==="module_read"){
       const code=clean(body.module_code,40);
       if(!COURSE_CODES.includes(code))return reply({error:"invalid_module"},400);
-      const incoming=body.card_codes===undefined?[]:body.card_codes;
-      if(!Array.isArray(incoming)||incoming.length>30||
-        incoming.some(x=>typeof x!=="string"||x.length>80))
-        return reply({error:"invalid_card_codes"},400);
-      const codes=[...new Set(incoming.map(x=>x.trim()))];
-      const state=await requiredReadState(admin,agent.id,code);
-      if(codes.some(x=>!state.required.includes(x)))
-        return reply({error:"invalid_card_codes"},400);
-      if(codes.length){
+      const phase=clean(body.phase||"status",20);
+      if(!["status","start","complete"].includes(phase))return reply({error:"invalid_phase"},400);
+      const cardCode=clean(body.card_code,80);
+      const before=await requiredReadState(admin,agent.id,code);
+      if(phase!=="status"){
+        if(!before.required.includes(cardCode))return reply({error:"invalid_card_code"},400);
         const {data:allProgress,error:progressError}=await admin.from("training_progress")
           .select("status,training_modules(code)").eq("agent_id",agent.id);
         if(progressError)throw progressError;
         const progress=new Map((allProgress||[]).map(x=>[x.training_modules?.code,x.status]));
         const first=COURSE_CODES.find(x=>progress.get(x)!=="passed");
-        if(code!==first&&progress.get(code)!=="passed")
-          return reply({error:"previous_module_incomplete"},403);
-        const {error:writeError}=await admin.from("training_module_reads")
-          .upsert(codes.map(card_code=>({agent_id:agent.id,module_code:code,card_code})),
-           {onConflict:"agent_id,module_code,card_code",ignoreDuplicates:true});
-        if(writeError)throw writeError;
+        if(code!==first&&progress.get(code)!=="passed")return reply({error:"previous_module_incomplete"},403);
+        if(phase==="start"){
+          const {data:existing,error:e}=await admin.from("training_module_reads")
+            .select("card_code").eq("agent_id",agent.id).eq("module_code",code)
+            .eq("card_code",cardCode).maybeSingle();
+          if(e)throw e;
+          if(!existing){
+            const {error:insertError}=await admin.from("training_module_reads")
+              .insert({agent_id:agent.id,module_code:code,card_code:cardCode});
+            if(insertError&&!String(insertError.code||"").includes("23505"))throw insertError;
+          }
+        }else if(phase==="complete"){
+          const {data:seen,error:e}=await admin.from("training_module_reads")
+            .select("first_seen_at,read_at").eq("agent_id",agent.id).eq("module_code",code)
+            .eq("card_code",cardCode).maybeSingle();
+          if(e)throw e;
+          if(!seen||Date.now()-Date.parse(seen.first_seen_at)<4000)
+            return reply({error:"card_view_too_short"},409);
+          const {error:updateError}=await admin.from("training_module_reads")
+            .update({read_at:new Date().toISOString()}).eq("agent_id",agent.id)
+            .eq("module_code",code).eq("card_code",cardCode);
+          if(updateError)throw updateError;
+        }
       }
-      const latest=codes.length?await requiredReadState(admin,agent.id,code):state;
+      const latest=phase==="status"?before:await requiredReadState(admin,agent.id,code);
       return reply({ok:true,module_code:code,required_card_codes:latest.required,
         read_card_codes:latest.read,remaining_card_codes:latest.remaining,
-        ready_for_quiz:latest.remaining.length===0});
+        ready_for_quiz:latest.ready_for_quiz,no_approved_cards:latest.required.length===0});
     }
 
     if(action==="module_quiz_start"){
       const code=clean(body.module_code,40);
       if(!COURSE_CODES.includes(code))return reply({error:"invalid_module"},400);
       const {data:module,error:modError}=await admin.from("training_modules")
-        .select("id,code,required,active,pass_score,handbook_section")
+        .select("id,code,required,active,pass_score")
         .eq("code",code).eq("required",true).eq("active",true).maybeSingle();
       if(modError||!module)return reply({error:"invalid_module"},400);
       const {data:allProgress,error:progressError}=await admin.from("training_progress")
@@ -187,8 +204,8 @@ Deno.serve(async req=>{
           p_agent_id:agent.id,p_module_code:code
         });
         if(poolError)throw poolError;
-        const selected=shuffle(pool||[]).slice(0,3);
-        if(selected.length<3)return reply({error:"module_question_bank_not_ready"},400);
+        const selected=shuffle(pool||[]).slice(0,5);
+        if(selected.length<5)return reply({error:"module_question_bank_not_ready"},400);
         const {data:latest,error:latestError}=await admin.from("training_module_quiz_attempts")
           .select("attempt_no").eq("agent_id",agent.id).eq("module_code",code)
           .order("attempt_no",{ascending:false}).limit(1);
@@ -222,7 +239,7 @@ Deno.serve(async req=>{
 
     if(action==="module_quiz_answer"){
       const attemptId=uuid(body.attempt_id),position=int(body.position),selected=int(body.selected_index);
-      if(!attemptId||position==null||position<1||position>3||selected==null||selected<0||selected>3)
+      if(!attemptId||position==null||position<1||position>5||selected==null||selected<0||selected>3)
         return reply({error:"invalid_answer"},400);
       const {data:attempt,error:attemptError}=await admin.from("training_module_quiz_attempts")
         .select("id,module_code,status,score,passed").eq("id",attemptId)
@@ -249,9 +266,9 @@ Deno.serve(async req=>{
       if(updateError)throw updateError;
       if(!updated)return reply({error:"duplicate_answer"},409);
       const feedback={correct,explanation_en:q.explanation_en,explanation_zh:q.explanation_zh,related_card_code:q.related_card_code||null};
-      if(position===3){
+      if(position===5){
         const right=(items||[]).filter(x=>x.answered_at&&x.is_correct).length+(correct?1:0);
-        const score=Math.round(right/3*100*100)/100;
+        const score=Math.round(right/5*100*100)/100;
         // The existing training_progress row and certification are updated by
         // the same server-owned RPC as the current MCQ certification flow.
         const {data:record,error:recordError}=await admin.rpc("record_training_result_internal",{

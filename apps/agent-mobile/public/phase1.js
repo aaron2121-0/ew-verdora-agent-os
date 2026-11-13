@@ -7,6 +7,7 @@ import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
+import {dailyActions,emptyCopy,localized} from "./approved-content.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -369,6 +370,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       element("span",{className:"badge badge-"+statusTone(a.status),text:statusLabel(a.status)}));
     greet.append(gLeft,badges);
     page.append(greet);
+    page.append(renderEarningActions());
+    page.append(handbook.journey());
 
     if(isLocked()){
       const lock=element("div",{className:"lock-banner"});
@@ -381,8 +384,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       lock.append(ico,copy,action);
       page.append(lock);
     }
-
-    page.append(handbook.journey());
 
     const moneyCard=element("section",{className:"money-card"});
     const moneyHead=element("div",{className:"money-head"});
@@ -424,21 +425,18 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     // An empty order state must teach the next permitted action, not just
     // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
     if(Number(D?.today_progress?.orders||0)===0){
-      const empty=element("section",{className:"handbook-empty-orders"});
-      empty.append(
-        element("strong",{text:getLang()==="zh"?"今天还没有订单":"No orders yet today"}),
-        element("p",{text:getLang()==="zh"?
-          "先熟悉客户需求与作品图，再记录客户询问。报价与收款必须走正式流程。":
-          "Start with customer needs and approved examples, then record the enquiry. Always use the official quote and payment process."})
-      );
-      const go=iconButton(isLocked()?"graduationCap":"plus",
-        isLocked()?tr("handbookTitle"):(getLang()==="zh"?"开始记录客户询问":"Record an enquiry"),
-        "btn btn-secondary");
-      go.addEventListener("click",()=>isLocked()?handbook.open():navigate("order"));
-      empty.append(go);page.append(empty);
+      const copy=emptyCopy("orders");
+      if(copy){
+        const empty=element("section",{className:"handbook-empty-orders"});
+        empty.append(element("strong",{text:localized(copy,"title",getLang())}),
+          element("p",{text:localized(copy,"body",getLang())}));
+        const go=iconButton("phoneCall",localized(copy,"cta",getLang()),"btn btn-secondary");
+        go.addEventListener("click",()=>navigate("today",{scrollTo:"dueFollowups"}));
+        empty.append(go);page.append(empty);
+      }
     }
     const priorities=element("div",{className:"ai-priority-list"});
-    for(const [name,card] of [["tasks",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
+    for(const [name,card] of [["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
       card.dataset.priorityCard=name;
       const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
       card.prepend(why);priorities.append(card);
@@ -498,36 +496,29 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return section;
   }
 
-  function renderTodayTasks(){
-    const section=element("section",{className:"task-card"});
-    const facts=taskFacts();
-    const doneCount=Object.values(facts).filter(Boolean).length;
-    const head=element("div",{className:"card-head"});
-    const title=element("div",{className:"card-head-title"});title.append(createIcon("listChecks",{size:20}),element("h2",{text:getLang()==="zh"?"今日销售待办":"Today’s selling tasks"}));
-    head.append(title,element("span",{className:"task-count",text:doneCount+" / 2"}));
-    section.append(head);
-    const tasks=[
-      {id:"followup",title:"taskFollowupTitle",desc:"taskFollowupDesc",done:facts.followup,go:()=>navigate("today",{scrollTo:"dueFollowups"})},
-      {id:"kit",title:"taskKitTitle",desc:"taskKitDesc",done:facts.kit,go:()=>isLocked()?showLock():navigate("selling")}
-    ].sort((a,b)=>Number(a.done)-Number(b.done));
-    if(doneCount===2){
-      const all=element("div",{className:"all-done"});
-      all.append(createIcon("sparkles",{size:18}),element("span",{text:tr("allDoneText")}));
-      section.append(all);
-    }
-    const list=element("div",{className:"task-list"});
-    tasks.forEach(task=>{
-      const row=element("button",{className:"task-row"+(task.done?" done":""),attrs:{type:"button"}});
-      const check=element("span",{className:"task-check"});
-      if(task.done)check.append(createIcon("check",{size:17}));
-      const copy=element("span",{className:"task-copy"});
-      copy.append(element("strong",{text:tr(task.title)}),element("small",{text:tr(task.desc)}));
-      row.append(check,copy,element("span",{className:"task-go",text:task.done?tr("completedBadge"):tr("goNow")}));
-      row.addEventListener("click",task.go);
-      list.append(row);
+  function renderEarningActions(){
+    const section=element("section",{className:"earning-actions",attrs:{id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"Three ways to earn today"}});
+    const heading=element("h2",{className:"earning-title",text:getLang()==="zh"?"今天赚钱 3 件事":"3 things to earn today"});
+    const cards=element("div",{className:"earning-action-list"});
+    const icons=["users","phoneCall","megaphone"];
+    dailyActions(getData()||{},getLang()).forEach((action,index)=>{
+      const b=element("button",{className:"earning-action",attrs:{type:"button","data-earning-action":action.key}});
+      b.append(createIcon(icons[index],{size:22}));
+      const copy=element("span",{className:"earning-action-copy"});
+      copy.append(element("strong",{text:action.title}),element("small",{text:action.detail}));
+      b.append(copy,createIcon("arrowRight",{size:18}));
+      b.addEventListener("click",()=>{
+        const target=action.target;
+        if(target==="order"||target==="selling"){
+          if(isLocked())return showLock();
+          navigate(target);return;
+        }
+        if(target==="today")navigate("today",{scrollTo:"dueFollowups"});
+        else navigate(["customers","training"].includes(target)?target:"customers");
+      });
+      cards.append(b);
     });
-    section.append(list);
-    return section;
+    section.append(heading,cards);return section;
   }
 
   function renderDueFollowups(){
@@ -610,12 +601,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
     const allRows=getData()?.phase1?.recent_leads||[];
     if(!allRows.length){
-      page.append(emptyState({icon:"users",title:tr("noCustomers"),message:getLang()==="zh"?"还没有客户？先看手册学习如何介绍业务，再从接单流程记录第一位客户。":"No customers yet? Read the handbook, then use the order flow to record your first enquiry."}));
-      const guide=iconButton("flower2",tr("handbookTitle"),"btn btn-primary");
-      guide.addEventListener("click",()=>handbook.open());page.append(guide);
-      const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});
-      ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);
-      host.append(page);return
+      const copy=emptyCopy("customers");
+      page.append(emptyState({icon:"users",title:localized(copy,"title",getLang())||tr("noCustomers"),
+        message:localized(copy,"body",getLang())}));
+      const add=iconButton("plus",localized(copy,"cta",getLang())||tr("goNow"),"btn btn-primary");
+      add.addEventListener("click",()=>isLocked()?showLock():navigate("order"));
+      page.append(add);host.append(page);return;
     }
 
     const filters=element("div",{className:"follow-actions",attrs:{"data-phase4-hook":"customer-segments"}});
@@ -884,6 +875,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     setupSheets();
     setupNav();
     await order.init();
+    await handbook.initContent();
     renderAll();
     handbook.showWelcome();
     navigate("today");

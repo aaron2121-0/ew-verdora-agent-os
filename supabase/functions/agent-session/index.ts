@@ -112,34 +112,13 @@ Deno.serve(async (req) => {
     if(section&&!sections.includes(section)) return reply({error:"invalid_handbook_section"},400);
     if(productLine&&!lines.includes(productLine)) return reply({error:"invalid_product_line"},400);
     let query=admin.from("company_knowledge")
-      .select("id,code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint,active,visible_to_agent,needs_owner_confirm")
+      .select("id,code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint")
       .eq("active",true).eq("visible_to_agent",true).eq("needs_owner_confirm",false);
     if(section)query=query.eq("section",section);
     if(productLine)query=query.eq("product_line",productLine);
     const {data,error}=await query.order("sort",{ascending:true}).limit(200);
     if(error)return reply({error:"handbook_unavailable"},400);
     return reply({ok:true,section:section||null,product_line:productLine||null,entries:data||[]});
-  }
-
-
-  if(action==="handbook_portfolio"){
-    const {data:found,error:photosError}=await admin.from("portfolio_photos")
-      .select("id,product_line,storage_path,caption_en,caption_zh,status,sort")
-      .eq("status","approved").neq("product_line","unknown")
-      .order("sort",{ascending:true}).limit(80);
-    if(photosError)return reply({ok:true,photos:[],content_pending:true});
-    const approved=(found||[]).filter(x=>x.storage_path);
-    if(!approved.length)return reply({ok:true,photos:[]});
-    const {data:signed,error:signError}=await admin.storage.from("portfolio")
-      .createSignedUrls(approved.map(x=>x.storage_path),900);
-    if(signError)return reply({ok:true,photos:[],content_pending:true});
-    return reply({ok:true,photos:approved.flatMap((p,i)=>{
-      const url=signed?.[i]?.signedUrl||signed?.[i]?.signed_url||"";
-      return /^https:\/\//.test(url)?[{
-        id:p.id,product_line:p.product_line,status:"approved",sort:p.sort,
-        caption_en:p.caption_en,caption_zh:p.caption_zh,signed_url:url
-      }]:[];
-    })});
   }
 
   if (action === "phase1_overview") {
