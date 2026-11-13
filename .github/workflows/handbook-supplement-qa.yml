@@ -42,6 +42,8 @@ jobs:
       - name: Syntax checks
         run: |
           node --check apps/agent-mobile/public/training.js
+          node --check apps/agent-mobile/public/i18n.js
+          node --check apps/agent-mobile/public/icons.js
           node --check scripts/handbook-import-integration-test.mjs
           node --input-type=module --check < apps/owner-mobile/index.ts
       - name: Install Postgres client
