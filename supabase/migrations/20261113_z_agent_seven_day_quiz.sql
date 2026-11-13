@@ -1,32 +1,10 @@
 -- Seven-day onboarding: use the EXISTING seven training modules and the EXISTING
 -- private.training_questions bank (no new skill_code values).
 -- Applying this migration does not publish content or grant client-table access.
-alter table public.training_modules
-  add column if not exists handbook_section text;
-do $$
-begin
- if not exists(select 1 from pg_constraint where conname='training_modules_handbook_section_check') then
-  alter table public.training_modules
-   add constraint training_modules_handbook_section_check
-   check (handbook_section is null or handbook_section in
-    ('condolence','opening','bouquet','wedding_event','wholesale'));
- end if;
-end $$;
-
--- Provisional curriculum mapping, subject to Owner review; does not create
--- product claims or override Owner-approved knowledge visibility.
-update public.training_modules set handbook_section=case code
- when 'CORE-BRAND' then 'bouquet'
- when 'LEAD-FINDING' then 'wholesale'
- when 'QUALIFY' then 'opening'
- when 'REFERENCE' then 'wedding_event'
- when 'OBJECTION' then 'condolence'
- when 'CLOSING' then 'bouquet'
- when 'PAYMENT' then 'wholesale'
- else handbook_section end
-where required=true and code in
- ('CORE-BRAND','LEAD-FINDING','QUALIFY','REFERENCE','OBJECTION','CLOSING','PAYMENT')
- and handbook_section is null;
+-- Course -> handbook section mapping is owned by
+-- 20261113150100_handbook_training_links.sql on main.
+-- Preserve that enum mapping (story/product_line/service_rule/script).
+-- Do NOT substitute floral product-line names into the handbook_section enum.
 
 create table if not exists public.training_module_quiz_attempts(
  id uuid primary key default gen_random_uuid(),
