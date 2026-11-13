@@ -66,7 +66,7 @@ export function initAIOrb({onClick,tr,getData,getLang}){
  if(vm?.mountAiOrb){
    orbMotion=trackMotion("ai-orb",vm.mountAiOrb(slot,{
      lang:getLang?.()||"en",size:52,state:state==="thinking"?"thinking":"idle",
-     label:tr("aiOpenChat")
+
    }));
  }else{
    const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);

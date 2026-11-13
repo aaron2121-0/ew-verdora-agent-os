@@ -470,3 +470,19 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .handbook-empty-orders p{font-size:.76rem;line-height:1.5;margin:0}
 .handbook-empty-orders .btn{justify-self:start}
 :root[data-theme="dark"] .training-review-details,:root[data-theme="dark"] .handbook-empty-orders{--surface:#1e352b;--text:#f0f7f2;--border:#3c5949}
+
+/* Claude-reviewed Gemini motion: preserve App navigation and accessible actions. */
+.earning-actions{margin-top:14px;min-width:0}
+.earning-actions .vd-ht-card{width:100%;max-width:100%}
+.earning-actions .vd-ht-item{min-width:0;overflow-wrap:anywhere}
+.vd-ht-action-detail{margin:6px 0 0;color:var(--text-secondary,#375649);font-size:.76rem;line-height:1.5}
+.vd-ht-go{align-self:flex-start;max-width:100%;white-space:normal;margin-top:7px;font-size:.74rem}
+.earning-actions .vd-ht-tip[hidden]{display:none!important}
+.handbook-line-grid.vd-hero-grid{min-width:0}
+.handbook-line-grid .vd-hero-card{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.handbook-line-grid .vd-card-copy{min-width:0;overflow-wrap:anywhere}
+.ai-orb-vendor-slot{display:grid;place-items:center;width:100%;height:100%;pointer-events:none}
+.ai-orb-vendor-slot .vd-orb-wrap{max-width:100%;max-height:100%}
+.ai-orb:has(.vd-orb-wrap){padding:0;overflow:visible}
+@media(max-width:430px){.earning-actions .vd-ht-card{padding:15px 12px}.earning-actions .vd-ht-list{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.ai-orb-vendor-slot *{animation:none!important}}
