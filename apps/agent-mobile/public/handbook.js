@@ -321,6 +321,21 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     slideIndex=target>=0?target:0;
     renderPage();
   }
+  async function reviewQuestionCard(code,cardCode){
+    await load();
+    const row=cardCode?(handbookData?.knowledge||[]).find(x=>
+      x.code===cardCode&&x.kind==="card"&&x.section==="product_line"):null;
+    const line=row?rowLine(row):null;
+    if(line&&line!==sectionForCourse(code)){
+      clearSlideTimer();currentCourse=null;currentLine=line;slideIndex=0;
+      const cards=approvedSlides(line);
+      slideIndex=Math.max(0,cards.findIndex(x=>x.code===cardCode));
+      onNavigate("handbook");renderPage();
+      return;
+    }
+    await openForCourse(code,cardCode||null);
+  }
+
   function journey(){
     const s=moduleState();
     hydrateJourney();
@@ -503,7 +518,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
         options.replaceChildren(next);
         if(!r.correct){
           const back=btn(t(getLang,"Review this handbook card","回去看这张卡"),()=>{
-            close();void openForCourse(code,r.related_card_code||null);
+            close();void reviewQuestionCard(code,r.related_card_code||null);
           },"btn btn-secondary");
           options.append(back);
         }
