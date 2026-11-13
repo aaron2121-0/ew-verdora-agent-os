@@ -6,6 +6,7 @@ import {createOrderWizard} from "./order.js";
 import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
+import {createAgentGuide,COURSE_TO_LINE} from "./guide.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -77,10 +78,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   const performance=createPerformanceDashboard({
     getUserId,getLang,tr,api
   });
-  const training=createTrainingUI({getData,getLang,tr,api,onSummary:today=>{
+  const training=createTrainingUI({getData,getLang,tr,api,openHandbook:code=>guide.openLine(COURSE_TO_LINE[code]||"bouquet",{course:code}),onSummary:today=>{
     unlockSummary=today;
     if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
   }});
+
+  const guide=createAgentGuide({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate});
+  document.addEventListener("ew-guide-onboarded",()=>{requestAnimationFrame(()=>guide.showTour("today",[['#todayPage .guide-roadmap', "tourToday"],['#todayPage .quick-grid', "tourTraining"]]))});
 
   function langText(value){
     const key=categoryKey(value);
@@ -179,7 +183,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   function pageSwap(next){
     const old=document.querySelector(".section.active");
     const target=document.querySelector('.section[data-page="'+next+'"]');
-    if(!target)return;
+    if(!target)return Promise.resolve();
+    let ready=Promise.resolve();
     const nextIndex=NAV.findIndex(x=>x[0]===next);
     const direction=nextIndex>=0&&previousNavIndex>=0&&nextIndex<previousNavIndex?-1:1;
     const swap=()=>{
@@ -188,7 +193,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     if(document.startViewTransition&&!reduced){
-      document.startViewTransition(swap);
+      ready=document.startViewTransition(swap).updateCallbackDone;
     }else{
       swap();
       if(!reduced)target.animate(
@@ -197,12 +202,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       );
     }
     if(nextIndex>=0)previousNavIndex=nextIndex;
+    return ready;
   }
 
   function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
     active=next;
-    pageSwap(next);
+    const navigationReady=pageSwap(next);
     updateNavIndicator();
     if(next==="today")renderToday();
     else if(next==="customers")renderCustomers();
@@ -210,10 +216,24 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     else if(next==="training")renderTraining({focusModule,focusExam});
     else if(next==="performance")renderPerformance();
     else if(next==="selling")renderSelling();
-    requestAnimationFrame(()=>{
+    else if(next==="handbook")renderHandbook();
+    navigationReady.then(()=>requestAnimationFrame(()=>{
+      if(active!==next)return;
+      if(["today","customers","order","training","performance","handbook"].includes(next)){
+        const selectors={
+          today:[["#todayPage .guide-roadmap","tourToday"],["#todayPage .quick-grid","tourTraining"]],
+          customers:[["#customersPage .guide-help-empty, #customersPage .customer-list","tourCustomers"]],
+          order:[["#orderPage .page-shell, #orderPage .order-shell","tourOrder"]],
+          training:[["#trainingPage .training3-modules","tourTraining"]],
+          performance:[["#performancePage .page-shell","tourPerformance"]],
+          handbook:[["#handbookPage .guide-line-card","tourHandbook"]]
+        };
+        guide.showTour(next,selectors[next]);
+
+      }
       if(scrollTo)document.getElementById(scrollTo)?.scrollIntoView({behavior:"smooth",block:"start"});
       else if(!focusModule&&!focusExam)window.scrollTo({top:0,behavior:"instant"});
-    });
+    })).catch(()=>{});
   }
 
   async function refreshUnlockSummary(){
@@ -354,6 +374,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     });
     live.append(left,refresh);
     page.append(live);
+    page.append(guide.renderRoadmap());
 
     const greet=element("div",{className:"greeting-row"});
     const greetingKey={morning:"greetingMorning",afternoon:"greetingAfternoon",evening:"greetingEvening",night:"greetingNight"}[greetingPeriod()];
@@ -410,6 +431,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     }
     moneyCard.append(tierWrap);
     page.append(moneyCard);
+    if(tp.orders_30d!==undefined&&tp.orders_30d!==null&&Number(tp.orders_30d)===0){
+      page.append(guide.emptyAction("orders"));
+    }
 
     const daily=document.createElement("div");daily.id="aiDailyBrief";daily.dataset.priorityCard="brief";page.append(daily);
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
@@ -471,6 +495,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       b.addEventListener("click",item.action);
       grid.append(b);
     });
+    const manual=element("button",{className:"quick-tile tone-green",attrs:{type:"button"}});
+    manual.append(createIcon("flower2",{size:22}),element("strong",{text:getLang()==="zh"?"产品手册":"Product handbook"}));
+    manual.addEventListener("click",()=>navigate("handbook"));
+    grid.prepend(manual);
     section.append(grid);
     return section;
   }
@@ -587,7 +615,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
     const allRows=getData()?.phase1?.recent_leads||[];
-    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);host.append(page);return}
+    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));page.append(guide.emptyAction("customers"));const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);host.append(page);return}
 
     const filters=element("div",{className:"follow-actions",attrs:{"data-phase4-hook":"customer-segments"}});
     [
@@ -745,6 +773,11 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     sheet.classList.remove("hidden");
   }
 
+  function renderHandbook(){
+    const host=document.getElementById("handbookPage");if(!host)return;
+    clear(host);host.append(guide.renderHandbook());
+  }
+
   function renderTraining(options={}){
     const host=document.getElementById("trainingPage");
     if(!host)return;
@@ -834,7 +867,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   function renderAll(){
     setupNav();
-    renderToday();renderCustomers();if(active==="training")renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
+    renderToday();renderCustomers();renderHandbook();if(active==="training")renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
     renderNavBadges();
   }
 
@@ -854,10 +887,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     setupSheets();
     setupNav();
     await order.init();
+    await guide.load();
     renderAll();
     navigate("today");
+    guide.showOnboardingOnce();
     refreshUnlockSummary();
   }
 
-  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training};
+  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training,guide,destroy:()=>guide.destroy()};
 }

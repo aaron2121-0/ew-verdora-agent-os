@@ -15,7 +15,7 @@ function moduleStatus(value,tr){
   return key?tr(key):String(value||"—");
 }
 
-export function createTrainingUI({getData,getLang,tr,api,onSummary}){
+export function createTrainingUI({getData,getLang,tr,api,onSummary,openHandbook}){
   let host=null;
   let today=null;
   let exam=null;
@@ -205,6 +205,10 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
         r.append(b);
       }
       item.append(r);
+      const handbookButton=element("button",{className:"btn btn-secondary btn-small guide-handbook-course",attrs:{type:"button"}});
+      handbookButton.append(createIcon("flower2",{size:16}),element("span",{text:getLang()==="zh"?"先看手册":"Read handbook first"}));
+      handbookButton.addEventListener("click",()=>openHandbook?.(code));
+      item.append(handbookButton);
       if(expandedModule===code){
         const detail=element("div",{className:"training3-course-content"});
         const content=(getLang()==="zh"?mod.content_zh:mod.content_en)||{};

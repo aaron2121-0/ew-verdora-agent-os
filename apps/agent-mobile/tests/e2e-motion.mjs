@@ -28,6 +28,14 @@ const server=createServer(async(req,res)=>{
    return json({ok:true});
   }
   if(body.action==="dashboard")return json(dashboard);
+  if(body.action==="handbook")return json({lines:[
+   "condolence","opening","bouquet","wedding_event","wholesale"
+  ].map(id=>({id,cards:[
+   {title_en:"Know the customer",title_zh:"了解客户",body_en:"Confirm the occasion before requesting an approved quote.",body_zh:"先确认客户的用花场合，再向系统申请批准报价。",status:"approved"},
+   {title_en:"Confirm the details",title_zh:"确认需求",body_en:"Check delivery date and reference requirements.",body_zh:"确认送达日期和参考图要求。",status:"approved"},
+   {title_en:"Use approved content",title_zh:"使用核准资料",body_en:"Only share approved EW VERDORA information.",body_zh:"只分享 EW VERDORA 已核准的资料。",status:"approved"},
+   {title_en:"Keep a next step",title_zh:"明确下一步",body_en:"Record the lead before quoting.",body_zh:"报价前先记录询盘。",status:"approved"}
+  ],photos:[],scripts:[],faqs:[]}))});
   return json({ok:true,server_now:new Date().toISOString()});
  }
  let pathname=decodeURIComponent(u.pathname);if(pathname==="/")pathname="/index.html";
@@ -42,16 +50,31 @@ const browser=await chromium.launch({headless:true,args:["--no-sandbox"],executa
 try{
  for(const width of [360,430])for(const lang of ["en","zh"])for(const theme of ["dark","light"]){
   const ctx=await browser.newContext({viewport:{width,height:850},locale:lang==="zh"?"zh-CN":"en-US",colorScheme:theme});
+  if(lang==="zh")await ctx.addInitScript(()=>localStorage.setItem("ew_lang","zh"));
   const page=await ctx.newPage();const errors=[];page.on("pageerror",e=>errors.push(e.message));
   await page.goto(origin,{waitUntil:"domcontentloaded"});
   await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
   await page.locator("#todayPage .page-shell").waitFor({timeout:15000});
-  if(lang==="zh")await page.locator("#lang").click();
+  await page.locator(".guide-onboarding-image").waitFor({timeout:15000});
+  await page.screenshot({path:path.join(screenshots,"onboarding-"+width+"-"+lang+"-"+theme+".png")});
+  await page.locator(".guide-skip").click();
+  const tour=page.locator(".guide-tour-tip .btn-text").first();
+  await tour.waitFor({timeout:5000});await tour.click();
+  const aiTips=page.locator(".guide-ai-tips .guide-close").first();
+  if(await aiTips.count())await aiTips.click();
   assert.equal(await page.locator("html").getAttribute("lang"),lang==="zh"?"zh-CN":"en");
   assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
   const dims=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
   assert.ok(dims.scroll<=dims.view+1,"horizontal overflow "+width+" "+lang+" "+theme+": "+JSON.stringify(dims));
+  assert.equal(await page.locator("#todayPage .guide-roadmap").count(),1);
+  assert.equal(await page.locator("#todayPage .guide-day").count(),7);
   await page.screenshot({path:path.join(screenshots,width+"-"+lang+"-"+theme+".png"),fullPage:true});
+  await page.locator("#todayPage .quick-grid .quick-tile").first().click();
+  await page.locator("#handbookPage.section.active .guide-line-card").first().waitFor();
+  const handbookTour=page.locator(".guide-tour-tip .btn-text");
+  await handbookTour.first().waitFor({timeout:5000});await handbookTour.first().click();
+  await page.screenshot({path:path.join(screenshots,"handbook-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
+  await page.locator(".nav-item[data-tab=today]").click();
   if(width===360&&lang==="zh"&&theme==="dark"){
    await page.locator(".ai-orb").click();
    await page.locator(".ai-chat-input").fill("怎么跟进客户？");
@@ -80,11 +103,16 @@ try{
    content_zh:{lesson:["请遵守 EW VERDORA 核准的定价与收款规定。"]}}}));
  for(const width of [360,430])for(const lang of ["en","zh"]){
   const ctx=await browser.newContext({viewport:{width,height:850},locale:lang==="zh"?"zh-CN":"en-US",colorScheme:"light"});
+  if(lang==="zh")await ctx.addInitScript(()=>localStorage.setItem("ew_lang","zh"));
   const page=await ctx.newPage(),errors=[];
   page.on("pageerror",e=>errors.push(e.message));
   await page.goto(origin,{waitUntil:"domcontentloaded"});
   await page.locator(".lock-banner").waitFor({timeout:15000});
-  if(lang==="zh")await page.locator("#lang").click();
+  await page.locator(".guide-skip").click();
+  const traineeTour=page.locator(".guide-tour-tip .btn-text");
+  await traineeTour.first().waitFor({timeout:5000});await traineeTour.first().click();
+  const traineeTip=page.locator(".guide-ai-tips .guide-close");
+  if(await traineeTip.count())await traineeTip.first().click();
   await page.locator(".lock-banner button").click();
   await page.locator("#lockSheet:not(.hidden)").waitFor({timeout:15000});
   await page.locator("#lockHowSummary").click();
@@ -95,7 +123,7 @@ try{
   await page.screenshot({path:path.join(screenshots,`unlock-${width}-${lang}-sheet.png`),fullPage:true});
   await page.locator("#lockChecklist .unlock-step-action").first().click();
   await page.locator("#trainingPage.section.active").waitFor({timeout:15000});
-  await page.locator("#lockSheet.hidden").waitFor({timeout:5000});
+  await page.locator("#lockSheet").waitFor({state:"hidden",timeout:5000});
   await page.locator('[data-course="CORE-BRAND"] .training3-course-content').waitFor({timeout:15000});
   assert.match(await page.locator(".training3-daily-note").textContent(),lang==="zh"?/不计入解锁/:/does not count toward unlocking/);
   assert.equal(await page.locator("#trainingPage .unlock-progress-count").textContent(),"0/7");

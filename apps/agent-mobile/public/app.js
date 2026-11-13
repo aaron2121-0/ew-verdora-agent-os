@@ -217,6 +217,7 @@ function setupHandlers(){
     }catch(e){out.textContent=friendlyError(e.message)}
     finally{aiEnd();setButtonLoading($("scoreRole"),false,tr("submit"))}
   });
+  document.addEventListener("ew-ai-ask",e=>{const q=String(e.detail||"").trim();if(q&&aiChat){aiChat.open();aiChat.send(q)}});
   $("logout").addEventListener("click",async()=>{
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);

@@ -33,6 +33,13 @@ jobs:
           fc-cache -f
       - name: Run mocked browser E2E and capture responsive screenshots
         run: node apps/agent-mobile/tests/e2e-motion.mjs
+      - name: Upload review-only bundle (not deployed)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-guide-review-bundle
+          path: apps/agent-mobile/dist/railway-function.ts
+          if-no-files-found: ignore
       - name: Upload browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
