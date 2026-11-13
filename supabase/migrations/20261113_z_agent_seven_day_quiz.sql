@@ -124,3 +124,28 @@ revoke all on function public.agent_module_quiz_pool_internal(uuid,text),
  public.agent_module_quiz_question_internal(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.agent_module_quiz_pool_internal(uuid,text),
  public.agent_module_quiz_question_internal(uuid,uuid) to service_role;
+
+
+-- Owner rule: one server-side read record per actual reviewed handbook card.
+create table if not exists public.training_module_reads(
+ agent_id uuid not null references public.agents(id) on delete cascade,
+ module_code text not null,
+ card_code text not null check(length(btrim(card_code))>0),
+ read_at timestamptz not null default now(),
+ primary key(agent_id,module_code,card_code)
+);
+create index if not exists training_module_reads_agent_idx
+ on public.training_module_reads(agent_id,module_code,read_at);
+alter table public.training_module_reads enable row level security;
+revoke all on public.training_module_reads from public,anon,authenticated;
+grant select,insert,update,delete on public.training_module_reads to service_role;
+comment on table public.training_module_reads is
+ 'Server-persisted course reading checkpoints, submitted after >=4s per card in UI. Codes must be validated against current Owner-approved handbook before insertion.';
+
+-- Optional card reference for a wrong answer. No fallback card data is fabricated.
+alter table private.training_questions
+ add column if not exists related_card_code text;
+comment on column private.training_questions.related_card_code is
+ 'Owner-reviewed handbook card code used for incorrect-answer return link; NULL means first course card.';
+
+-- No client policy on the module read table, private questions or handbook.
