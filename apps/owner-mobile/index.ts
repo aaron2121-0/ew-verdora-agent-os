@@ -8,6 +8,7 @@ const HTML=[
 '<div class="card"><div class="grid"><div><div class="muted">Active Agents</div><div id="active" class="metric"></div></div><div><div class="muted">Dormant</div><div id="dormant" class="metric"></div></div><div><div class="muted">Commission Liability</div><div id="comm" class="metric"></div></div><div><div class="muted">Bonus Liability</div><div id="bonus" class="metric"></div></div></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
+'<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload handbook_content.json. Every item stays hidden until you approve it. / 上传后需 Owner 逐项核准才可供 Agent 查阅。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
 '<div class="card" id="baselineCard"><div class="title">Global Reference Cost Baseline / 全局成本基准</div><div class="muted" style="color:#D4B47A">会影响之后所有同类报价。此操作与单笔报价审核完全分开，必须二次确认。</div><div class="form" style="margin-top:10px"><select id="bSize"><option>small</option><option selected>medium</option><option>large</option><option>xl</option><option>structure</option></select><select id="bDensity"><option>light</option><option selected>medium</option><option>full</option><option>very_full</option></select><select id="bPremium"><option>low</option><option selected>medium</option><option>high</option><option>very_high</option></select><select id="bComplexity"><option>low</option><option selected>medium</option><option>high</option><option>special</option></select><input id="bCost" type="number" min="0" step="0.01" placeholder="安全生产成本 RM"><button id="baselineBtn" class="btn">修改全局基准 / Change global baseline</button><div id="baselineMsg" class="muted"></div></div></div>',
 '<div class="card"><div class="title">Agent Access Link</div><div class="muted">Create a one-time login link valid for 24 hours. Use this when email delivery is delayed or rate-limited.</div><div class="form" style="margin-top:11px"><input id="inviteEmail" type="email" placeholder="agent@email.com"><button id="inviteBtn" class="btn primary">Create one-time Agent link</button><div id="inviteOut" class="muted"></div><button id="copyInvite" class="btn hidden">Copy link</button></div></div>',
 '<div class="card"><div class="title">Owner Recovery Link</div><div class="muted">Create a one-time Owner recovery link valid for 24 hours. Save it securely in case email sign-in is unavailable.</div><div class="form" style="margin-top:11px"><button id="recoveryBtn" class="btn primary">Create Owner recovery link</button><div id="recoveryOut" class="muted"></div><button id="copyRecovery" class="btn hidden">Copy recovery link</button></div></div>',
@@ -31,6 +32,30 @@ const friendlyError=code=>{
 };
 async function call(body){let r=await fetch(CFG.url+"/functions/v1/owner-session",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":CFG.key},body:JSON.stringify(body||{})});let j=await r.json();if(!r.ok)throw Error(j.error||"Request failed");return j}
 function show(x){$("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
+async function refreshHandbook(){
+  const j=await call({action:"handbook_pending"});
+  const entries=j.entries||[];
+  $("handbookPending").innerHTML=entries.length?entries.map(row=>{
+    const id=escapeHtml(row.id);
+    return "<div class='item'><div><b>"+escapeHtml(row.title_zh)+" / "+escapeHtml(row.title_en)+"</b></div>"
+      +"<div class='muted'>"+escapeHtml(row.section)+"</div>"
+      +"<p class='muted' style='white-space:pre-line;max-height:110px;overflow:auto'>"+escapeHtml(row.body_zh)+"</p>"
+      +"<p class='muted' style='white-space:pre-line;max-height:110px;overflow:auto'>"+escapeHtml(row.body_en)+"</p>"
+      +"<div class='row'><button class='btn primary hb-review' data-id='"+id+"' data-decision='approve'>Approve / 核准</button>"
+      +"<button class='btn hb-review' data-id='"+id+"' data-decision='reject'>Reject / 拒绝</button></div></div>";
+  }).join(""):"<div class='item muted'>No pending handbook entries. / 目前没有待审核内容。</div>";
+  document.querySelectorAll(".hb-review").forEach(btn=>btn.onclick=async()=>{
+    const approve=btn.dataset.decision==="approve";
+    if(!confirm(approve?"Approve this content for ALL Agents? / 确认发布给所有 Agent？":"Reject this handbook entry? / 确认拒绝？"))return;
+    btn.disabled=true;
+    try{
+      await call({action:"handbook_review",id:btn.dataset.id,decision:btn.dataset.decision});
+      $("handbookMsg").textContent=approve?"Approved and published / 已核准发布":"Rejected / 已拒绝";
+      await refreshHandbook();
+    }catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}
+    finally{btn.disabled=false}
+  });
+}
 async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboard"}),call({action:"quote_queue"})]),d=j.dashboard||{};show("app");$("mode").textContent=String(d.profit_mode||"normal").toUpperCase();$("margin").textContent=(Number(d.net_margin_30d||0)*100).toFixed(1)+"%";$("orders").textContent=d.orders_today||0;$("revenue").textContent="RM "+Number(d.revenue_today||0).toFixed(0);$("avg").textContent=Number(d.avg_orders_per_active_agent||0).toFixed(2);$("active").textContent=d.active_agents||0;$("dormant").textContent=d.dormant_agents||0;$("comm").textContent="RM "+Number(d.commission_liability||0).toFixed(0);$("bonus").textContent="RM "+Number(d.bonus_liability||0).toFixed(0);$("exCount").textContent=(d.serious_exceptions||0)+" open";let ex=j.exceptions||[];$("exceptions").innerHTML=ex.length?ex.map(e=>"<div class=item><div class=row style='justify-content:space-between'><div><b class=damage>"+escapeHtml(String(e.severity||"").toUpperCase())+" · "+escapeHtml(e.type)+"</b><div class=muted>"+escapeHtml(e.summary)+"</div></div><div class=row><button class='btn ex' data-id='"+escapeHtml(e.id)+"' data-a='freeze'>Freeze</button><button class='btn ex' data-id='"+escapeHtml(e.id)+"' data-a='dismiss'>Dismiss</button></div></div></div>").join(""):"<div class='item muted'>No serious exceptions.</div>";document.querySelectorAll(".ex").forEach(b=>b.onclick=async()=>{await call({action:"decide_exception",exception_id:b.dataset.id,decision:b.dataset.a});await refresh()});
 let qq=qj.queue||[];
 $("quoteCount").textContent=qq.length+" pending";
@@ -63,6 +88,8 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
   finally{b.disabled=false}
 }));
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
+$("handbookCard").classList.toggle("hidden",j.role!=="owner");
+if(j.role==="owner"){try{await refreshHandbook()}catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}}
 $("recoveryBtn").closest(".card").classList.toggle("hidden",j.role!=="owner");
 
 }catch(e){
@@ -166,6 +193,20 @@ $("copyRecovery").onclick=async()=>{
   if(!latestRecovery)return;
   try{await navigator.clipboard.writeText(latestRecovery);$("recoveryOut").textContent="Copied ✓ · keep this recovery link private."}
   catch{$("recoveryOut").textContent=latestRecovery}
+};
+$("handbookImportBtn").onclick=async()=>{
+  const btn=$("handbookImportBtn"),file=$("handbookFile").files?.[0],msg=$("handbookMsg");
+  if(!file){msg.textContent="Choose handbook_content.json first. / 请先选择 JSON 文件。";return}
+  if(file.size>262144){msg.textContent="File exceeds 256 KiB. / 文件超过大小限制。";return}
+  btn.disabled=true;msg.textContent="Validating and importing… / 验证与导入中…";
+  try{
+    const content=JSON.parse(await file.text());
+    const j=await call({action:"handbook_import",content});
+    msg.textContent=String(j.imported||0)+" drafts imported. Owner approval required before Agent visibility. / 已导入待审核，发布前必须经 Owner 核准。";
+    $("handbookFile").value="";
+    await refreshHandbook();
+  }catch(e){msg.textContent="Import failed: "+String(e?.message||"invalid_json").slice(0,140)}
+  finally{btn.disabled=false}
 };
 $("opexBtn").onclick=async()=>{try{await call({action:"add_opex",date:$("date").value||kuchingDate(),category:$("category").value||"Other",amount:Number($("amount").value),note:$("note").value});$("opexMsg").textContent="Saved ✓";await refresh()}catch(e){$("opexMsg").textContent=friendlyError(e?.message)}};
 (async()=>{
