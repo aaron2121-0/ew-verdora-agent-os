@@ -15,7 +15,7 @@ function moduleStatus(value,tr){
   return key?tr(key):String(value||"—");
 }
 
-export function createTrainingUI({getData,getLang,tr,api,onSummary}){
+export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
   let host=null;
   let today=null;
   let exam=null;
@@ -205,6 +205,15 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
         r.append(b);
       }
       item.append(r);
+      const sectionName={
+        condolence:["Condolence","慰问花圈"],opening:["Opening","开张花礼"],
+        bouquet:["Bouquets","花束"],wedding_event:["Weddings & Events","婚礼与活动"],
+        wholesale:["Wholesale","鲜切花批发"]
+      }[mod.handbook_section]||[tr("handbookTitle"),tr("handbookTitle")];
+      const hb=element("button",{className:"btn btn-text btn-small course-handbook-link",attrs:{type:"button"}});
+      hb.append(createIcon("flower2",{size:16}),element("span",{text:(getLang()==="zh"?"先看手册：":"Read handbook: ")+sectionName[getLang()==="zh"?1:0]}));
+      hb.addEventListener("click",()=>onHandbook?.(code));
+      item.append(hb);
       if(expandedModule===code){
         const detail=element("div",{className:"training3-course-content"});
         const content=(getLang()==="zh"?mod.content_zh:mod.content_en)||{};
