@@ -422,6 +422,22 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
+    // An empty order state must teach the next permitted action, not just
+    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
+    if(Number(D?.today_progress?.orders||0)===0){
+      const empty=element("section",{className:"handbook-empty-orders"});
+      empty.append(
+        element("strong",{text:getLang()==="zh"?"今天还没有订单":"No orders yet today"}),
+        element("p",{text:getLang()==="zh"?
+          "先熟悉客户需求与作品图，再记录客户询问。报价与收款必须走正式流程。":
+          "Start with customer needs and approved examples, then record the enquiry. Always use the official quote and payment process."})
+      );
+      const go=iconButton(isLocked()?"graduationCap":"plus",
+        isLocked()?tr("handbookTitle"):(getLang()==="zh"?"开始记录客户询问":"Record an enquiry"),
+        "btn btn-secondary");
+      go.addEventListener("click",()=>isLocked()?handbook.open():navigate("order"));
+      empty.append(go);page.append(empty);
+    }
     const priorities=element("div",{className:"ai-priority-list"});
     for(const [name,card] of [["training",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
       card.dataset.priorityCard=name;
