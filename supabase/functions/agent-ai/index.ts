@@ -23,34 +23,41 @@ function redact(s){
     .replace(/\+?\d[\d\s-]{6,}\d/g,"[phone]");
 }
 
-// input: a string, or an array of {role:"user"|"assistant", text} for multi-turn chat.
-async function callAI(instructions,input,json=false){
-  if(!geminiKey) return null;
+const FALLBACK_MODEL="gemini-flash-lite-latest";
+async function callModel(model,body,ms){
   const ctl=new AbortController();
-  const timer=setTimeout(()=>ctl.abort(),12000);
-  const contents=Array.isArray(input)
-    ? input.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:redact(m.text)}]}))
-    : [{role:"user",parts:[{text:redact(input)}]}];
+  const timer=setTimeout(()=>ctl.abort(),ms);
   try{
-    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+geminiModel+":generateContent",{
-      method:"POST",
-      signal:ctl.signal,
+    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+      method:"POST",signal:ctl.signal,
       headers:{"Content-Type":"application/json","x-goog-api-key":geminiKey},
-      body:JSON.stringify({
-        systemInstruction:{parts:[{text:instructions}]},
-        contents,
-        generationConfig:json?{maxOutputTokens:2048,temperature:0.6,responseMimeType:"application/json"}:{maxOutputTokens:2048,temperature:0.7}
-      })
+      body
     });
-    if(!r.ok){ console.error("GEMINI_STATUS",r.status); return null; }
+    if(!r.ok){ console.error("GEMINI_STATUS",model,r.status); return {retry:r.status===429||r.status>=500||r.status===404,text:null}; }
     const j=await r.json();
     const parts=j?.candidates?.[0]?.content?.parts||[];
     const text=parts.map(p=>typeof p.text==="string"&&!p.thought?p.text:"").join("").trim();
-    return text||null;
+    return {retry:!text,text:text||null};
   }catch(e){
-    console.error("GEMINI_ERROR",e?.name||"error");
-    return null;
+    console.error("GEMINI_ERROR",model,e?.name||"error");
+    return {retry:true,text:null};
   }finally{ clearTimeout(timer); }
+}
+// input: a string, or an array of {role:"user"|"assistant", text} for multi-turn chat.
+// Primary model first; on overload/timeout/empty, one retry on the lighter fallback model.
+async function callAI(instructions,input,json=false){
+  if(!geminiKey) return null;
+  const contents=Array.isArray(input)
+    ? input.map(m=>({role:m.role==="assistant"?"model":"user",parts:[{text:redact(m.text)}]}))
+    : [{role:"user",parts:[{text:redact(input)}]}];
+  const body=JSON.stringify({
+    systemInstruction:{parts:[{text:instructions}]},
+    contents,
+    generationConfig:json?{maxOutputTokens:2048,temperature:0.6,responseMimeType:"application/json"}:{maxOutputTokens:2048,temperature:0.7}
+  });
+  const first=await callModel(geminiModel,body,9000);
+  if(first.text||!first.retry||geminiModel===FALLBACK_MODEL) return first.text;
+  return (await callModel(FALLBACK_MODEL,body,9000)).text;
 }
 function parseJson(s){
   if(!s) return null;
