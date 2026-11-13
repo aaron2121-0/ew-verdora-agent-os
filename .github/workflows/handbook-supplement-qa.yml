@@ -1,0 +1,24 @@
+name: Product Handbook Supplement QA
+
+on:
+  push:
+    branches: [feat/handbook-training-import-supplement-20261113]
+  pull_request:
+    branches: [feat/product-handbook-phase-a-20261113]
+
+permissions:
+  contents: read
+
+jobs:
+  handbook-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --ignore-scripts
+      - run: npm run check
+      - run: node --test apps/agent-mobile/tests/handbook-content.test.mjs
+      - run: node --check apps/agent-mobile/public/training.js
+      - run: node --input-type=module --check < apps/owner-mobile/index.ts
