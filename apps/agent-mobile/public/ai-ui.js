@@ -64,7 +64,7 @@ export function initAIOrb({onClick,tr,getData}){
   const msg=document.createElement("span");msg.textContent=tr(tips[0].key,tips[0].params||{});
   const close=document.createElement("button");close.type="button";close.textContent="×";close.setAttribute("aria-label",tr("close"));close.addEventListener("click",()=>tip.remove());
   tip.append(msg,close);
-  const questions=tr("languageName")==="中文"?[
+  const questions=tr("languageName")==="EN"?[
     "开张花篮适合推荐给谁？","客户还没确定预算时，我应该先问什么？","客户要慰问花圈，我该怎么开始沟通？"
   ]:[
     "Who should I recommend opening flower stands to?",
