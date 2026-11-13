@@ -49,6 +49,24 @@ function safeQuestionPayload(value,allowFeedback=false){
 function int(v){const n=Number(v);return Number.isInteger(n)?n:null}
 function uuid(v){const s=clean(v,80);return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)?s:null}
 
+
+const COURSE_CODES=["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"];
+function shuffle(list){
+  const a=[...list];
+  for(let i=a.length-1;i>0;i--){
+    const b=new Uint32Array(1);crypto.getRandomValues(b);
+    const j=b[0]%(i+1);[a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function questionForClient(q,item){
+  return {
+    position:item.position,question_en:q.question_en,question_zh:q.question_zh,
+    options_en:item.option_order.map(n=>q.options_en[n]),
+    options_zh:item.option_order.map(n=>q.options_zh[n])
+  };
+}
+
 const url=Deno.env.get("SUPABASE_URL")||"";
 const pubKeys=JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")||"{}");
 const secKeys=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}");
@@ -76,6 +94,121 @@ Deno.serve(async req=>{
   const day=kuchingToday();
 
   try{
+
+    if(action==="module_quiz_start"){
+      const code=clean(body.module_code,40);
+      if(!COURSE_CODES.includes(code))return reply({error:"invalid_module"},400);
+      const {data:module,error:modError}=await admin.from("training_modules")
+        .select("id,code,required,active,pass_score,handbook_section")
+        .eq("code",code).eq("required",true).eq("active",true).maybeSingle();
+      if(modError||!module)return reply({error:"invalid_module"},400);
+      const {data:allProgress,error:progressError}=await admin.from("training_progress")
+        .select("status,training_modules(code)")
+        .eq("agent_id",agent.id);
+      if(progressError)throw progressError;
+      const progress=new Map((allProgress||[]).map(x=>[x.training_modules?.code,x.status]));
+      if(progress.get(code)==="passed")return reply({ok:true,passed:true});
+      const pending=COURSE_CODES.find(x=>progress.get(x)!=="passed");
+      if(pending!==code)return reply({error:"previous_module_incomplete"},403);
+      let {data:attempt,error:attemptError}=await admin.from("training_module_quiz_attempts")
+        .select("id,status,attempt_no,module_code,score,passed")
+        .eq("agent_id",agent.id).eq("module_code",code).eq("status","active").maybeSingle();
+      if(attemptError)throw attemptError;
+      if(!attempt){
+        // The bank remains private. CORE-BRAND uses tagged questions with one
+        // of the existing six skill codes, never a new skill_code.
+        let query=admin.schema("private").from("training_questions")
+          .select("id,code,skill_code")
+          .eq("active",true).eq("is_test",false).eq("bank_type","daily");
+        if(code==="CORE-BRAND")query=query.like("code","HB-CORE-BRAND-%");
+        else query=query.eq("skill_code",code);
+        const {data:pool,error:poolError}=await query.limit(250);
+        if(poolError)throw poolError;
+        const selected=shuffle(pool||[]).slice(0,3);
+        if(selected.length<3)return reply({error:"module_question_bank_not_ready"},400);
+        const {data:latest,error:latestError}=await admin.from("training_module_quiz_attempts")
+          .select("attempt_no").eq("agent_id",agent.id).eq("module_code",code)
+          .order("attempt_no",{ascending:false}).limit(1);
+        if(latestError)throw latestError;
+        const attemptNo=Number(latest?.[0]?.attempt_no||0)+1;
+        const {data:newAttempt,error:createError}=await admin.from("training_module_quiz_attempts")
+          .insert({agent_id:agent.id,module_code:code,attempt_no:attemptNo})
+          .select("id,status,attempt_no,module_code,score,passed").single();
+        if(createError)throw createError;
+        attempt=newAttempt;
+        const items=selected.map((q,i)=>({
+          attempt_id:attempt.id,agent_id:agent.id,position:i+1,
+          question_id:q.id,option_order:shuffle([0,1,2,3])
+        }));
+        const {error:itemsError}=await admin.from("training_module_quiz_items").insert(items);
+        if(itemsError)throw itemsError;
+      }
+      const {data:items,error:itemsError}=await admin.from("training_module_quiz_items")
+        .select("position,question_id,option_order,answered_at,is_correct")
+        .eq("attempt_id",attempt.id).eq("agent_id",agent.id)
+        .order("position",{ascending:true});
+      if(itemsError)throw itemsError;
+      const first=(items||[]).find(x=>!x.answered_at);
+      if(!first)return reply({error:"quiz_needs_recovery"},409);
+      const {data:q,error:qError}=await admin.schema("private").from("training_questions")
+        .select("id,question_en,question_zh,options_en,options_zh").eq("id",first.question_id).single();
+      if(qError)throw qError;
+      return reply({ok:true,quiz:{attempt_id:attempt.id,module_code:code,completed:false,question:questionForClient(q,first)}});
+    }
+
+    if(action==="module_quiz_answer"){
+      const attemptId=uuid(body.attempt_id),position=int(body.position),selected=int(body.selected_index);
+      if(!attemptId||position==null||position<1||position>3||selected==null||selected<0||selected>3)
+        return reply({error:"invalid_answer"},400);
+      const {data:attempt,error:attemptError}=await admin.from("training_module_quiz_attempts")
+        .select("id,module_code,status,score,passed").eq("id",attemptId)
+        .eq("agent_id",agent.id).maybeSingle();
+      if(attemptError)throw attemptError;
+      if(!attempt)return reply({error:"attempt_not_found"},404);
+      if(attempt.status!=="active")return reply({error:"attempt_already_finished"},409);
+      const {data:items,error:itemsError}=await admin.from("training_module_quiz_items")
+        .select("id,position,question_id,option_order,answered_at,is_correct")
+        .eq("agent_id",agent.id).eq("attempt_id",attemptId)
+        .order("position",{ascending:true});
+      if(itemsError)throw itemsError;
+      const current=(items||[]).find(x=>!x.answered_at);
+      if(!current||current.position!==position)return reply({error:"question_not_current"},409);
+      const {data:q,error:qError}=await admin.schema("private").from("training_questions")
+        .select("id,correct_index,explanation_en,explanation_zh").eq("id",current.question_id).single();
+      if(qError)throw qError;
+      const correct=current.option_order[selected]===q.correct_index;
+      const {data:updated,error:updateError}=await admin.from("training_module_quiz_items")
+        .update({selected_index:selected,is_correct:correct,answered_at:new Date().toISOString()})
+        .eq("id",current.id).eq("agent_id",agent.id).is("answered_at",null)
+        .select("id").maybeSingle();
+      if(updateError)throw updateError;
+      if(!updated)return reply({error:"duplicate_answer"},409);
+      const feedback={correct,explanation_en:q.explanation_en,explanation_zh:q.explanation_zh};
+      if(position===3){
+        const right=(items||[]).filter(x=>x.answered_at&&x.is_correct).length+(correct?1:0);
+        const score=Math.round(right/3*100*100)/100;
+        // The existing training_progress row and certification are updated by
+        // the same server-owned RPC as the current MCQ certification flow.
+        const {data:record,error:recordError}=await admin.rpc("record_training_result_internal",{
+          p_agent_id:agent.id,p_module_code:attempt.module_code,p_score:score
+        });
+        if(recordError)throw recordError;
+        const {error:finishError}=await admin.from("training_module_quiz_attempts")
+          .update({status:"completed",score,passed:record?.passed===true,completed_at:new Date().toISOString()})
+          .eq("id",attempt.id).eq("agent_id",agent.id).eq("status","active");
+        if(finishError)throw finishError;
+        return reply({ok:true,...feedback,quiz:{attempt_id:attempt.id,completed:true,score,passed:record?.passed===true}});
+      }
+      const next=(items||[]).find(x=>x.position===position+1);
+      if(!next)return reply({error:"quiz_needs_recovery"},409);
+      const {data:nextQ,error:nextError}=await admin.schema("private").from("training_questions")
+        .select("id,question_en,question_zh,options_en,options_zh").eq("id",next.question_id).single();
+      if(nextError)throw nextError;
+      return reply({ok:true,...feedback,quiz:{
+        attempt_id:attempt.id,module_code:attempt.module_code,completed:false,
+        question:questionForClient(nextQ,next)
+      }});
+    }
     if(action==="today"){
       const start=body.start===true;
       const {data:existing,error:existingError}=await admin.from("training_daily_attempts")
