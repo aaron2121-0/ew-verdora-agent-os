@@ -150,7 +150,7 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
     card.append(top,streak);
     const meta=element("div",{className:"training3-meta"});
     meta.append(element("span",{text:tr("dailyPassRule")}),element("span",{text:tr("serverTimed45")}));
-    card.append(meta,element("small",{className:"training3-daily-note",text:tr("unlockDailyNote")}));
+    card.append(meta,element("small",{className:"training3-daily-note",text:getLang()==="zh"?"复习用，不计入解锁":"Optional review · does not count toward unlocking"}));
     return card;
   }
 
@@ -211,7 +211,7 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
         wholesale:["Wholesale","鲜切花批发"]
       }[mod.handbook_section]||[tr("handbookTitle"),tr("handbookTitle")];
       const hb=element("button",{className:"btn btn-text btn-small course-handbook-link",attrs:{type:"button"}});
-      hb.append(createIcon("flower2",{size:16}),element("span",{text:(getLang()==="zh"?"先看手册：":"Read handbook: ")+sectionName[getLang()==="zh"?1:0]}));
+      hb.append(createIcon("flower2",{size:16}),element("span",{text:(getLang()==="zh"?"进入课程 · 先读手册：":"Open course · handbook first: ")+sectionName[getLang()==="zh"?1:0]}));
       hb.addEventListener("click",()=>onHandbook?.(code));
       item.append(hb);
       if(expandedModule===code){
@@ -334,24 +334,28 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
     const state=getUnlockProgress(getData(),today);
     if(state.agentStatus==="trainee"||state.agentStatus==="recovery"||state.showRestriction||state.completed<state.total){
       page.append(buildUnlockChecklist({data:getData(),summary:today,tr,
-        onCourse:code=>expandModule(code),
+        onCourse:code=>onHandbook?.(code),
         onExam:()=>document.getElementById("training-exam-entry")?.scrollIntoView({behavior:"smooth",block:"center"})
       }));
     }
-    page.append(dailyHero(),skills());
+    // Required lessons come first. Daily MCQ is an optional review aid.
+    page.append(modules(),examCard());
+    const review=element("details",{className:"training-review-details"});
+    review.append(element("summary",{text:getLang()==="zh"?"每日训练 · 选做复习":"Daily training · optional review"}));
+    review.append(dailyHero(),skills());
     if(today?.status==="completed"){
       const done=element("section",{className:"training3-daily-done"});
       done.append(createIcon(today?.passed?"circleCheck":"target",{size:22}),
         element("div",{className:"training3-done-copy"}));
       done.lastChild.append(element("strong",{text:tr("todayScore",{score:Math.round(Number(today.score||0))})}),
         element("span",{text:today?.passed?tr("dailyPassText"):tr("dailyFailText")}));
-      page.append(done);
+      review.append(done);
     }else{
       const start=element("button",{className:"btn btn-primary btn-wide training3-start",attrs:{type:"button",disabled:loading}});
       start.append(createIcon("target",{size:19}),element("span",{text:today?.status==="active"?tr("resumeDaily"):tr("startDaily")}));
-      start.addEventListener("click",startDaily);page.append(start);
+      start.addEventListener("click",startDaily);review.append(start);
     }
-    page.append(examCard(),modules());
+    page.append(review);
     return page;
   }
 
