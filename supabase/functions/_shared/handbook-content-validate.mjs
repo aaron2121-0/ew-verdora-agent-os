@@ -18,7 +18,7 @@ export function validateHandbookContent(input){
   if(input.schema_version!=="1.0")fail("schema_version must be 1.0");
   if(input.source!=="grok")fail("source must be grok");
   if(input.generated_at!==undefined &&
-      (typeof input.generated_at!=="string"||!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$/.test(input.generated_at)||!Number.isFinite(Date.parse(input.generated_at))))
+      (typeof input.generated_at!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\\.\d+)?Z$/.test(input.generated_at)||!Number.isFinite(Date.parse(input.generated_at))))
     fail("generated_at must be a valid UTC ISO 8601 timestamp");
   if(!Array.isArray(input.entries)||input.entries.length<1||input.entries.length>100)
     fail("entries must contain 1-100 items");
