@@ -105,15 +105,20 @@ Deno.serve(async (req) => {
   // Handbook is always server-filtered; unpublished Grok imports never reach Agents.
   if (action === "handbook") {
     const section = String(body.section || "");
-    const sections = ["story","product_line","service_rule","delivery","script","announcement"];
-    if(!sections.includes(section)) return reply({error:"invalid_handbook_section"},400);
-    const {data,error}=await admin.from("company_knowledge")
-      .select("id,section,title_en,title_zh,body_en,body_zh,sort")
-      .eq("section",section).eq("active",true)
-      .eq("visible_to_agent",true).eq("needs_owner_confirm",false)
-      .order("sort",{ascending:true}).limit(100);
+    const productLine = String(body.product_line || "");
+    const sections = ["story","product_line","service_rule","delivery","script","announcement","faq"];
+    const lines = ["condolence","opening","bouquet","wedding_event","wholesale"];
+    if(!section&&!productLine) return reply({error:"handbook_filter_required"},400);
+    if(section&&!sections.includes(section)) return reply({error:"invalid_handbook_section"},400);
+    if(productLine&&!lines.includes(productLine)) return reply({error:"invalid_product_line"},400);
+    let query=admin.from("company_knowledge")
+      .select("id,code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint")
+      .eq("active",true).eq("visible_to_agent",true).eq("needs_owner_confirm",false);
+    if(section)query=query.eq("section",section);
+    if(productLine)query=query.eq("product_line",productLine);
+    const {data,error}=await query.order("sort",{ascending:true}).limit(200);
     if(error)return reply({error:"handbook_unavailable"},400);
-    return reply({ok:true,section,entries:data||[]});
+    return reply({ok:true,section:section||null,product_line:productLine||null,entries:data||[]});
   }
 
   if (action === "phase1_overview") {
