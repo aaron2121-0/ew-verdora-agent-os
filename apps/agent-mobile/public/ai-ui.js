@@ -1,11 +1,17 @@
 import {typeText,flipReorder,motionBudget} from "./motion.js";
 import {suggestions} from "./approved-content.js";
+import {vendorMotion,trackMotion,removeMotion} from "./motion-vendor.js";
 import {kuchingHour,kuchingDateKey} from "./date.js";
-let state="idle",pending=0,orb=null,promptUsed=false,agentProfile=null;
+let state="idle",pending=0,orb=null,orbMotion=null,promptUsed=false,agentProfile=null;
 export function setAgentProfile(value){agentProfile=value&&typeof value==="object"?value:null}
 const states=new Set(["idle","listening","thinking","speaking","done","error"]);
 export function setAIState(next){
- if(!states.has(next))next="idle";state=next;if(orb){orb.dataset.aiState=next;orb.setAttribute("aria-busy",String(next==="thinking"||next==="speaking"))}
+ if(!states.has(next))next="idle";state=next;if(orb){
+  orb.dataset.aiState=next;
+  orb.setAttribute("aria-busy",String(next==="thinking"||next==="speaking"));
+  orbMotion?.setState?.(next==="thinking"||next==="listening"?"thinking":
+    next==="speaking"||next==="done"?"replying":"idle");
+ }
 }
 export function aiStart(){pending++;setAIState("thinking")}
 export function aiEnd(ok=true){pending=Math.max(0,pending-1);setAIState(pending?"thinking":ok?"done":"error");if(!pending)setTimeout(()=>{if(state==="done"||state==="error")setAIState("idle")},1300)}
@@ -55,9 +61,18 @@ export function createAICard({title,text="",provider="gemini",cached=false,tr,ac
 export function initAIOrb({onClick,tr,getData,getLang}){
  if(orb)return orb;
  orb=document.createElement("button");orb.type="button";orb.className="ai-orb";orb.dataset.aiState=state;orb.setAttribute("aria-label",tr("aiOpenChat"));
- const ring=document.createElement("span");ring.className="ai-orb-core";ring.setAttribute("aria-hidden","true");
+ const slot=document.createElement("span");slot.className="ai-orb-vendor-slot";slot.setAttribute("aria-hidden","true");
+ const vm=vendorMotion();
+ if(vm?.mountAiOrb){
+   orbMotion=trackMotion("ai-orb",vm.mountAiOrb(slot,{
+     lang:getLang?.()||"en",size:52,state:state==="thinking"?"thinking":"idle",
+     label:tr("aiOpenChat")
+   }));
+ }else{
+   const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);
+ }
  const label=document.createElement("span");label.className="sr-only";label.textContent=tr("aiOpenChat");
- orb.append(ring,label);orb.addEventListener("click",onClick);document.body.append(orb);
+ orb.append(slot,label);orb.addEventListener("click",onClick);document.body.append(orb);
  motionBudget();
  const tips=contextTips(getData(),Date.now(),tr);
  if(!promptUsed&&tips.length&&canShowTipNow(agentProfile,Date.now())){promptUsed=true;
@@ -75,13 +90,13 @@ export function initAIOrb({onClick,tr,getData,getLang}){
     });
     promptList.append(b);
   }
-  tip.append(suggestions);orb.before(tip);
+  tip.append(promptList);orb.before(tip);
   orb.addEventListener("click",()=>tip.remove(),{once:true});
  }
  return orb;
 }
 export function refreshAIOrb(tr){if(orb){orb.setAttribute("aria-label",tr("aiOpenChat"));orb.querySelector(".sr-only").textContent=tr("aiOpenChat")}}
-export function resetAIOrb(){agentProfile=null;orb?.remove();orb=null;document.querySelector(".ai-orb-tip")?.remove();promptUsed=false;pending=0;state="idle"}
+export function resetAIOrb(){agentProfile=null;orb?.remove();orb=null;orbMotion=null;removeMotion("ai-orb");document.querySelector(".ai-orb-tip")?.remove();promptUsed=false;pending=0;state="idle"}
 
 export function createAIProfile({api,tr,getLang}){
  const backdrop=document.createElement("div");backdrop.className="ai-profile-overlay hidden";
