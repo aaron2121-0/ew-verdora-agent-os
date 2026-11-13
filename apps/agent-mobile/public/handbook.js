@@ -304,13 +304,26 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     backdrop.append(img,bar);
   }
   async function open(line=null){
-    currentLine=lineById(line)?line:null;slideIndex=0;onNavigate("handbook");
-    const host=document.getElementById("handbookPage");
-    if(host)host.replaceChildren(element("p",{text:t(getLang,"Loading approved content…","正在载入核准资料…")}));
-    await load();renderPage();
+    clearSlideTimer();currentCourse=null;currentLine=lineById(line)?line:null;slideIndex=0;
+    onNavigate("handbook");
+    await load();if(currentCourse===null)renderPage();
+  }
+  async function openForCourse(code,targetCardCode=null){
+    if(!REQUIRED_COURSE_CODES.includes(code))return;
+    clearSlideTimer();
+    currentCourse=code;currentLine=sectionForCourse(code);slideIndex=0;
+    onNavigate("handbook");
+    await load();
+    await syncReadState(code);
+    if(currentCourse!==code)return;
+    const cards=approvedSlides(currentLine);
+    const target=cards.findIndex(x=>x.code===targetCardCode);
+    slideIndex=target>=0?target:0;
+    renderPage();
   }
   function journey(){
     const s=moduleState();
+    hydrateJourney();
     const wrap=element("section",{className:"journey-card",attrs:{"aria-label":t(getLang,"My seven-day learning path","我的 7 天上手路线")}});
     const header=element("div",{className:"journey-header"});
     const ring=element("div",{className:"journey-ring",attrs:{role:"progressbar","aria-valuemin":"0","aria-valuemax":"7","aria-valuenow":String(s.done)}});
@@ -325,7 +338,8 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
       const passed=courseRow(code)?.status==="passed";
       const unlocked=passed||code===s.next;
       const line=sectionForCourse(code);
-      const hasRead=safeStore(readKey(line))==="1";
+      const read=readStatus(code);
+      const courseReady=read?.ready_for_quiz===true;
       const item=element("article",{className:"journey-day"+(passed?" completed":unlocked?" current":" locked")});
       const left=element("span",{className:"journey-day-num",text:passed?"✓":String(i+1)});
       const words=element("div",{className:"journey-day-copy"});
@@ -333,13 +347,24 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
       if(getLang()==="zh")words.append(element("small",{text:courseLabel(code)+" · "+(lineById(line)?.zh||"")}));
       else words.append(element("small",{text:lineById(line)?.en||code}));
       item.append(left,words);
+      const stateLabel=passed?t(getLang,"Passed","已通过"):
+        unlocked?(courseReady?t(getLang,"Quiz ready","可测验"):t(getLang,"Reading","阅读中")):
+        t(getLang,"Locked","未解锁");
+      words.append(element("small",{className:"journey-stage",text:stateLabel}));
       if(passed)item.append(element("span",{className:"journey-done",text:t(getLang,"Passed","已通过")}));
       else if(unlocked){
-        item.append(btn(hasRead?t(getLang,"Take 3 MCQs","做 3 题"):t(getLang,"Read handbook","看手册"),()=>hasRead?openQuiz(code):open(line),"btn btn-secondary btn-small"));
+        const action=btn(courseReady?t(getLang,"Continue course","继续课程"):t(getLang,"Read cards","读手册"),()=>openForCourse(code),"btn btn-secondary btn-small");
+        item.append(action);
       }else item.append(element("span",{className:"journey-done",text:t(getLang,"Locked","未解锁")}));
+
       list.append(item);
     });
     wrap.append(list);
+    if(s.next){
+      const index=REQUIRED_COURSE_CODES.indexOf(s.next)+1;
+      const state=readStatus(s.next)?.ready_for_quiz===true?t(getLang,"Quiz ready","可测验"):t(getLang,"Reading","阅读中");
+      wrap.append(element("p",{className:"journey-current-status",text:t(getLang,"Course ","第 ")+index+(getLang()==="zh"?" 课 · ":" · ")+state}));
+    }
     if(s.done===7){const banner=element("p",{className:"journey-complete",text:t(getLang,"All seven courses passed!","7 门课程已全部通过！")});wrap.append(banner);celebrate(banner,t(getLang,"All modules passed","已完成必修课程"))}
     return wrap;
   }
@@ -418,6 +443,10 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
   }
   async function openQuiz(code){
     const s=moduleState();
+    if(code!==currentCourse||readStatus(code)?.ready_for_quiz!==true){
+      toast(t(getLang,"Read all approved cards before the quiz.","请先读完这门课所有核准卡片。"));
+      void openForCourse(code);return;
+    }
     if(code!==s.next){toast(t(getLang,"Complete the previous course first.","请先完成前一门课程。"));return}
     const {backdrop,close}=simpleModal("handbook-quiz-layer");
     const panel=element("div",{className:"handbook-quiz-panel"});
@@ -436,6 +465,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
         if(r.passed){question.textContent=t(getLang,"Course already passed.","此课程已通过。");return}
         current=r.quiz||null;draw();
       }catch(e){
+        if(String(e?.message||"").includes("must_read_handbook_first")){close();void openForCourse(code);return}
         question.textContent=t(getLang,"The three-question course quiz is not available yet. Your progress is unchanged.","课程 3 题测验暂不可用，进度不会被修改。");
         progress.textContent="";
       }
@@ -471,10 +501,16 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
         current=r.quiz;
         const next=btn(t(getLang,"Continue","继续"),draw,"btn btn-primary");
         options.replaceChildren(next);
+        if(!r.correct){
+          const back=btn(t(getLang,"Review this handbook card","回去看这张卡"),()=>{
+            close();void openForCourse(code,r.related_card_code||null);
+          },"btn btn-secondary");
+          options.append(back);
+        }
       }catch(e){toast(t(getLang,"Could not submit answer","提交失败"),{tone:"danger"});options.querySelectorAll("button").forEach(b=>b.disabled=false)}
       finally{busy=false}
     }
     start();
   }
-  return {journey,open,openQuiz,spotlight,showWelcome,openForCourse:code=>open(sectionForCourse(code)),reRender:renderPage,refresh:()=>{handbookData=null}};
+  return {journey,open,openQuiz,spotlight,showWelcome,openForCourse,reRender:renderPage,refresh:()=>{handbookData=null},destroy:clearSlideTimer};
 }
