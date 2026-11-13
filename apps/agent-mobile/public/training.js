@@ -200,7 +200,7 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
       if(x.status==="passed")r.append(element("span",{className:"badge badge-success",text:tr("passed")}));
       else{
         const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button","aria-expanded":expandedModule===code?"true":"false"}});
-        b.append(createIcon("bookOpen",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
+        b.append(createIcon("graduationCap",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
         b.addEventListener("click",()=>expandModule(code));
         r.append(b);
       }
