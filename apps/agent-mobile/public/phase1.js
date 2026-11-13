@@ -6,6 +6,7 @@ import {createOrderWizard} from "./order.js";
 import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
+import {createHandbookExperience} from "./handbook.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -77,10 +78,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   const performance=createPerformanceDashboard({
     getUserId,getLang,tr,api
   });
-  const training=createTrainingUI({getData,getLang,tr,api,onSummary:today=>{
+  const training=createTrainingUI({getData,getLang,tr,api,onHandbook:code=>handbook.openForCourse(code),onSummary:today=>{
     unlockSummary=today;
     if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
   }});
+
+  const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate});
 
   function langText(value){
     const key=categoryKey(value);
@@ -210,7 +213,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     else if(next==="training")renderTraining({focusModule,focusExam});
     else if(next==="performance")renderPerformance();
     else if(next==="selling")renderSelling();
+    else if(next==="handbook")handbook.reRender();
     requestAnimationFrame(()=>{
+      if(next!=="today"||document.querySelector(".onboarding-layer")===null)handbook.spotlight(next);
       if(scrollTo)document.getElementById(scrollTo)?.scrollIntoView({behavior:"smooth",block:"start"});
       else if(!focusModule&&!focusExam)window.scrollTo({top:0,behavior:"instant"});
     });
@@ -378,6 +383,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       page.append(lock);
     }
 
+    page.append(handbook.journey());
+
     const moneyCard=element("section",{className:"money-card"});
     const moneyHead=element("div",{className:"money-head"});
     const moneyTitle=element("div");
@@ -459,6 +466,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       {icon:"phoneCall",title:"tileFollowup",sub:"tileFollowupSub",tone:"amber",action:()=>navigate("today",{scrollTo:"dueFollowups"}),status:tr("dueBadge",{count:(p.due_followups||[]).length})},
       {icon:"megaphone",title:"tileSelling",sub:"tileSellingSub",tone:"blue",action:()=>isLocked()?showLock():navigate("selling"),status:taskFacts().kit?tr("completedBadge"):tr("readyBadge"),locked:isLocked()},
       {icon:"graduationCap",title:"tileTraining",sub:"tileTrainingSub",tone:"green",action:()=>navigate("training"),status:p.training_pending?tr("trainingPendingBadge"):tr("completedBadge")},
+      {icon:"flower2",title:"handbookTitle",sub:"handbookSubtitle",tone:"green",action:()=>handbook.open(),status:tr("readyBadge")},
       {icon:"trendingUp",title:"tilePerformance",sub:"tilePerformanceSub",tone:"indigo",action:()=>navigate("performance"),status:tr(tierKey(p.tier_progress?.current_tier||getData()?.agent?.tier))},
       {icon:"wallet",title:"tileWallet",sub:"tileWalletSub",tone:"gold",action:()=>navigate("performance",{scrollTo:"commissionPreview"}),status:money(m.pending)}
     ];
@@ -587,7 +595,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
     const allRows=getData()?.phase1?.recent_leads||[];
-    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);host.append(page);return}
+    if(!allRows.length){
+      page.append(emptyState({icon:"users",title:tr("noCustomers"),message:getLang()==="zh"?"还没有客户？先看手册学习如何介绍业务，再从接单流程记录第一位客户。":"No customers yet? Read the handbook, then use the order flow to record your first enquiry."}));
+      const guide=iconButton("flower2",tr("handbookTitle"),"btn btn-primary");
+      guide.addEventListener("click",()=>handbook.open());page.append(guide);
+      const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});
+      ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);
+      host.append(page);return
+    }
 
     const filters=element("div",{className:"follow-actions",attrs:{"data-phase4-hook":"customer-segments"}});
     [
@@ -834,7 +849,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   function renderAll(){
     setupNav();
-    renderToday();renderCustomers();if(active==="training")renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
+    renderToday();renderCustomers();if(active==="training")renderTraining();if(active==="performance")renderPerformance();if(active==="handbook")handbook.reRender();renderSelling();order.render();
     renderNavBadges();
   }
 
@@ -843,6 +858,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     order.onLanguageChange();
     performance.onLanguageChange();
     training.onLanguageChange();
+    if(active==="handbook")handbook.reRender();
   }
 
   function onForeground(){
@@ -855,6 +871,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     setupNav();
     await order.init();
     renderAll();
+    handbook.showWelcome();
     navigate("today");
     refreshUnlockSummary();
   }
