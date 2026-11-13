@@ -372,3 +372,13 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 
 .guide-static-icon{display:block;font-size:29px;line-height:1;color:#286344;font-family:Georgia,serif;font-weight:700}
 :root[data-theme="dark"] .guide-static-icon{color:#d3ecdb}
+
+/* Font-independent floral placeholder: only used until verified motion/icons media exists. */
+.guide-icon-motion:not(:has(img))::after{
+ content:"";position:absolute;left:calc(50% - 4px);top:calc(50% - 4px);
+ width:8px;height:8px;background:#2b7051;border-radius:50%;
+ box-shadow:0 -12px 0 1px #2b7051,0 12px 0 1px #2b7051,-12px 0 0 1px #2b7051,12px 0 0 1px #2b7051;
+}
+:root[data-theme="dark"] .guide-icon-motion:not(:has(img))::after{
+ background:#d5ebd6;box-shadow:0 -12px 0 1px #d5ebd6,0 12px 0 1px #d5ebd6,-12px 0 0 1px #d5ebd6,12px 0 0 1px #d5ebd6;
+}
