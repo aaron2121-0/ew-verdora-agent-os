@@ -86,7 +86,7 @@ export function initAIOrb({onClick,tr,getData}){
  return orb;
 }
 export function refreshAIOrb(tr){if(orb){orb.setAttribute("aria-label",tr("aiOpenChat"));orb.querySelector(".sr-only").textContent=tr("aiOpenChat")}}
-export function resetAIOrb(){agentProfile=null;orb?.remove();orb=null;document.querySelector(".ai-orb-tip")?.remove();pending=0;state="idle"}
+export function resetAIOrb(){agentProfile=null;orb?.remove();orb=null;document.querySelector(".ai-orb-tip")?.remove();promptUsed=false;pending=0;state="idle"}
 
 export function createAIProfile({api,tr,getLang}){
  const backdrop=document.createElement("div");backdrop.className="ai-profile-overlay hidden";
