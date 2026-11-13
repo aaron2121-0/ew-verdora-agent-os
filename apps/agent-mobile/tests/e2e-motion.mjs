@@ -68,6 +68,46 @@ try{
   assert.deepEqual(errors,[],"page errors "+width+" "+lang+" "+theme);
   await ctx.close();
  }
+
+ // TRAINEE unlock checklist must work at both mobile widths with actual course content.
+ dashboard.agent.status="trainee";
+ dashboard.phase1.can_sell=false;
+ dashboard.phase1.training_pending=true;
+ dashboard.training=[
+  "CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"
+ ].map(code=>({status:"assigned",best_score:0,training_modules:{code,title_en:code,title_zh:code==="CORE-BRAND"?"品牌与代理规则":code,
+   content_en:{lesson:["Read and follow EW VERDORA approved pricing and payment rules."]},
+   content_zh:{lesson:["请遵守 EW VERDORA 核准的定价与收款规定。"]}}}));
+ for(const width of [360,430])for(const lang of ["en","zh"]){
+  const ctx=await browser.newContext({viewport:{width,height:850},locale:lang==="zh"?"zh-CN":"en-US",colorScheme:"light"});
+  const page=await ctx.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  await page.goto(origin,{waitUntil:"domcontentloaded"});
+  await page.locator(".lock-banner").waitFor({timeout:15000});
+  if(lang==="zh")await page.locator("#lang").click();
+  await page.locator(".lock-banner button").click();
+  await page.locator("#lockSheet:not(.hidden)").waitFor({timeout:15000});
+  await page.locator("#lockHowSummary").click();
+  await page.locator("#lockChecklist .unlock-progress-count").waitFor();
+  assert.equal(await page.locator("#lockChecklist .unlock-progress-count").textContent(),"0/7");
+  assert.ok(await page.locator("#lockChecklist .unlock-step").count()>=2,"module and exam rows");
+  assert.ok(await page.locator("#lockChecklist .unlock-progress-logo").evaluate(el=>el.complete&&el.naturalWidth>0),"company logo loads");
+  await page.screenshot({path:path.join(screenshots,`unlock-${width}-${lang}-sheet.png`),fullPage:true});
+  await page.locator("#lockChecklist .unlock-step-action").first().click();
+  await page.locator("#trainingPage.section.active").waitFor({timeout:15000});
+  await page.locator('[data-course="CORE-BRAND"] .training3-course-content').waitFor({timeout:15000});
+  assert.match(await page.locator(".training3-daily-note").textContent(),lang==="zh"?/不计入解锁/:/does not count toward unlocking/);
+  assert.equal(await page.locator("#trainingPage .unlock-progress-count").textContent(),"0/7");
+  const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
+  assert.ok(size.scroll<=size.view+1,"TRAINEE unlock horizontal overflow "+width+"/"+lang+" "+JSON.stringify(size));
+  await page.screenshot({path:path.join(screenshots,`unlock-${width}-${lang}-course.png`),fullPage:true});
+  assert.deepEqual(errors,[],"TRAINEE page errors "+width+" "+lang);
+  await ctx.close();
+ }
+ dashboard.agent.status="active";
+ dashboard.phase1.can_sell=true;
+ dashboard.phase1.training_pending=false;
+ dashboard.training=[];
  const sdkContext=await browser.newContext();
  const sdkPage=await sdkContext.newPage();
  await sdkPage.goto(origin);

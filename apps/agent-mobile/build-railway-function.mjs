@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
+import {createHash} from "node:crypto";
 import subsetFont from "subset-font";
 import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","ai-ui.js","ai-chat.js","favicon.svg"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
@@ -81,7 +82,7 @@ function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type
 export default {fetch(req){
   const u=new URL(req.url);
   if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
-  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.6.0-motion",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
+  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.6.1-motion",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
   const compressed=/\\bgzip\\b/.test(req.headers.get("accept-encoding")||"");
   const body=bodyFor(u.pathname,compressed);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
@@ -95,3 +96,4 @@ const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const jsBytes=jsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 if(jsBytes>150*1024)throw new Error(`JS gzip budget exceeded: ${jsBytes} bytes`);
 console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; JS gzip ${jsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
+console.log("BUNDLE_SHA256 "+createHash("sha256").update(output,"utf8").digest("hex"));

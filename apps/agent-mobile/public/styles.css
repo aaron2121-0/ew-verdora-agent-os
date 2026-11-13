@@ -244,3 +244,55 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 :root[data-theme="dark"] .task-row.done .task-copy strong,
 :root[data-theme="dark"] .task-row.done .task-copy small{color:#46564E}
 @media(max-width:380px){.nav-label{font-size:12px}.top-actions .btn{font-size:12px}}
+
+/* Owner-approved Agent unlock transparency (mobile-first, 360px safe) */
+.unlock-details{margin:12px 0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface)}
+.unlock-details>summary{list-style:none;cursor:pointer;padding:13px 15px;color:var(--verdora-900);font-size:.78rem;font-weight:850;display:flex;align-items:center;justify-content:space-between;min-height:48px}
+.unlock-details>summary::-webkit-details-marker{display:none}
+.unlock-details>summary::after{content:"⌄";font-size:1.05rem;transition:transform .2s}
+.unlock-details[open]>summary::after{transform:rotate(180deg)}
+.unlock-details>#lockChecklist{padding:0 10px 12px}
+.unlock-progress-card{width:100%;min-width:0;margin:10px 0 14px;padding:13px 12px;border-radius:19px;background:var(--surface);border:1px solid rgba(23,63,53,.14);box-shadow:0 5px 18px rgba(23,63,53,.035)}
+.unlock-details .unlock-progress-card{margin:0;box-shadow:none;border-radius:12px;padding:11px 9px}
+.unlock-progress-head{display:flex;gap:10px;align-items:center;min-width:0}
+.unlock-progress-logo{display:block;flex:none;width:40px;height:40px;object-fit:contain;background:#fff;border-radius:50%;border:1px solid rgba(23,63,53,.08)}
+.unlock-progress-label{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.unlock-progress-label strong{font-size:.86rem;font-weight:900;color:var(--verdora-900)}
+.unlock-progress-label small{font-size:.61rem;color:var(--text-650);line-height:1.35}
+.unlock-progress-count{flex:none;padding:6px 9px;border-radius:12px;background:#eaf2ed;color:var(--verdora-900);font-size:.85rem;font-weight:900;font-variant-numeric:tabular-nums}
+.unlock-progress-track{height:6px;background:#e5ece7;border-radius:10px;margin:12px 1px 9px;overflow:hidden}
+.unlock-progress-fill{height:100%;display:block;background:linear-gradient(90deg,#40856a,#85b95b);border-radius:inherit;transition:width .2s}
+.unlock-progress-steps{display:grid;gap:0}
+.unlock-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(23,63,53,.09);min-width:0}
+.unlock-step:first-child{border-top:0}
+.unlock-step-number{width:20px;flex:none;color:var(--verdora-800);font-size:1rem;font-weight:800;line-height:1.45}
+.unlock-step-content{flex:1;min-width:0}
+.unlock-step-heading{display:flex;gap:8px;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.unlock-step-heading strong{font-size:.74rem;color:var(--text-950);font-weight:850}
+.unlock-step-status{font-size:.65rem;font-weight:850;color:var(--text-650);line-height:1.45}
+.unlock-step-status-done{color:var(--success)}
+.unlock-step-status-ready{color:var(--verdora-700)}
+.unlock-step-status-pending{color:var(--warning)}
+.unlock-step-hint{display:block;margin-top:3px;color:var(--text-650);font-size:.65rem;line-height:1.5;overflow-wrap:anywhere}
+.unlock-step-action{margin-top:8px;display:inline-flex;align-items:center;justify-content:center;min-height:40px;max-width:100%;padding:8px 11px;border:1px solid rgba(23,63,53,.2);border-radius:11px;background:#eff6f0;color:var(--verdora-900);font-size:.72rem;font-weight:850;white-space:normal;text-align:center;cursor:pointer}
+.unlock-step-action:active{transform:scale(.98)}
+.training3-daily-note{display:block;font-size:.65rem;line-height:1.5;color:rgba(255,255,255,.87);margin-top:9px}
+.training3-course-item{min-width:0;border-top:1px solid #f0f0eb;scroll-margin-top:90px;outline-offset:3px}
+.training3-course-item:first-child{border-top:0}
+.training3-course-item .training3-module{border:0}
+.training3-course-content{padding:10px 11px 12px;margin-bottom:8px;border-radius:12px;background:#f4f8f5;border:1px solid #e4ede5;color:var(--text-800)}
+.training3-course-section{display:block;font-size:.71rem;color:var(--verdora-900);margin:4px 0 6px}
+.training3-course-list{margin:0 0 10px;padding-left:19px;font-size:.72rem;line-height:1.55}
+.training3-course-list li{margin-bottom:5px;overflow-wrap:anywhere}
+:root[data-theme="dark"] .unlock-progress-card,:root[data-theme="dark"] .unlock-details{background:#21332d;border-color:#476057}
+:root[data-theme="dark"] .unlock-progress-label strong,:root[data-theme="dark"] .unlock-details>summary,:root[data-theme="dark"] .unlock-step-heading strong,:root[data-theme="dark"] .training3-course-section{color:#e0f0e7}
+:root[data-theme="dark"] .unlock-progress-label small,:root[data-theme="dark"] .unlock-step-hint,:root[data-theme="dark"] .unlock-step-status{color:#b8cdc1}
+:root[data-theme="dark"] .unlock-step-status-done{color:#8fd6a6}
+:root[data-theme="dark"] .unlock-step-status-pending{color:#f1cf85}
+:root[data-theme="dark"] .unlock-step-action{background:#304f3e;border-color:#678a76;color:#e5f7ea}
+:root[data-theme="dark"] .unlock-progress-count{background:#375743;color:#effbeb}
+:root[data-theme="dark"] .training3-course-content{background:#273e34;border-color:#4f6b5a;color:#e8f1ea}
+@media(max-width:380px){.unlock-progress-card{padding:11px 9px}.unlock-step-heading{gap:3px}.unlock-step-action{width:100%}.unlock-progress-label small{font-size:.59rem}}
+@media(prefers-reduced-motion:reduce){.unlock-step-action,.unlock-progress-fill{transition:none}}
+/* Keep TRAINEE unlock sheet above interactive AI orb and its dismissible tip. */
+#lockSheet{z-index:100}

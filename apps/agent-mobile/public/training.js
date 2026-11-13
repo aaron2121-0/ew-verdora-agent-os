@@ -1,5 +1,6 @@
 import {clear,element,progress,toast,vibrate,setButtonLoading,stagger} from "./components.js";
 import {createIcon} from "./icons.js";
+import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 
 const SKILLS=["LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"];
 const skillKey=s=>({
@@ -14,7 +15,7 @@ function moduleStatus(value,tr){
   return key?tr(key):String(value||"—");
 }
 
-export function createTrainingUI({getData,getLang,tr,api}){
+export function createTrainingUI({getData,getLang,tr,api,onSummary}){
   let host=null;
   let today=null;
   let exam=null;
@@ -26,6 +27,7 @@ export function createTrainingUI({getData,getLang,tr,api}){
   let timer=null;
   let clockOffset=0;
   let timeoutSubmitting=false;
+  let expandedModule=null;
 
   function lang(en,zh){return getLang()==="zh"?zh:en}
   function stopTimer(){if(timer){clearInterval(timer);timer=null}}
@@ -44,6 +46,7 @@ export function createTrainingUI({getData,getLang,tr,api}){
     try{
       const j=await call({action:"today",start:false});
       today=j.today||null;
+      onSummary?.(today);
       feedback=null;result=null;
     }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
     finally{loading=false;render()}
@@ -54,7 +57,7 @@ export function createTrainingUI({getData,getLang,tr,api}){
     loading=true;render();
     try{
       const j=await call({action:"today",start:true});
-      today=j.today||null;feedback=null;result=null;
+      today=j.today||null;onSummary?.(today);feedback=null;result=null;
       vibrate(8);
     }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
     finally{loading=false;render()}
@@ -78,7 +81,7 @@ export function createTrainingUI({getData,getLang,tr,api}){
       try{
         const j=await call({action:"finish"});
         result=j.result||null;
-        const s=await call({action:"today",start:false});today=s.today||today;
+        const s=await call({action:"today",start:false});today=s.today||today;onSummary?.(today);
       }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
       finally{loading=false;feedback=null;render()}
       return;
@@ -147,7 +150,7 @@ export function createTrainingUI({getData,getLang,tr,api}){
     card.append(top,streak);
     const meta=element("div",{className:"training3-meta"});
     meta.append(element("span",{text:tr("dailyPassRule")}),element("span",{text:tr("serverTimed45")}));
-    card.append(meta);
+    card.append(meta,element("small",{className:"training3-daily-note",text:tr("unlockDailyNote")}));
     return card;
   }
 
@@ -169,6 +172,16 @@ export function createTrainingUI({getData,getLang,tr,api}){
     card.append(grid);return card;
   }
 
+  function expandModule(code){
+    expandedModule=expandedModule===code?null:code;
+    render();
+    if(expandedModule)requestAnimationFrame(()=>{
+      const node=[...host.querySelectorAll("[data-course]")].find(x=>x.dataset.course===code);
+      node?.scrollIntoView({behavior:"smooth",block:"start"});
+      node?.focus({preventScroll:true});
+    });
+  }
+
   function modules(){
     const card=element("section",{className:"training3-card"});
     const head=element("div",{className:"training3-section-head"});
@@ -177,19 +190,41 @@ export function createTrainingUI({getData,getLang,tr,api}){
     const list=element("div",{className:"training3-modules"});
     const rows=getData()?.training||[];
     rows.forEach(x=>{
-      const mod=x.training_modules||{},r=element("div",{className:"training3-module"});
+      const mod=x.training_modules||{},code=String(mod.code||"");
+      const item=element("article",{className:"training3-course-item",attrs:{"data-course":code,tabindex:"-1"}});
+      const r=element("div",{className:"training3-module"});
       const left=element("div");
       left.append(element("strong",{text:getLang()==="zh"?mod.title_zh:mod.title_en}),
         element("small",{text:moduleStatus(x.status,tr)+" · "+Number(x.best_score||0)+"/100"}));
       r.append(left);
       if(x.status==="passed")r.append(element("span",{className:"badge badge-success",text:tr("passed")}));
       else{
-        const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button"}});
-        b.append(createIcon("graduationCap",{size:16}),element("span",{text:tr("practice")}));
-        b.addEventListener("click",()=>api.openPractice(mod.code));
+        const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button","aria-expanded":expandedModule===code?"true":"false"}});
+        b.append(createIcon("graduationCap",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
+        b.addEventListener("click",()=>expandModule(code));
         r.append(b);
       }
-      list.append(r);
+      item.append(r);
+      if(expandedModule===code){
+        const detail=element("div",{className:"training3-course-content"});
+        const content=(getLang()==="zh"?mod.content_zh:mod.content_en)||{};
+        for(const [key,title] of [["lesson","unlockCourseContent"],["must_not","unlockCourseMustNot"]]){
+          const values=Array.isArray(content?.[key])?content[key]:[];
+          if(!values.length)continue;
+          detail.append(element("strong",{className:"training3-course-section",text:tr(title)}));
+          const ul=element("ul",{className:"training3-course-list"});
+          values.forEach(line=>ul.append(element("li",{text:String(line)})));
+          detail.append(ul);
+        }
+        if(x.status!=="passed"){
+          const practice=element("button",{className:"btn btn-text btn-small",attrs:{type:"button"}});
+          practice.append(createIcon("graduationCap",{size:16}),element("span",{text:tr("practice")}));
+          practice.addEventListener("click",()=>api.openPractice(code));
+          detail.append(practice);
+        }
+        item.append(detail);
+      }
+      list.append(item);
     });
     card.append(list);return card;
   }
@@ -197,7 +232,7 @@ export function createTrainingUI({getData,getLang,tr,api}){
   function examCard(){
     const remaining=Number(today?.remaining_required??(getData()?.training||[]).filter(x=>x.status!=="passed").length);
     const passed=Boolean(today?.exam_passed);
-    const card=element("section",{className:"training3-card exam-entry"});
+    const card=element("section",{className:"training3-card exam-entry",attrs:{id:"training-exam-entry"}});
     const top=element("div",{className:"exam-entry-top"});
     const ico=element("span");ico.append(createIcon("trophy",{size:22}));
     const copy=element("div");
@@ -286,7 +321,15 @@ export function createTrainingUI({getData,getLang,tr,api}){
 
   function home(){
     const page=element("div",{className:"page-shell training3-shell"});
-    page.append(header(),dailyHero(),skills());
+    page.append(header());
+    const state=getUnlockProgress(getData(),today);
+    if(state.agentStatus==="trainee"||state.agentStatus==="recovery"||state.showRestriction||state.completed<state.total){
+      page.append(buildUnlockChecklist({data:getData(),summary:today,tr,
+        onCourse:code=>expandModule(code),
+        onExam:()=>document.getElementById("training-exam-entry")?.scrollIntoView({behavior:"smooth",block:"center"})
+      }));
+    }
+    page.append(dailyHero(),skills());
     if(today?.status==="completed"){
       const done=element("section",{className:"training3-daily-done"});
       done.append(createIcon(today?.passed?"circleCheck":"target",{size:22}),
@@ -323,11 +366,17 @@ export function createTrainingUI({getData,getLang,tr,api}){
     stagger(host.querySelectorAll(".training3-card,.skill-bar-row,.training3-module"),{step:25,max:10});
   }
 
-  async function open(target){
+  async function open(target,{focusModule=null,focusExam=false}={}){
     host=target||host;
+    if(focusModule)expandedModule=focusModule;
     render();
     if(!today)await loadSummary();
     else render();
+    if(focusModule||focusExam)requestAnimationFrame(()=>{
+      const node=focusModule?[...host.querySelectorAll("[data-course]")].find(x=>x.dataset.course===focusModule):host.querySelector("#training-exam-entry");
+      node?.scrollIntoView({behavior:"smooth",block:"start"});
+      node?.focus?.({preventScroll:true});
+    });
   }
   function onLanguageChange(){render()}
   function onForeground(){
