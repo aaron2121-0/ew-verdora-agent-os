@@ -33,6 +33,8 @@ jobs:
           node-version: "22"
 
       - name: Enforce Phase 4 file boundary
+        # This ownership check is specific to the backend branch; UI-motion PRs must still run the remaining Phase 4 security tests.
+        if: github.head_ref == 'phase4-backend' || github.ref_name == 'phase4-backend'
         run: |
           set -euo pipefail
           git fetch origin main

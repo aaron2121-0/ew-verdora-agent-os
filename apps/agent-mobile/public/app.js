@@ -3,16 +3,20 @@ import {createIcon} from "./icons.js";
 import {setupBottomSheet,setButtonLoading,toast,vibrate} from "./components.js";
 import {createPhase1UI} from "./phase1.js";
 import {clearOrderDraft,prepareOrderDraftForUser} from "./draft.js";
+import {initMotion} from "./motion.js";
+import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile,aiStart,aiEnd} from "./ai-ui.js";
+import {createAIChat} from "./ai-chat.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
 let scenario="",activeModule="";
-let refreshBusy=null;
+let refreshBusy=null,aiChat=null,aiProfile=null;
 const $=id=>document.getElementById(id);
 const tr=(key,vars={})=>translate(lang,key,vars);
 
 function friendlyError(code){
   const c=String(code||"").toLowerCase();
+  if(c.includes("daily_limit"))return tr("aiLimit");
   if(c.includes("invalid_session")||c.includes("authentication_required")||c.includes("jwt"))return tr("errorSession");
   if(c.includes("selling_access_locked")||c.includes("quote_access_locked"))return tr("errorQuoteLocked");
   if(c.includes("lead_not_found"))return tr("errorLeadNotFound");
@@ -45,6 +49,9 @@ function applyI18n(){
     langBtn.append(createIcon("languages",{size:18}),document.createTextNode(tr("languageName")));
   }
   UI?.onLanguageChange();
+  refreshAIOrb(tr);
+  const themeBtn=$("themeToggle");
+  if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
 
 function view(name){
@@ -54,6 +61,7 @@ function view(name){
   $("nav").classList.toggle("hidden",name!=="app");
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
+  $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
 }
 
 async function fn(path,body){
@@ -107,6 +115,12 @@ async function refresh(){
       });
       await UI.init();
     }else UI.renderAll();
+    if(!aiChat){
+      const aiCall=body=>fn("agent-ai",body);
+      aiChat=createAIChat({api:aiCall,tr,getData:()=>D,getLang:()=>lang});
+      aiProfile=createAIProfile({api:aiCall,tr,getLang:()=>lang});
+      initAIOrb({onClick:()=>aiChat?.open(),tr,getData:()=>D});
+    }
     return result;
   })();
   try{return await refreshBusy}finally{refreshBusy=null}
@@ -120,11 +134,23 @@ async function openPractice(code){
   $("roleAnswer").value="";
   $("scoreRole").classList.remove("hidden");
   $("roleResult").classList.remove("roleplay-practice-result");
+  aiStart();
   try{
     const j=await fn("agent-ai",{action:"roleplay_generate",weakness:activeModule});
     scenario=j.scenario||"";
     $("scenario").textContent=scenario;
   }catch(e){$("scenario").textContent=friendlyError(e.message)}
+  finally{aiEnd()}
+}
+
+function setupAppearance(){
+  const stored=localStorage.getItem("ew_theme");
+  const apply=()=>{const theme=localStorage.getItem("ew_theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=theme;const b=$("themeToggle");if(b){b.textContent=theme==="dark"?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");b.setAttribute("aria-label",tr("themeToggle"))}};
+  if(stored&&stored!=="light"&&stored!=="dark")localStorage.removeItem("ew_theme");
+  apply();matchMedia("(prefers-color-scheme: light)").addEventListener?.("change",()=>{if(!localStorage.getItem("ew_theme"))apply()});
+  $("themeToggle")?.addEventListener("click",()=>{localStorage.setItem("ew_theme",document.documentElement.dataset.theme==="dark"?"light":"dark");apply()});
+  $("aiProfileOpen")?.addEventListener("click",()=>aiProfile?.open());
+  document.addEventListener("ew-open-ai",()=>aiChat?.open());
 }
 
 function setupHandlers(){
@@ -159,6 +185,7 @@ function setupHandlers(){
   $("scoreRole").addEventListener("click",async()=>{
     const out=$("roleResult");out.classList.remove("hidden");out.textContent=tr("loading");
     setButtonLoading($("scoreRole"),true,tr("loading"));
+    aiStart();
     try{
       const j=await fn("agent-ai",{action:"roleplay_score",scenario,answer:$("roleAnswer").value,module_code:activeModule});
       const score=j.score||{};
@@ -188,12 +215,13 @@ function setupHandlers(){
       vibrate(12);
       await refresh();
     }catch(e){out.textContent=friendlyError(e.message)}
-    finally{setButtonLoading($("scoreRole"),false,tr("submit"))}
+    finally{aiEnd();setButtonLoading($("scoreRole"),false,tr("submit"))}
   });
   $("logout").addEventListener("click",async()=>{
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);
     UI?.training?.destroy?.();
+    aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
   });
   const role=setupBottomSheet($("roleSheet"));
@@ -209,7 +237,7 @@ async function waitForSupabase(){
   if(window.supabase)return;
   await new Promise((resolve,reject)=>{
     const script=document.createElement("script");
-    script.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.src="/vendor/supabase-2.119.0.js";
     script.async=true;script.crossOrigin="anonymous";
     const timer=setTimeout(()=>{script.remove();reject(new Error("supabase_sdk_unavailable"))},7000);
     script.addEventListener("load",()=>{clearTimeout(timer);resolve()},{once:true});
@@ -220,6 +248,8 @@ async function waitForSupabase(){
 }
 
 async function bootstrap(){
+  initMotion();
+  setupAppearance();
   applyI18n();
   setupHandlers();
   try{

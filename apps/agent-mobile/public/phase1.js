@@ -1,3 +1,4 @@
+import {createAICard,prioritizeCards,aiStart,aiEnd} from "./ai-ui.js";
 import {clear,element,emptyState,countTo,stagger,toast,vibrate,setupBottomSheet,setButtonLoading,progress} from "./components.js";
 import {createIcon} from "./icons.js";
 import {greetingPeriod,kuchingDateKey,formatKuchingDateTime} from "./date.js";
@@ -60,6 +61,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let detailController=null;
   let generatedKit=null;
   let generatedKitCode=null;
+  let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let lastAllDone=false;
   let customerSegment="all";
 
@@ -79,7 +81,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const key=categoryKey(value);
     return key?tr(key):String(value||"—");
   }
-
 
   function segmentsForLead(lead){
     if(Array.isArray(lead?.customer_segments))return lead.customer_segments;
@@ -373,13 +374,42 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     moneyCard.append(tierWrap);
     page.append(moneyCard);
 
+    const daily=document.createElement("div");daily.id="aiDailyBrief";daily.dataset.priorityCard="brief";page.append(daily);
+    if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
+    else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    page.append(renderTodayTasks());
-    page.append(renderDueFollowups());
-    page.append(renderCampaigns());
+    const priorities=element("div",{className:"ai-priority-list"});
+    for(const [name,card] of [["training",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
+      card.dataset.priorityCard=name;
+      const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
+      card.prepend(why);priorities.append(card);
+    }
+    page.append(priorities);
     host.append(page);
+    prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
     celebrateIfNeeded();
+  }
+
+  function renderDailyBrief(response){
+    const g=response?.greeting||{};
+    const card=createAICard({title:tr("aiDailyTitle"),text:g.text||"",provider:g.provider||"template",cached:!!response.cached,tr}).card;
+    if(g.focus){
+      const focus=Array.isArray(g.focus)?g.focus.join(" · "):typeof g.focus==="string"?g.focus:JSON.stringify(g.focus);
+      card.append(element("p",{className:"ai-priority-why",text:tr("aiDailyFocus")+": "+focus}));
+    }
+    const due=(getData()?.phase1?.due_followups||[]).length;
+    const action=element("button",{className:"btn btn-primary btn-small",text:due?tr("aiDailyFollowup"):tr("aiDailyViewTasks"),attrs:{type:"button"}});
+    action.addEventListener("click",()=>navigate("today",{scrollTo:due?"dueFollowups":null}));
+    card.append(action);return card;
+  }
+
+  async function loadDailyGreeting(){
+    if(aiGreetingLoading||aiGreeting)return;
+    aiGreetingLoading=true;aiStart();let aiOk=false;
+    try{aiGreeting=await api.ai({action:"daily_greeting"});aiOk=true;const host=document.getElementById("aiDailyBrief");if(host){host.replaceChildren();host.append(renderDailyBrief(aiGreeting))}}
+    catch{document.getElementById("aiDailyBrief")?.replaceChildren(element("p",{className:"ai-chat-thinking",text:tr("aiDailyUnavailable")}))}
+    finally{aiGreetingLoading=false;aiEnd(aiOk)}
   }
 
   function renderQuickActions(){
@@ -520,7 +550,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
     const allRows=getData()?.phase1?.recent_leads||[];
-    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));host.append(page);return}
+    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);host.append(page);return}
 
     const filters=element("div",{className:"follow-actions",attrs:{"data-phase4-hook":"customer-segments"}});
     [
@@ -555,6 +585,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       const foot=element("div",{className:"customer-card-foot"});
       foot.append(element("span",{text:tr("customerBudgetLabel")}),element("strong",{text:money(lead.budget)}));
       card.append(top,pipeline,foot);
+      if(lead.lead_score!==undefined&&lead.lead_score!==null){
+        const score=Math.max(0,Math.min(100,Number(lead.lead_score)||0));
+        const level=score>=70?"aiChanceHigh":score>=40?"aiChanceMedium":"aiChanceLow";
+        card.append(element("span",{className:"badge",text:tr(level)}));
+        if(intelligenceReason(lead))card.append(element("p",{className:"ai-priority-why",text:intelligenceReason(lead)}));
+      }
+      if(lead.best_followup_time)card.append(element("p",{className:"ai-priority-why",text:tr("aiBestFollowup")+": "+formatKuchingDateTime(lead.best_followup_time,getLang())}));
+      if(lead.next_best_action)card.append(element("p",{className:"ai-priority-why",text:tr("aiNextAction")+": "+nextBestActionLabel(lead.next_best_action)}));
       card.addEventListener("click",()=>openLeadDetail(lead));
       list.append(card);
     });
@@ -639,6 +677,34 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       loss.append(select,save);body.append(loss);
     }
 
+    const coach=element("section",{className:"ai-coach-panel"});
+    coach.append(element("h3",{text:tr("aiCoachTitle")}));
+    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
+    input.placeholder=tr("aiCoachInput");coach.append(input);
+    const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
+    coach.append(ask);
+    ask.addEventListener("click",async()=>{
+      const customerMessage=input.value.trim();if(!customerMessage)return;
+      ask.disabled=true;aiStart();let coachOk=false;
+      const waiting=element("p",{className:"ai-chat-thinking",text:tr("aiThinking2")});coach.append(waiting);
+      try{
+        const j=await api.ai({action:"coach",customer_message:customerMessage});coachOk=true;
+        waiting.remove();
+        const suggestion=typeof j.suggestion==="string"?j.suggestion:JSON.stringify(j.suggestion||{});
+        const actions=element("div",{className:"ai-message-actions"});
+        for(const [label,signal] of [[tr("aiHelpful"),"thumbs_up"],[tr("aiNotHelpful"),"thumbs_down"],[tr("copyText"),"copied"]]){
+          const b=element("button",{className:"btn btn-secondary btn-small",text:label,attrs:{type:"button"}});
+          b.addEventListener("click",async()=>{
+            if(signal==="copied")try{await navigator.clipboard.writeText(suggestion)}catch{}
+            api.ai({action:"feedback",ai_action:"coach",output_ref:null,signal}).catch(()=>{});
+          });actions.append(b);
+        }
+        const old=coach.querySelector(".ai-output-card");old?.remove();
+        const out=createAICard({title:tr("aiCoachTitle"),text:suggestion,provider:j.provider||"template",cached:false,tr,actions});coach.append(out.card);
+      }catch(e){waiting.textContent=api.friendlyError(e?.message)}
+      finally{ask.disabled=false;aiEnd(coachOk)}
+    });
+    body.append(coach);
     sheet.classList.remove("hidden");
   }
 
@@ -680,14 +746,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         setButtonLoading(gen,true,tr("loading"));
         try{
           const j=await api.ai({action:"daily_content",kit_code:k.code,channel:chosen});
-          generatedKit=j.content||{};generatedKitCode=k.code;
+          generatedKit=j.content||{};generatedKitCode=k.code;generatedProvider=j.provider||"template";
           renderSelling();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
         finally{setButtonLoading(gen,false,tr("generateTodayCopy"))}
       });
       card.append(gen);
       if(generatedKit&&generatedKitCode===k.code){
-        const out=element("div",{className:"generated-copy"});
+        const out=element("div",{className:"generated-copy "+(generatedProvider==="gemini"?"ai-output-card ai-live":"ai-output-card ai-template")});
         const body=[
           tr("generatedFor",{channel:chosen}),
           generatedKit.post_copy||"",
@@ -707,7 +773,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
           window.open("https://wa.me/?text="+encodeURIComponent(body),"_blank","noopener,noreferrer");
           markLocalTask("kit",true);vibrate(10);
         });
-        actions.append(copyBtn,wa);out.append(actions);card.append(out);
+        const feedback=(signal)=>{api.ai({action:"feedback",ai_action:"daily_content",output_ref:null,signal}).catch(()=>{})};
+        const up=iconButton("check",tr("aiHelpful"),"btn btn-secondary btn-small");up.addEventListener("click",()=>feedback("thumbs_up"));
+        const down=element("button",{className:"btn btn-secondary btn-small",text:tr("aiNotHelpful")});down.type="button";down.addEventListener("click",()=>feedback("thumbs_down"));
+        copyBtn.addEventListener("click",()=>feedback("copied"));
+        wa.addEventListener("click",()=>feedback("sent_whatsapp"));
+        actions.append(copyBtn,wa,up,down);out.append(actions);card.append(out);
       }
       list.append(card);
     });

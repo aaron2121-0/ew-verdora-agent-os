@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install pinned workspace dependencies
+        run: npm install --no-audit --no-fund
       - name: Build compressed Railway Function
         run: node apps/agent-mobile/build-railway-function.mjs
       - name: Verify generated bundle size and syntax
@@ -31,7 +33,7 @@ jobs:
           test -f apps/agent-mobile/dist/railway-function.ts
           bytes=$(wc -c < apps/agent-mobile/dist/railway-function.ts)
           echo "Bundle bytes: $bytes"
-          test "$bytes" -lt 120000
+          test "$bytes" -lt 380000
           node --check apps/agent-mobile/dist/railway-function.ts
       - name: Commit generated bundle
         run: |

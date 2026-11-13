@@ -1,0 +1,48 @@
+name: Agent UI Motion Validation
+on:
+  push:
+    branches: [ui-motion]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  agent-ui-motion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install workspace dependencies
+        run: npm install --no-audit --no-fund
+      - name: Agent tests and bundled asset budgets
+        run: npm run check --workspace @ew-verdora/agent-mobile
+      - name: Repository TypeScript checks and unit tests
+        run: npm run check
+      - name: Install headless browser test runner
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1 lighthouse@12.8.2 chrome-launcher@1.2.0
+          echo "CHROME_PATH=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" >> "$GITHUB_ENV"
+      - name: Install CJK system fallback fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+          fc-cache -f
+      - name: Run mocked browser E2E and capture responsive screenshots
+        run: node apps/agent-mobile/tests/e2e-motion.mjs
+      - name: Upload browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-motion-responsive
+          path: apps/agent-mobile/artifacts/ui-motion/
+          if-no-files-found: ignore
+      - name: Validate no prohibited dynamic HTML sinks in AI modules
+        run: |
+          if grep -En 'innerHTML|insertAdjacentHTML|outerHTML|document.write' apps/agent-mobile/public/{motion,ai-ui,ai-chat}.js; then
+            echo "Prohibited dynamic HTML API detected"
+            exit 1
+          fi

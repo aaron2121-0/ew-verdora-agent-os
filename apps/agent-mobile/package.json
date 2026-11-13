@@ -4,7 +4,13 @@
   "type": "module",
   "scripts": {
     "start": "bun run server.ts",
-    "check": "node --test tests/phase0-security.test.mjs && node build-railway-function.mjs",
+    "check": "node --test tests/phase0-security.test.mjs tests/ai-motion.test.mjs && node build-railway-function.mjs",
     "build:function": "node build-railway-function.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.0",
+    "@fontsource/noto-sans-sc": "5.3.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "subset-font": "2.9.0"
   }
 }
