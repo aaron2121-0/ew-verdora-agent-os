@@ -59,13 +59,19 @@ async function requiredReadState(admin,agentId,moduleCode){
   if(moduleError||!module?.handbook_section)throw new Error("handbook_not_ready");
   // Needs the separately Owner-reviewed handbook metadata migration.
   // Fail closed: legacy seed entries or unapproved cards do NOT count.
+  const section=String(module.handbook_section);
+  if(!["story","product_line","service_rule","script"].includes(section))
+    throw new Error("handbook_not_ready");
   const {data:cards,error:cardsError}=await admin.from("company_knowledge")
-    .select("code,sort").eq("section","product_line").eq("kind","card")
-    .eq("product_line",module.handbook_section)
+    .select("id,code,kind,sort").eq("section",section)
     .eq("active",true).eq("visible_to_agent",true)
-    .eq("needs_owner_confirm",false).order("sort",{ascending:true});
+    .eq("needs_owner_confirm",false).order("sort",{ascending:true}).limit(200);
   if(cardsError)throw new Error("handbook_not_ready");
-  const required=[...new Set((cards||[]).map(x=>String(x.code||"").trim()).filter(Boolean))];
+  const approved=(cards||[]).filter(x=>section==="product_line"?x.kind==="card":
+    section==="script"?["script","seed"].includes(x.kind):x.kind==="seed");
+  // Phase-A Owner-reviewed story/rules entries have a stable UUID but no
+  // code; use the same deterministic surrogate on client and server.
+  const required=[...new Set(approved.map(x=>String(x.code||("SEED-"+x.id)).trim()).filter(Boolean))];
   if(!required.length)throw new Error("handbook_not_ready");
   const {data:reads,error:readError}=await admin.from("training_module_reads")
     .select("card_code").eq("agent_id",agentId).eq("module_code",moduleCode)
