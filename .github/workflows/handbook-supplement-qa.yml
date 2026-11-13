@@ -1,0 +1,60 @@
+name: Product Handbook Supplement QA
+
+on:
+  push:
+    branches: [feat/handbook-training-import-supplement-20261113]
+  pull_request:
+    branches: [feat/product-handbook-phase-a-20261113, main]
+
+permissions:
+  contents: read
+
+jobs:
+  handbook-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: handbook_test_only
+          POSTGRES_DB: handbook_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d handbook_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://postgres:handbook_test_only@localhost:5432/handbook_test
+      HANDBOOK_TEST_ALLOW_SQL: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm install --ignore-scripts
+      - name: Core and validator tests
+        run: |
+          npm run check
+          node --test apps/agent-mobile/tests/handbook-content.test.mjs
+      - name: Syntax checks
+        run: |
+          node --check apps/agent-mobile/public/training.js
+          node --check apps/agent-mobile/public/i18n.js
+          node --check apps/agent-mobile/public/icons.js
+          node --check scripts/handbook-import-integration-test.mjs
+          node --input-type=module --check < apps/owner-mobile/index.ts
+      - name: Install Postgres client
+        run: command -v psql || (sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client)
+      - name: Apply handbook migrations to disposable CI Postgres only
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -q -f scripts/handbook-test-bootstrap.sql
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261113145300_product_handbook.sql
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261113145900_product_handbook_faq_enum.sql
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261113150100_handbook_training_links.sql
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261113150200_handbook_import_workflow.sql
+      - name: Real reviewed JSON end-to-end transactional QA (ROLLBACK)
+        run: node scripts/handbook-import-integration-test.mjs

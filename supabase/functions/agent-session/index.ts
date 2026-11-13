@@ -101,6 +101,26 @@ Deno.serve(async (req) => {
   if (!agent) return reply({ ok: true, needs_registration: true, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
+
+  // Handbook is always server-filtered; unpublished Grok imports never reach Agents.
+  if (action === "handbook") {
+    const section = String(body.section || "");
+    const productLine = String(body.product_line || "");
+    const sections = ["story","product_line","service_rule","delivery","script","announcement","faq"];
+    const lines = ["condolence","opening","bouquet","wedding_event","wholesale"];
+    if(!section&&!productLine) return reply({error:"handbook_filter_required"},400);
+    if(section&&!sections.includes(section)) return reply({error:"invalid_handbook_section"},400);
+    if(productLine&&!lines.includes(productLine)) return reply({error:"invalid_product_line"},400);
+    let query=admin.from("company_knowledge")
+      .select("id,code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint")
+      .eq("active",true).eq("visible_to_agent",true).eq("needs_owner_confirm",false);
+    if(section)query=query.eq("section",section);
+    if(productLine)query=query.eq("product_line",productLine);
+    const {data,error}=await query.order("sort",{ascending:true}).limit(200);
+    if(error)return reply({error:"handbook_unavailable"},400);
+    return reply({ok:true,section:section||null,product_line:productLine||null,entries:data||[]});
+  }
+
   if (action === "phase1_overview") {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || "")) ? String(body.date) : kuchingToday();
     const [overviewRes,intelRes] = await Promise.all([
@@ -230,7 +250,7 @@ Deno.serve(async (req) => {
   const progressReq = admin.rpc("agent_today_progress_internal", { p_agent_id: agent.id, p_date: today });
   const campaignsReq = admin.rpc("agent_campaigns_internal", { p_agent_id: agent.id });
   const trainingReq = admin.from("training_progress")
-    .select("id,status,attempts,best_score,completed_at,training_modules(code,title_en,title_zh,category,pass_score,content_en,content_zh)")
+    .select("id,status,attempts,best_score,completed_at,training_modules(code,title_en,title_zh,category,pass_score,content_en,content_zh,handbook_section)")
     .eq("agent_id", agent.id);
   const kitsReq = admin.from("selling_kits")
     .select("code,category,title_en,title_zh,content_en,content_zh,target_personas,recommended_channels")
