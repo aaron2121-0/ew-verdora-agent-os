@@ -117,12 +117,9 @@ Deno.serve(async req=>{
       if(!attempt){
         // The bank remains private. CORE-BRAND uses tagged questions with one
         // of the existing six skill codes, never a new skill_code.
-        let query=admin.schema("private").from("training_questions")
-          .select("id,code,skill_code")
-          .eq("active",true).eq("is_test",false).eq("bank_type","daily");
-        if(code==="CORE-BRAND")query=query.like("code","HB-CORE-BRAND-%");
-        else query=query.eq("skill_code",code);
-        const {data:pool,error:poolError}=await query.limit(250);
+        const {data:pool,error:poolError}=await admin.rpc("agent_module_quiz_pool_internal",{
+          p_agent_id:agent.id,p_module_code:code
+        });
         if(poolError)throw poolError;
         const selected=shuffle(pool||[]).slice(0,3);
         if(selected.length<3)return reply({error:"module_question_bank_not_ready"},400);
@@ -150,8 +147,9 @@ Deno.serve(async req=>{
       if(itemsError)throw itemsError;
       const first=(items||[]).find(x=>!x.answered_at);
       if(!first)return reply({error:"quiz_needs_recovery"},409);
-      const {data:q,error:qError}=await admin.schema("private").from("training_questions")
-        .select("id,question_en,question_zh,options_en,options_zh").eq("id",first.question_id).single();
+      const {data:q,error:qError}=await admin.rpc("agent_module_quiz_question_internal",{
+        p_agent_id:agent.id,p_question_id:first.question_id
+      });
       if(qError)throw qError;
       return reply({ok:true,quiz:{attempt_id:attempt.id,module_code:code,completed:false,question:questionForClient(q,first)}});
     }
@@ -173,8 +171,9 @@ Deno.serve(async req=>{
       if(itemsError)throw itemsError;
       const current=(items||[]).find(x=>!x.answered_at);
       if(!current||current.position!==position)return reply({error:"question_not_current"},409);
-      const {data:q,error:qError}=await admin.schema("private").from("training_questions")
-        .select("id,correct_index,explanation_en,explanation_zh").eq("id",current.question_id).single();
+      const {data:q,error:qError}=await admin.rpc("agent_module_quiz_question_internal",{
+        p_agent_id:agent.id,p_question_id:current.question_id
+      });
       if(qError)throw qError;
       const correct=current.option_order[selected]===q.correct_index;
       const {data:updated,error:updateError}=await admin.from("training_module_quiz_items")
@@ -201,8 +200,9 @@ Deno.serve(async req=>{
       }
       const next=(items||[]).find(x=>x.position===position+1);
       if(!next)return reply({error:"quiz_needs_recovery"},409);
-      const {data:nextQ,error:nextError}=await admin.schema("private").from("training_questions")
-        .select("id,question_en,question_zh,options_en,options_zh").eq("id",next.question_id).single();
+      const {data:nextQ,error:nextError}=await admin.rpc("agent_module_quiz_question_internal",{
+        p_agent_id:agent.id,p_question_id:next.question_id
+      });
       if(nextError)throw nextError;
       return reply({ok:true,...feedback,quiz:{
         attempt_id:attempt.id,module_code:attempt.module_code,completed:false,
