@@ -1,5 +1,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { validateHandbookContent } from "../_shared/handbook-content-validate.mjs";
 const cors={
   "Access-Control-Allow-Origin":"*",
   "Access-Control-Allow-Headers":"authorization, apikey, content-type",
@@ -48,8 +49,70 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_review"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
+
+
+  // Grok handbook imports are Owner-only and unpublished until explicit review.
+  if(action==="handbook_import"){
+    let parsed;
+    try{parsed=validateHandbookContent(b.content)}
+    catch(e){return reply({error:"handbook_validation_failed",detail:String(e?.message||"invalid_content").slice(0,160)},422)}
+    const rows=parsed.entries.map(row=>({
+      ...row,active:false,visible_to_agent:false,needs_owner_confirm:true,updated_by:uid
+    }));
+    const {data:created,error}=await admin.from("company_knowledge").insert(rows).select("id");
+    if(error||!created||created.length!==rows.length)return reply({error:"handbook_import_failed"},400);
+    const ids=created.map(row=>row.id);
+    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{
+      p_user_id:uid,p_action:"handbook_import_pending",
+      p_entity_type:"company_knowledge",p_entity_id:uid,
+      p_after:{source:"grok",schema_version:parsed.schema_version,count:ids.length,ids}
+    });
+    if(auditError){
+      await admin.from("company_knowledge").delete().in("id",ids)
+        .eq("needs_owner_confirm",true).eq("visible_to_agent",false);
+      return reply({error:"audit_failed"},500);
+    }
+    return reply({ok:true,imported:ids.length,pending_owner_review:true,ids});
+  }
+  if(action==="handbook_pending"){
+    const {data,error}=await admin.from("company_knowledge")
+      .select("id,section,title_en,title_zh,body_en,body_zh,sort,updated_at")
+      .eq("needs_owner_confirm",true)
+      .order("updated_at",{ascending:false}).limit(100);
+    if(error)return reply({error:"handbook_list_failed"},400);
+    return reply({ok:true,entries:data||[]});
+  }
+  if(action==="handbook_review"){
+    const id=String(b.id||"");
+    const decision=String(b.decision||"");
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||
+       !["approve","reject"].includes(decision))
+      return reply({error:"invalid_handbook_review"},400);
+    const {data:before,error:readErr}=await admin.from("company_knowledge")
+      .select("id,section,title_en,title_zh,active,visible_to_agent,needs_owner_confirm")
+      .eq("id",id).eq("needs_owner_confirm",true).maybeSingle();
+    if(readErr)return reply({error:"handbook_review_failed"},400);
+    if(!before)return reply({error:"handbook_not_pending"},409);
+    const approved=decision==="approve";
+    const {data:changed,error:writeErr}=await admin.from("company_knowledge")
+      .update({active:approved,visible_to_agent:approved,needs_owner_confirm:false,updated_by:uid,updated_at:new Date().toISOString()})
+      .eq("id",id).eq("needs_owner_confirm",true).select("id").maybeSingle();
+    if(writeErr)return reply({error:"handbook_review_failed"},400);
+    if(!changed)return reply({error:"handbook_not_pending"},409);
+    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{
+      p_user_id:uid,p_action:"handbook_"+decision,p_entity_type:"company_knowledge",p_entity_id:id,
+      p_after:{id,section:before.section,title_en:before.title_en,title_zh:before.title_zh,approved}
+    });
+    if(auditError){
+      await admin.from("company_knowledge").update({
+        active:before.active,visible_to_agent:before.visible_to_agent,needs_owner_confirm:true,updated_by:uid
+      }).eq("id",id).eq("needs_owner_confirm",false);
+      return reply({error:"audit_failed"},500);
+    }
+    return reply({ok:true,id,decision,visible_to_agent:approved});
+  }
 
   if(action==="create_owner_recovery_link"){
     const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
