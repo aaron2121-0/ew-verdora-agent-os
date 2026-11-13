@@ -1,0 +1,235 @@
+{
+ "source_version": "claude-core-brand-2026-11-13",
+ "questions": [
+  {
+   "code": "HB-CORE-BRAND-01",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "Which city is EW VERDORA based in?",
+   "question_zh": "EW VERDORA 位于哪个城市？",
+   "options_en": [
+    "Kuching",
+    "Kota Kinabalu",
+    "Miri",
+    "Sibu"
+   ],
+   "options_zh": [
+    "古晋",
+    "亚庇",
+    "美里",
+    "诗巫"
+   ],
+   "correct_index": 0,
+   "explanation_en": "EW VERDORA is a floral brand based in Kuching, Sarawak.",
+   "explanation_zh": "EW VERDORA 是位于砂拉越古晋的花艺品牌。"
+  },
+  {
+   "code": "HB-CORE-BRAND-02",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "Which of these is NOT one of EW VERDORA's five product lines?",
+   "question_zh": "以下哪一项不是 EW VERDORA 的五大业务线？",
+   "options_en": [
+    "Condolence wreaths",
+    "Grand opening baskets",
+    "Cake and dessert delivery",
+    "Flower wholesale"
+   ],
+   "options_zh": [
+    "帛事花圈",
+    "开张花篮",
+    "蛋糕甜点配送",
+    "鲜花批发"
+   ],
+   "correct_index": 2,
+   "explanation_en": "The five lines are condolence, grand opening, bouquets, wedding & event, and wholesale.",
+   "explanation_zh": "五大业务线是帛事花圈、开张花篮、精致花束、婚礼与活动、鲜花批发。"
+  },
+  {
+   "code": "HB-CORE-BRAND-03",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "A customer asks why our flowers can stay fresh. What is the honest answer?",
+   "question_zh": "客人问为什么我们的花材比较新鲜，诚实的回答是？",
+   "options_en": [
+    "We guarantee every flower lasts two weeks",
+    "The company handles its own import documents, air-freights flowers via Kuching Airport and plans with pre-orders; I will still confirm the actual condition",
+    "All our flowers are grown in our own farm",
+    "Fresh flowers never wilt"
+   ],
+   "options_zh": [
+    "保证每朵花都能放两个星期",
+    "公司自行处理进口文件，经古晋机场空运清关，并用预订制安排；实际花况我仍会帮你确认",
+    "所有花都是我们自己的农场种的",
+    "鲜花不会凋谢"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Explain the real process honestly and never guarantee the condition.",
+   "explanation_zh": "如实说明流程，不保证花况。"
+  },
+  {
+   "code": "HB-CORE-BRAND-04",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "Which area is within our listed delivery areas?",
+   "question_zh": "以下哪个地区在我们列出的配送区域内？",
+   "options_en": [
+    "Miri",
+    "Samarahan",
+    "Bintulu",
+    "Sri Aman"
+   ],
+   "options_zh": [
+    "美里",
+    "Samarahan",
+    "民都鲁",
+    "斯里阿曼"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Listed areas: Kuching, Matang, Batu Kawa, Tabuan Jaya, Petra Jaya, Satok, Padawan, Siburan, Samarahan, subject to stock and schedule.",
+   "explanation_zh": "配送区域：Kuching、Matang、Batu Kawa、Tabuan Jaya、Petra Jaya、Satok、Padawan、Siburan、Samarahan，视库存与排期。"
+  },
+  {
+   "code": "HB-CORE-BRAND-05",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "A customer asks how much a bouquet costs. What should you do?",
+   "question_zh": "客人问一束花多少钱，你应该怎么做？",
+   "options_en": [
+    "Quote a price from memory",
+    "Copy the price from an old order",
+    "Say a low price first and adjust later",
+    "Ask for the date and budget, then request a current quote in the App"
+   ],
+   "options_zh": [
+    "凭记忆报一个价",
+    "照旧订单的价格报",
+    "先报低价再慢慢加",
+    "问清日期和预算，再在 App 申请当下报价"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Prices follow the current quote, which the Agent requests in the App.",
+   "explanation_zh": "价格以当下报价为准，由 Agent 在 App 申请。"
+  },
+  {
+   "code": "HB-CORE-BRAND-06",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A customer sends a photo and asks for the exact same arrangement. Correct reply?",
+   "question_zh": "客人发一张图，要求做得一模一样，正确回应是？",
+   "options_en": [
+    "The photo is a style reference; flowers and colours follow the season, and I'll confirm with you first",
+    "Yes, it will be 100% identical",
+    "We do not accept photos",
+    "Agree first and explain later"
+   ],
+   "options_zh": [
+    "图片是风格参考，花材和颜色会依当季调整，我会先跟你确认",
+    "可以，保证 100% 一样",
+    "我们不接受图片",
+    "先答应，之后再解释"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Photos are style references only and the customer must be told first.",
+   "explanation_zh": "图片仅供风格参考，必须先告知客人。"
+  },
+  {
+   "code": "HB-CORE-BRAND-07",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "How does EW VERDORA communicate with customers about orders?",
+   "question_zh": "EW VERDORA 跟客人沟通订单主要通过什么方式？",
+   "options_en": [
+    "An online shopping cart with automatic payment",
+    "Phone calls only",
+    "Direct WhatsApp conversation",
+    "Email forms only"
+   ],
+   "options_zh": [
+    "网上购物车自动扣款",
+    "只用电话",
+    "WhatsApp 直接沟通",
+    "只用电邮表格"
+   ],
+   "correct_index": 2,
+   "explanation_en": "There is no shopping cart; details are confirmed directly on WhatsApp.",
+   "explanation_zh": "不用购物车，细节通过 WhatsApp 直接确认。"
+  },
+  {
+   "code": "HB-CORE-BRAND-08",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A customer asks if a certain flower is in stock right now and you are not sure. What do you say?",
+   "question_zh": "客人问某种花现在有没有货，你不确定，应该怎么说？",
+   "options_en": [
+    "Say yes so you do not lose the sale",
+    "Say it is sold out",
+    "Make up a restock date",
+    "Say you will confirm with the company and get back to them"
+   ],
+   "options_zh": [
+    "先说有，免得失去订单",
+    "直接说卖完了",
+    "随便讲一个到货日期",
+    "说我帮你跟公司确认，再回复你"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Never invent stock; confirm with the company.",
+   "explanation_zh": "绝不虚构库存，要跟公司确认。"
+  },
+  {
+   "code": "HB-CORE-BRAND-09",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "What must you complete before you can take customer orders?",
+   "question_zh": "你必须完成什么才能开始接单？",
+   "options_en": [
+    "The 7 required courses and the certification exam at 85% or higher",
+    "Only the daily practice",
+    "Inviting 3 friends",
+    "Posting on Facebook once"
+   ],
+   "options_zh": [
+    "7 个必修课，加上认证考试 85% 以上",
+    "只要做每日练习",
+    "邀请 3 位朋友",
+    "在 Facebook 发一次贴文"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Unlocking requires the 7 required courses plus passing certification at 85%.",
+   "explanation_zh": "解锁接单需要完成 7 个必修课，并通过 85% 的认证考试。"
+  },
+  {
+   "code": "HB-CORE-BRAND-10",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A customer says they saw negative reviews online. What is the right approach?",
+   "question_zh": "客人说在网上看到负评，正确的做法是？",
+   "options_en": [
+    "Say all bad reviews are fake",
+    "Criticise the reviewer",
+    "Thank them for asking, take it seriously, and offer to confirm any specific concern with the company",
+    "Ignore the comment"
+   ],
+   "options_zh": [
+    "说负评都是假的",
+    "批评留评价的人",
+    "谢谢客人直接问，认真看待，并提议把具体担心跟公司确认",
+    "不理会"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Stay honest and respectful; never badmouth others or invent reviews.",
+   "explanation_zh": "保持诚实尊重，不贬低别人，也不虚构评价。"
+  }
+ ]
+}

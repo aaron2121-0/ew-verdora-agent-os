@@ -297,6 +297,14 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 /* Keep TRAINEE unlock sheet above interactive AI orb and its dismissible tip. */
 #lockSheet{z-index:100}
 
+/* Owner-reviewed handbook content inside training. */
+.training3-handbook-button{margin-top:10px;max-width:100%;white-space:normal;text-align:left}
+.training3-handbook-panel{margin-top:10px;padding:12px;border-radius:12px;background:var(--surface-1,#fff);border:1px solid var(--border,#d8e6db);max-height:420px;overflow:auto}
+.training3-handbook-entry+.training3-handbook-entry{border-top:1px solid #d6e3d9;margin-top:12px;padding-top:12px}
+.training3-handbook-entry h3{font-size:.83rem;margin:0 0 7px}
+.training3-handbook-entry p{white-space:pre-line;overflow-wrap:anywhere;font-size:.75rem;line-height:1.6;margin:0}
+
+
 
 /* Seven-day onboarding + Owner-approved product handbook */
 .journey-card,.handbook-group,.handbook-slides{

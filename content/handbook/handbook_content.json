@@ -1,0 +1,613 @@
+{
+ "source_version": "grok-2026-11-13-claude-reviewed",
+ "cards": [
+  {
+   "code": "COND-1",
+   "product_line": "condolence",
+   "order": 1,
+   "title_en": "What it is",
+   "title_zh": "这是什么",
+   "body_en": "Standing wreaths and mourning baskets for funerals, memorials and wake halls. Delivered on time to Kuching funeral parlours.",
+   "body_zh": "庄重立式花圈与哀悼花篮，用于丧礼、追悼会、治丧处，准时送达古晋各殡仪馆。",
+   "key_points_en": [
+    "Standing wreaths and mourning baskets",
+    "For funerals and memorials",
+    "On-time delivery to Kuching parlours"
+   ],
+   "key_points_zh": [
+    "庄重立式花圈与哀悼花篮",
+    "丧礼追悼会治丧处使用",
+    "准时送达古晋殡仪馆"
+   ],
+   "icon_hint": "wreath"
+  },
+  {
+   "code": "COND-2",
+   "product_line": "condolence",
+   "order": 2,
+   "title_en": "Who and occasions",
+   "title_zh": "适合谁和什么场合",
+   "body_en": "For bereaved families and friends at funerals, memorial services or wake halls in Kuching.",
+   "body_zh": "适合丧家与亲友，用于丧礼、追悼会或治丧处场合。",
+   "key_points_en": [
+    "Bereaved families and friends",
+    "Funerals and memorials",
+    "Wake halls"
+   ],
+   "key_points_zh": [
+    "丧家与亲友",
+    "丧礼与追悼会",
+    "治丧处"
+   ],
+   "icon_hint": "people"
+  },
+  {
+   "code": "COND-3",
+   "product_line": "condolence",
+   "order": 3,
+   "title_en": "Common questions",
+   "title_zh": "客人最常问什么",
+   "body_en": "Can it arrive same day? Are flowers fresh? Delivery to which parlours?",
+   "body_zh": "可以当天送到吗？花材新鲜吗？送到哪间殡仪馆？",
+   "key_points_en": [
+    "Same-day if conditions met",
+    "Freshness process",
+    "Kuching funeral parlours"
+   ],
+   "key_points_zh": [
+    "符合条件可当日送达",
+    "新鲜度说明",
+    "古晋各殡仪馆"
+   ],
+   "icon_hint": "question"
+  },
+  {
+   "code": "COND-4",
+   "product_line": "condolence",
+   "order": 4,
+   "title_en": "How to recommend",
+   "title_zh": "怎么开口推荐",
+   "body_en": "When someone shares a loss, offer condolences first, then gently ask if they need help arranging a wreath.",
+   "body_zh": "听到丧事时先致意慰问，再温和地问是否需要帮忙安排花圈。",
+   "key_points_en": [
+    "Condolences first",
+    "Offer help gently",
+    "Mention on-time delivery"
+   ],
+   "key_points_zh": [
+    "先致意慰问",
+    "温和提供协助",
+    "说明准时送达"
+   ],
+   "icon_hint": "chat"
+  },
+  {
+   "code": "OPEN-1",
+   "product_line": "opening",
+   "order": 1,
+   "title_en": "What it is",
+   "title_zh": "这是什么",
+   "body_en": "Large festive baskets with money trees or lucky bamboo and congratulatory ribbons for openings.",
+   "body_zh": "大型喜庆花篮，可搭配发财树或开运竹及祝贺布条。",
+   "key_points_en": [
+    "Large festive baskets",
+    "Money tree or lucky bamboo options",
+    "Congratulatory ribbons"
+   ],
+   "key_points_zh": [
+    "大型喜庆花篮",
+    "发财树或开运竹搭配",
+    "祝贺布条"
+   ],
+   "icon_hint": "basket"
+  },
+  {
+   "code": "OPEN-2",
+   "product_line": "opening",
+   "order": 2,
+   "title_en": "Who and occasions",
+   "title_zh": "适合谁和什么场合",
+   "body_en": "For new shops, housewarmings, ribbon-cuttings and exhibitions.",
+   "body_zh": "适合开幕、乔迁、剪彩、展会等喜庆场合。",
+   "key_points_en": [
+    "New shop openings",
+    "Housewarmings",
+    "Ribbon-cuttings and exhibitions"
+   ],
+   "key_points_zh": [
+    "开幕与乔迁",
+    "剪彩",
+    "展会"
+   ],
+   "icon_hint": "store"
+  },
+  {
+   "code": "OPEN-3",
+   "product_line": "opening",
+   "order": 3,
+   "title_en": "Common questions",
+   "title_zh": "客人最常问什么",
+   "body_en": "Can you add a money tree? What size? Delivery on opening day?",
+   "body_zh": "可以加发财树吗？多大尺寸？开幕当天送到吗？",
+   "key_points_en": [
+    "Money tree or bamboo add-ons",
+    "Sizes available",
+    "Delivery subject to schedule"
+   ],
+   "key_points_zh": [
+    "可搭配发财树开运竹",
+    "多种尺寸",
+    "视排期送达"
+   ],
+   "icon_hint": "question"
+  },
+  {
+   "code": "OPEN-4",
+   "product_line": "opening",
+   "order": 4,
+   "title_en": "How to recommend",
+   "title_zh": "怎么开口推荐",
+   "body_en": "When someone mentions a new shop or move, offer a festive basket with ribbon.",
+   "body_zh": "听到开幕或乔迁时，推荐大型喜庆花篮并加祝贺布条。",
+   "key_points_en": [
+    "Listen for opening or moving news",
+    "Suggest festive basket",
+    "Offer ribbon and tree options"
+   ],
+   "key_points_zh": [
+    "留意开幕乔迁消息",
+    "推荐喜庆花篮",
+    "提议布条与树搭配"
+   ],
+   "icon_hint": "chat"
+  },
+  {
+   "code": "BOUQ-1",
+   "product_line": "bouquet",
+   "order": 1,
+   "title_en": "What it is",
+   "title_zh": "这是什么",
+   "body_en": "Refined bouquets with roses, tulips, sunflowers, carnations, hydrangeas and lisianthus.",
+   "body_zh": "精致花束，包含玫瑰、郁金香、向日葵、康乃馨、绣球、洋桔梗等。",
+   "key_points_en": [
+    "Roses tulips sunflowers",
+    "Carnations hydrangeas lisianthus",
+    "For personal celebrations"
+   ],
+   "key_points_zh": [
+    "玫瑰郁金香向日葵",
+    "康乃馨绣球洋桔梗",
+    "个人庆祝用"
+   ],
+   "icon_hint": "bouquet"
+  },
+  {
+   "code": "BOUQ-2",
+   "product_line": "bouquet",
+   "order": 2,
+   "title_en": "Who and occasions",
+   "title_zh": "适合谁和什么场合",
+   "body_en": "Birthdays, proposals, anniversaries, graduations, Valentine’s and Mother’s Day.",
+   "body_zh": "适合生日、求婚、纪念日、毕业、情人节、母亲节。",
+   "key_points_en": [
+    "Birthdays and anniversaries",
+    "Proposals and graduations",
+    "Valentine’s and Mother’s Day"
+   ],
+   "key_points_zh": [
+    "生日与纪念日",
+    "求婚与毕业",
+    "情人节母亲节"
+   ],
+   "icon_hint": "heart"
+  },
+  {
+   "code": "BOUQ-3",
+   "product_line": "bouquet",
+   "order": 3,
+   "title_en": "Common questions",
+   "title_zh": "客人最常问什么",
+   "body_en": "Can you match this photo? Which flowers for the occasion? How fresh?",
+   "body_zh": "可以照这张图做吗？什么花适合这个场合？新鲜吗？",
+   "key_points_en": [
+    "Photos are style reference only",
+    "Seasonal flower adjustment",
+    "Freshness explanation"
+   ],
+   "key_points_zh": [
+    "图片仅风格参考",
+    "依当季花材调整",
+    "新鲜度说明"
+   ],
+   "icon_hint": "question"
+  },
+  {
+   "code": "BOUQ-4",
+   "product_line": "bouquet",
+   "order": 4,
+   "title_en": "How to recommend",
+   "title_zh": "怎么开口推荐",
+   "body_en": "Ask the occasion and suggest suitable flowers, then request a current quote for the customer in the App.",
+   "body_zh": "先问场合，推荐合适花材，再由你在App帮客人申请当下报价。",
+   "key_points_en": [
+    "Ask the occasion first",
+    "Suggest matching flowers",
+    "You request the quote in the App"
+   ],
+   "key_points_zh": [
+    "先问场合",
+    "推荐合适花材",
+    "由你在App申请报价"
+   ],
+   "icon_hint": "chat"
+  },
+  {
+   "code": "WEDD-1",
+   "product_line": "wedding_event",
+   "order": 1,
+   "title_en": "What it is",
+   "title_zh": "这是什么",
+   "body_en": "Bridal bouquets, boutonnieres, car flowers, sign-in areas, arches and table flowers with full design and setup.",
+   "body_zh": "新娘手捧花、襟花、婚车、签到区、拱门、桌花，提供全案设计与现场布置。",
+   "key_points_en": [
+    "Bridal bouquets and boutonnieres",
+    "Car sign-in arch table flowers",
+    "Full design and on-site setup"
+   ],
+   "key_points_zh": [
+    "手捧花与襟花",
+    "婚车签到区拱门桌花",
+    "全案设计现场布置"
+   ],
+   "icon_hint": "wedding"
+  },
+  {
+   "code": "WEDD-2",
+   "product_line": "wedding_event",
+   "order": 2,
+   "title_en": "Who and occasions",
+   "title_zh": "适合谁和什么场合",
+   "body_en": "For couples and event organisers needing complete floral design and installation.",
+   "body_zh": "适合新人与活动主办方，需要完整花艺设计与现场布置。",
+   "key_points_en": [
+    "Couples and organisers",
+    "Weddings and events",
+    "Full design service"
+   ],
+   "key_points_zh": [
+    "新人与主办方",
+    "婚礼与活动",
+    "全案设计服务"
+   ],
+   "icon_hint": "people"
+  },
+  {
+   "code": "WEDD-3",
+   "product_line": "wedding_event",
+   "order": 3,
+   "title_en": "Common questions",
+   "title_zh": "客人最常问什么",
+   "body_en": "Can you do the full setup? Do you match reference photos? Delivery and installation?",
+   "body_zh": "可以全案布置吗？能照参考图做吗？会现场安装吗？",
+   "key_points_en": [
+    "Full design and setup available",
+    "Photos are style reference",
+    "On-site installation"
+   ],
+   "key_points_zh": [
+    "提供全案设计布置",
+    "图片仅风格参考",
+    "现场安装"
+   ],
+   "icon_hint": "question"
+  },
+  {
+   "code": "WEDD-4",
+   "product_line": "wedding_event",
+   "order": 4,
+   "title_en": "How to recommend",
+   "title_zh": "怎么开口推荐",
+   "body_en": "When someone mentions a wedding, offer full design from bouquet to arch and setup.",
+   "body_zh": "听到婚礼时，推荐从手捧花到拱门的全案设计与现场布置。",
+   "key_points_en": [
+    "Listen for wedding mentions",
+    "Offer complete package",
+    "Emphasise design and setup"
+   ],
+   "key_points_zh": [
+    "留意婚礼消息",
+    "推荐全案服务",
+    "强调设计与布置"
+   ],
+   "icon_hint": "chat"
+  },
+  {
+   "code": "WHOL-1",
+   "product_line": "wholesale",
+   "order": 1,
+   "title_en": "What it is",
+   "title_zh": "这是什么",
+   "body_en": "Bulk fresh flowers and foliage for local florists, wedding planners and event teams, by pre-order.",
+   "body_zh": "散装鲜花与叶材，供应本地花店、婚礼策划与活动团队，预订制。",
+   "key_points_en": [
+    "Bulk flowers and foliage",
+    "For florists and planners",
+    "Pre-order only"
+   ],
+   "key_points_zh": [
+    "散装鲜花与叶材",
+    "花店策划活动团队",
+    "预订制"
+   ],
+   "icon_hint": "wholesale"
+  },
+  {
+   "code": "WHOL-2",
+   "product_line": "wholesale",
+   "order": 2,
+   "title_en": "Who and occasions",
+   "title_zh": "适合谁和什么场合",
+   "body_en": "Local flower shops, wedding planners and event teams that need bulk supply.",
+   "body_zh": "适合本地花店、婚礼策划与活动团队需要大量花材时。",
+   "key_points_en": [
+    "Local florists",
+    "Wedding planners",
+    "Event teams"
+   ],
+   "key_points_zh": [
+    "本地花店",
+    "婚礼策划",
+    "活动团队"
+   ],
+   "icon_hint": "people"
+  },
+  {
+   "code": "WHOL-3",
+   "product_line": "wholesale",
+   "order": 3,
+   "title_en": "Common questions",
+   "title_zh": "客人最常问什么",
+   "body_en": "Do you sell bulk? Minimum order? Can I pre-order for a date?",
+   "body_zh": "可以批发吗？有最低量吗？可以预订特定日期吗？",
+   "key_points_en": [
+    "Bulk available",
+    "Pre-order system",
+    "For trade customers"
+   ],
+   "key_points_zh": [
+    "提供批发",
+    "预订制",
+    "供应行业客户"
+   ],
+   "icon_hint": "question"
+  },
+  {
+   "code": "WHOL-4",
+   "product_line": "wholesale",
+   "order": 4,
+   "title_en": "How to recommend",
+   "title_zh": "怎么开口推荐",
+   "body_en": "If a florist or planner needs volume, explain bulk pre-order, then request a current quote in the App.",
+   "body_zh": "花店或策划需要大量时，说明预订批发，再由你在App申请当下报价。",
+   "key_points_en": [
+    "Identify trade customers",
+    "Explain pre-order",
+    "You request the quote in the App"
+   ],
+   "key_points_zh": [
+    "识别行业客户",
+    "说明预订制",
+    "由你在App申请报价"
+   ],
+   "icon_hint": "chat"
+  }
+ ],
+ "scripts": [
+  {
+   "code": "SCR-COND-1",
+   "product_line": "condolence",
+   "situation_en": "Hearing of a funeral",
+   "situation_zh": "听到丧事",
+   "text_en": "So sorry for your loss. If you need a wreath for the wake, I can help arrange it and make sure it reaches the parlour on time.",
+   "text_zh": "听到这个消息很遗憾，请节哀。如果治丧处需要花圈，我可以帮你安排，并确保准时送到殡仪馆。"
+  },
+  {
+   "code": "SCR-COND-2",
+   "product_line": "condolence",
+   "situation_en": "Follow-up on same-day",
+   "situation_zh": "跟进当日送达",
+   "text_en": "If the conditions are met we can try same-day delivery to the parlour. Let me check with the company for you.",
+   "text_zh": "如果符合条件，我们可以尝试当天送到殡仪馆。我帮你跟公司确认一下。"
+  },
+  {
+   "code": "SCR-COND-3",
+   "product_line": "condolence",
+   "situation_en": "Asking about freshness",
+   "situation_zh": "询问新鲜度",
+   "text_en": "Our flowers come by air to Kuching airport with proper clearance. Pre-order and stock checks help keep them fresh.",
+   "text_zh": "我们的花材是古晋机场空运直采清关的。预订制和盘点有助于保持新鲜。"
+  },
+  {
+   "code": "SCR-OPEN-1",
+   "product_line": "opening",
+   "situation_en": "New shop opening",
+   "situation_zh": "新店开幕",
+   "text_en": "Congrats on the opening! Would you like a large festive basket with a congratulatory ribbon?",
+   "text_zh": "恭喜开幕！需要大型喜庆花篮加祝贺布条吗？"
+  },
+  {
+   "code": "SCR-OPEN-2",
+   "product_line": "opening",
+   "situation_en": "Housewarming",
+   "situation_zh": "乔迁",
+   "text_en": "Happy housewarming! We can prepare a festive basket, and money tree or lucky bamboo can be added.",
+   "text_zh": "乔迁之喜！我们可以准备喜庆花篮，也可以搭配发财树或开运竹。"
+  },
+  {
+   "code": "SCR-OPEN-3",
+   "product_line": "opening",
+   "situation_en": "Asking for quote",
+   "situation_zh": "询问价格",
+   "text_en": "Prices follow the current quote. Tell me the date, size and budget, and I'll get the quote for you.",
+   "text_zh": "价格以当下报价为准。告诉我日期、尺寸和预算，我帮你申请报价。"
+  },
+  {
+   "code": "SCR-BOUQ-1",
+   "product_line": "bouquet",
+   "situation_en": "Birthday",
+   "situation_zh": "生日",
+   "text_en": "Happy birthday to her! Would you like a refined bouquet with roses or sunflowers?",
+   "text_zh": "祝她生日快乐！需要精致花束吗？玫瑰或向日葵都可以。"
+  },
+  {
+   "code": "SCR-BOUQ-2",
+   "product_line": "bouquet",
+   "situation_en": "Proposal",
+   "situation_zh": "求婚",
+   "text_en": "For a proposal, a rose or tulip bouquet works well. Photos are style reference only; I’ll check seasonal flowers.",
+   "text_zh": "求婚的话，玫瑰或郁金香花束很合适。图片只是风格参考，我会确认当季花材。"
+  },
+  {
+   "code": "SCR-BOUQ-3",
+   "product_line": "bouquet",
+   "situation_en": "Mother’s Day",
+   "situation_zh": "母亲节",
+   "text_en": "Mother's Day is coming. Carnations or hydrangeas make a warm bouquet. Shall I get you a current quote?",
+   "text_zh": "母亲节快到了，康乃馨或绣球很温暖。要我帮你申请当下报价吗？"
+  },
+  {
+   "code": "SCR-WEDD-1",
+   "product_line": "wedding_event",
+   "situation_en": "Wedding enquiry",
+   "situation_zh": "婚礼咨询",
+   "text_en": "Congratulations on the wedding! We can do the full design from bridal bouquet to arch and on-site setup.",
+   "text_zh": "恭喜你们！我们可以从新娘手捧花到拱门做全案设计，并负责现场布置。"
+  },
+  {
+   "code": "SCR-WEDD-2",
+   "product_line": "wedding_event",
+   "situation_en": "Reference photo",
+   "situation_zh": "参考图片",
+   "text_en": "The photo is great for style reference. Flower types and colours will adjust to seasonal supply; I’ll confirm with you first.",
+   "text_zh": "这张图很好做风格参考。花材和颜色会依当季供应调整，我会先跟你确认。"
+  },
+  {
+   "code": "SCR-WEDD-3",
+   "product_line": "wedding_event",
+   "situation_en": "Follow-up",
+   "situation_zh": "跟进",
+   "text_en": "Have you decided on the date? I can check availability and get a quote for you.",
+   "text_zh": "日期定了吗？我可以帮你确认档期并申请报价。"
+  },
+  {
+   "code": "SCR-WHOL-1",
+   "product_line": "wholesale",
+   "situation_en": "Florist enquiry",
+   "situation_zh": "花店询价",
+   "text_en": "Hi, we supply bulk flowers and foliage by pre-order for local florists. What do you need?",
+   "text_zh": "你好，我们提供预订制散装鲜花与叶材给本地花店。需要什么？"
+  },
+  {
+   "code": "SCR-WHOL-2",
+   "product_line": "wholesale",
+   "situation_en": "Planner volume",
+   "situation_zh": "策划大量需求",
+   "text_en": "For wedding or event volume, we do bulk pre-orders. Tell me the date and I'll get a current quote for you.",
+   "text_zh": "婚礼或活动大量需求可以预订批发。告诉我日期，我帮你申请当下报价。"
+  },
+  {
+   "code": "SCR-WHOL-3",
+   "product_line": "wholesale",
+   "situation_en": "Stock check",
+   "situation_zh": "库存确认",
+   "text_en": "Stock depends on pre-order and schedule. I’ll confirm with the company and get back to you.",
+   "text_zh": "库存视预订与排期而定。我帮你跟公司确认后再回复。"
+  }
+ ],
+ "faqs": [
+  {
+   "code": "FAQ-01",
+   "q_en": "I saw negative reviews on Google",
+   "q_zh": "我在 Google 看到负评",
+   "a_en": "We take every feedback seriously and focus on fresh flowers and on-time service. If there is a specific concern, I can help confirm with the company.",
+   "a_zh": "我们重视每份反馈，专注新鲜花材与准时服务。如有具体问题，我帮你跟公司确认。"
+  },
+  {
+   "code": "FAQ-02",
+   "q_en": "Will the flowers be fresh?",
+   "q_zh": "花会不会不新鲜",
+   "a_en": "The company handles import documents itself. Flowers arrive by air freight to Kuching airport with direct clearance. Pre-orders and inventory checks reduce waste and keep flowers fresh.",
+   "a_zh": "公司自行处理进口文件，古晋机场空运直采清关。预订制与库存盘点减少损耗，保持花材新鲜。"
+  },
+  {
+   "code": "FAQ-03",
+   "q_en": "Can you make it exactly like this photo?",
+   "q_zh": "可以照这张图做吗",
+   "a_en": "The photo is for style reference only. Flower types and colours will be adjusted according to seasonal supply. I must tell you this first.",
+   "a_zh": "图片仅供风格参考。花材与颜色会依当季供应调整，我必须先告诉你。"
+  },
+  {
+   "code": "FAQ-04",
+   "q_en": "Can it be delivered today?",
+   "q_zh": "可以今天送到吗",
+   "a_en": "Condolence wreaths can be same-day if conditions are met. Other items depend on stock and schedule. Let me confirm with the company for you.",
+   "a_zh": "帛事花圈符合条件可当日送达。其他视库存与排期。我帮你跟公司确认。"
+  },
+  {
+   "code": "FAQ-05",
+   "q_en": "Do you deliver to Samarahan?",
+   "q_zh": "送不送到 Samarahan",
+   "a_en": "Yes, Samarahan is within our delivery areas (subject to stock and schedule).",
+   "a_zh": "是的，Samarahan在配送区域内（视库存与排期）。"
+  },
+  {
+   "code": "FAQ-06",
+   "q_en": "How much is the price?",
+   "q_zh": "价格多少",
+   "a_en": "Prices follow the current quote, because flowers change by season. Tell me the occasion, date and budget and I'll get the quote for you.",
+   "a_zh": "花材随季节变动，价格以当下报价为准。告诉我场合、日期和预算，我帮你申请报价。"
+  },
+  {
+   "code": "FAQ-07",
+   "q_en": "Which areas do you deliver to?",
+   "q_zh": "送到哪些地区？",
+   "a_en": "Kuching, Matang, Batu Kawa, Tabuan Jaya, Petra Jaya, Satok, Padawan, Siburan and Samarahan, subject to stock and schedule.",
+   "a_zh": "Kuching、Matang、Batu Kawa、Tabuan Jaya、Petra Jaya、Satok、Padawan、Siburan、Samarahan，视库存与排期。"
+  },
+  {
+   "code": "FAQ-08",
+   "q_en": "Do you have stock of this flower now?",
+   "q_zh": "现在有这种花吗？",
+   "a_en": "Availability depends on pre-orders and current stock. I'll confirm with the company and get back to you.",
+   "a_zh": "有没有货要看预订和当下库存，我帮你跟公司确认后回复你。"
+  },
+  {
+   "code": "FAQ-09",
+   "q_en": "Can you do wholesale for my shop?",
+   "q_zh": "可以给我的花店批发吗？",
+   "a_en": "Yes, we supply bulk flowers and foliage to local florists, planners and event teams by pre-order.",
+   "a_zh": "可以，我们以预订制供应散装鲜花与叶材给本地花店、婚礼策划与活动团队。"
+  },
+  {
+   "code": "FAQ-10",
+   "q_en": "Do you provide on-site setup for weddings?",
+   "q_zh": "婚礼可以现场布置吗？",
+   "a_en": "Yes, wedding and event service includes full design and on-site installation for bouquets, arches, table flowers and more.",
+   "a_zh": "可以，婚礼与活动提供全案设计与现场布置，包括手捧花、拱门、桌花等。"
+  },
+  {
+   "code": "FAQ-11",
+   "q_en": "How do I place an order?",
+   "q_zh": "怎么下单？",
+   "a_en": "Just WhatsApp me the occasion, date, delivery area and budget. I'll get the quote and arrange the order for you.",
+   "a_zh": "直接WhatsApp告诉我场合、日期、送货地区和预算，我帮你申请报价并安排下单。"
+  },
+  {
+   "code": "FAQ-12",
+   "q_en": "Can I see real customer photos?",
+   "q_zh": "可以看真实客户照片吗？",
+   "a_en": "Yes, I can share photos of arrangements we have made. They are for reference; the final piece follows seasonal flowers.",
+   "a_zh": "可以，我把我们做过的作品照给你看。作品照仅供参考，成品会依当季花材调整。"
+  }
+ ]
+}

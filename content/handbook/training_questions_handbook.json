@@ -1,0 +1,695 @@
+{
+ "source_version": "grok-handbook-2026-11-13-claude-reviewed",
+ "questions": [
+  {
+   "code": "HB-QUALIFY-01",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "A customer says their relative has passed away and they need something for the wake. Which product line is most suitable?",
+   "question_zh": "客人说亲人去世，需要治丧处用的东西。最适合哪条业务线？",
+   "options_en": [
+    "Condolence wreath",
+    "Grand opening basket",
+    "Flower wholesale",
+    "Refined bouquet"
+   ],
+   "options_zh": [
+    "帛事花圈",
+    "开张花篮",
+    "鲜花批发",
+    "精致花束"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Funerals, memorials and wake halls use standing wreaths and mourning baskets.",
+   "explanation_zh": "丧礼、追悼会、治丧处使用庄重立式花圈与哀悼花篮。"
+  },
+  {
+   "code": "HB-QUALIFY-02",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "A customer is opening a new shop next week. What should you recommend?",
+   "question_zh": "客人下周开新店。你应该推荐什么？",
+   "options_en": [
+    "Full wedding design",
+    "Grand opening basket",
+    "Bulk wholesale",
+    "Refined bouquet"
+   ],
+   "options_zh": [
+    "婚礼全案",
+    "开张花篮",
+    "散装批发",
+    "精致花束"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Openings, ribbon-cuttings and new shops use large festive baskets with ribbons.",
+   "explanation_zh": "开幕、剪彩、新店使用大型喜庆花篮与祝贺布条。"
+  },
+  {
+   "code": "HB-QUALIFY-03",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "Someone wants flowers for a proposal. Which line fits best?",
+   "question_zh": "有人想要求婚用的花。哪条业务线最合适？",
+   "options_en": [
+    "Flower wholesale",
+    "Condolence wreath",
+    "Refined bouquet",
+    "Grand opening basket"
+   ],
+   "options_zh": [
+    "鲜花批发",
+    "帛事花圈",
+    "精致花束",
+    "开张花篮"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Proposals, birthdays and anniversaries are for refined bouquets.",
+   "explanation_zh": "求婚、生日、纪念日属于精致花束。"
+  },
+  {
+   "code": "HB-QUALIFY-04",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A local florist needs a large quantity of roses for their own arrangements. What do you offer?",
+   "question_zh": "本地花店需要大量玫瑰自己做花。你提供什么？",
+   "options_en": [
+    "Grand opening basket",
+    "Refined bouquet",
+    "Wedding setup",
+    "Flower wholesale"
+   ],
+   "options_zh": [
+    "开张花篮",
+    "精致花束",
+    "婚礼布置",
+    "鲜花批发"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Bulk flowers for local florists and planners are wholesale by pre-order.",
+   "explanation_zh": "本地花店与策划的大量花材属于预订制鲜花批发。"
+  },
+  {
+   "code": "HB-QUALIFY-05",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 3,
+   "question_en": "A couple needs bridal bouquet, car flowers and an arch with full setup. Which service?",
+   "question_zh": "新人需要手捧花、婚车和拱门并要求全案布置。属于哪项服务？",
+   "options_en": [
+    "Wedding & event",
+    "Flower wholesale",
+    "Refined bouquet",
+    "Grand opening basket"
+   ],
+   "options_zh": [
+    "婚礼与活动",
+    "鲜花批发",
+    "精致花束",
+    "开张花篮"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Bridal items, arches and on-site setup are wedding and event full design.",
+   "explanation_zh": "手捧花、拱门与现场布置属于婚礼与活动全案设计。"
+  },
+  {
+   "code": "HB-QUALIFY-06",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 1,
+   "question_en": "Customer asks for flowers for Mother’s Day. Suitable line?",
+   "question_zh": "客人要母亲节的花。适合哪条？",
+   "options_en": [
+    "Condolence wreath",
+    "Refined bouquet",
+    "Grand opening basket",
+    "Wholesale"
+   ],
+   "options_zh": [
+    "帛事花圈",
+    "精致花束",
+    "开张花篮",
+    "批发"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Mother’s Day, Valentine’s and birthdays use refined bouquets.",
+   "explanation_zh": "母亲节、情人节、生日使用精致花束。"
+  },
+  {
+   "code": "HB-QUALIFY-07",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 2,
+   "question_en": "A customer is moving into a new house and wants a congratulatory arrangement. What to recommend?",
+   "question_zh": "客人乔迁新居，想要祝贺的摆设。推荐什么？",
+   "options_en": [
+    "Wedding arch",
+    "Refined bouquet",
+    "Grand opening basket",
+    "Condolence wreath"
+   ],
+   "options_zh": [
+    "婚礼拱门",
+    "精致花束",
+    "开张花篮",
+    "帛事花圈"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Housewarmings and openings use large festive baskets.",
+   "explanation_zh": "乔迁与开幕使用大型喜庆花篮。"
+  },
+  {
+   "code": "HB-QUALIFY-08",
+   "bank_type": "daily",
+   "skill_code": "QUALIFY",
+   "difficulty": 3,
+   "question_en": "An event planner needs bulk foliage for multiple tables. Which product line?",
+   "question_zh": "活动团队需要大量叶材做桌花。属于哪条业务线？",
+   "options_en": [
+    "Grand opening basket",
+    "Refined bouquet",
+    "Full wedding design",
+    "Flower wholesale"
+   ],
+   "options_zh": [
+    "开张花篮",
+    "精致花束",
+    "婚礼全案",
+    "鲜花批发"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Bulk flowers and foliage for event teams are wholesale.",
+   "explanation_zh": "活动团队的散装鲜花与叶材属于鲜花批发。"
+  },
+  {
+   "code": "HB-REFERENCE-01",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 1,
+   "question_en": "A customer sends a photo and says “make it exactly like this”. What is the correct rule?",
+   "question_zh": "客人发图说“照这张做”。正确规则是什么？",
+   "options_en": [
+    "Treat as style reference and inform that flowers adjust by season",
+    "Refuse all photos",
+    "Copy the photo without telling",
+    "Promise exact match"
+   ],
+   "options_zh": [
+    "当作风格参考并告知花材会依当季调整",
+    "拒绝所有图片",
+    "不告知直接照做",
+    "承诺一模一样"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Guest photos are style reference only; materials and colours adjust to seasonal supply and must be told first.",
+   "explanation_zh": "客人给图只能做风格参考，花材与颜色依当季供应调整，必须先告诉客人。"
+  },
+  {
+   "code": "HB-REFERENCE-02",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 2,
+   "question_en": "Why must you tell the customer about photo limitations first?",
+   "question_zh": "为什么必须先告诉客人图片的限制？",
+   "options_en": [
+    "Company rule is optional",
+    "To avoid misunderstanding because finished product adjusts by season",
+    "Photos are always exact",
+    "To increase price"
+   ],
+   "options_zh": [
+    "公司规定可做可不做",
+    "避免误会，因为成品依当季花材调整",
+    "图片一定一模一样",
+    "为了加价"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Display images are reference only; finished products follow seasonal flowers.",
+   "explanation_zh": "展示图片仅供参考，成品依当季花材调整。"
+  },
+  {
+   "code": "HB-REFERENCE-03",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 1,
+   "question_en": "A customer wants a bouquet exactly matching a Pinterest photo. Your reply should include:",
+   "question_zh": "客人要花束完全照Pinterest图。你的回复应包含：",
+   "options_en": [
+    "Price is fixed",
+    "Yes, exact same flowers",
+    "Style reference only, seasonal adjustment will be confirmed",
+    "We cannot use any photos"
+   ],
+   "options_zh": [
+    "价格固定",
+    "可以，花材完全一样",
+    "仅风格参考，当季调整会先确认",
+    "完全不能用图"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Must inform that it is style reference and materials adjust by season.",
+   "explanation_zh": "必须告知仅风格参考，花材依当季调整。"
+  },
+  {
+   "code": "HB-REFERENCE-04",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 3,
+   "question_en": "Which statement about reference photos is correct?",
+   "question_zh": "关于参考图，哪句正确？",
+   "options_en": [
+    "Photos guarantee stock",
+    "Ignore customer photos",
+    "We always copy exactly",
+    "Style reference only, must inform customer of seasonal changes"
+   ],
+   "options_zh": [
+    "图片保证有库存",
+    "忽略客人图片",
+    "我们一定一模一样",
+    "仅风格参考，必须告知当季调整"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Reference rule: style only, adjust by season, tell the guest first.",
+   "explanation_zh": "参考图规则：风格参考，依当季调整，必须先告知。"
+  },
+  {
+   "code": "HB-REFERENCE-05",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 2,
+   "question_en": "Customer says “the photo has blue hydrangeas, can you do blue?” Correct approach?",
+   "question_zh": "客人说“图里是蓝色绣球，可以做蓝色吗？”正确做法？",
+   "options_en": [
+    "Explain it depends on seasonal supply and confirm first",
+    "Say we never do blue",
+    "Invent stock of blue",
+    "Promise blue without checking"
+   ],
+   "options_zh": [
+    "说明视当季供应，先确认",
+    "说我们从不做蓝色",
+    "虚构有蓝色库存",
+    "不确认就承诺蓝色"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Colours and materials adjust to seasonal supply; never invent stock.",
+   "explanation_zh": "颜色与花材依当季供应调整，绝不虚构库存。"
+  },
+  {
+   "code": "HB-REFERENCE-06",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 1,
+   "question_en": "What should you never do with a customer’s reference photo?",
+   "question_zh": "对客人的参考图，你绝不应该做什么？",
+   "options_en": [
+    "Use it as style guide",
+    "Promise exact copy and invent matching stock",
+    "Tell them about seasonal adjustment",
+    "Confirm details first"
+   ],
+   "options_zh": [
+    "当作风格参考",
+    "承诺一模一样并虚构库存",
+    "告知当季调整",
+    "先确认细节"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Never invent inventory; photos are style reference only.",
+   "explanation_zh": "绝不虚构库存；图片仅风格参考。"
+  },
+  {
+   "code": "HB-REFERENCE-07",
+   "bank_type": "daily",
+   "skill_code": "REFERENCE",
+   "difficulty": 2,
+   "question_en": "In a WhatsApp reply about a photo, which phrase is appropriate?",
+   "question_zh": "WhatsApp回复图片时，哪句合适？",
+   "options_en": [
+    "Price includes exact match",
+    "We will make it 100% the same",
+    "This is for style reference; I’ll check seasonal flowers and confirm with you",
+    "No photos allowed"
+   ],
+   "options_zh": [
+    "价格包含一模一样",
+    "我们会做成100%一样",
+    "这是风格参考；我会确认当季花材再跟你说",
+    "完全不准用图"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Must state it is style reference and confirm seasonal supply.",
+   "explanation_zh": "必须说明是风格参考并确认当季供应。"
+  },
+  {
+   "code": "HB-OBJECTION-01",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 2,
+   "question_en": "Customer says “I saw negative reviews on Google”. Best reply?",
+   "question_zh": "客人说“我在Google看到负评”。最好回复？",
+   "options_en": [
+    "Ignore and change topic",
+    "Badmouth the reviewer",
+    "Those reviews are fake",
+    "We focus on fresh flowers and on-time service; I can help confirm any specific issue"
+   ],
+   "options_zh": [
+    "忽略并转移话题",
+    "贬低评价者",
+    "那些评价是假的",
+    "我们专注新鲜与准时；有具体问题我帮你确认"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Be honest, do not badmouth others, offer to confirm with company.",
+   "explanation_zh": "诚实回答，不贬低别人，可协助跟公司确认。"
+  },
+  {
+   "code": "HB-OBJECTION-02",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 1,
+   "question_en": "Customer worries “Will the flowers not be fresh?” Correct explanation?",
+   "question_zh": "客人担心“花会不会不新鲜？”正确说明？",
+   "options_en": [
+    "Air freight to Kuching airport with clearance; pre-order and inventory reduce waste",
+    "All flowers last forever",
+    "Ignore the question",
+    "We keep them for weeks"
+   ],
+   "options_zh": [
+    "古晋机场空运清关；预订制与盘点减少损耗",
+    "所有花永远新鲜",
+    "忽略问题",
+    "我们放很久"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Explain the import process, air freight and pre-order system.",
+   "explanation_zh": "说明自行处理进口、空运直采与预订盘点减少损耗。"
+  },
+  {
+   "code": "HB-OBJECTION-03",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 2,
+   "question_en": "Customer asks for the exact price. What do you say?",
+   "question_zh": "客人问确切价格。你怎么说？",
+   "options_en": [
+    "Give a fixed number",
+    "Price follows the current quote; I'll request it for you",
+    "Say it is free",
+    "Invent a discount"
+   ],
+   "options_zh": [
+    "报一个固定数字",
+    "价格以当下报价为准，我帮你申请",
+    "说是免费",
+    "虚构折扣"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Never invent prices; you request the current quote in the App.",
+   "explanation_zh": "绝不编造价格；一律由你在App申请当下报价。"
+  },
+  {
+   "code": "HB-OBJECTION-04",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 3,
+   "question_en": "Customer says the price is too high. Appropriate response?",
+   "question_zh": "客人说价格太高。合适回应？",
+   "options_en": [
+    "Badmouth competitors",
+    "Offer an invented discount",
+    "Explain current quote process and value of freshness without promising lower price",
+    "Refuse to talk"
+   ],
+   "options_zh": [
+    "贬低别人",
+    "虚构折扣",
+    "说明当下报价流程与新鲜价值，不承诺降价",
+    "拒绝沟通"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Stay honest, do not invent discounts or badmouth; refer to current quote.",
+   "explanation_zh": "保持诚实，不虚构折扣或贬低他人；引导当下报价。"
+  },
+  {
+   "code": "HB-OBJECTION-05",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 1,
+   "question_en": "On freshness, which point is true?",
+   "question_zh": "关于新鲜度，哪点是事实？",
+   "options_en": [
+    "No clearance needed",
+    "Stock is never checked",
+    "Flowers come by sea only",
+    "Company handles import documents and uses Kuching airport air freight"
+   ],
+   "options_zh": [
+    "不需要清关",
+    "从不盘点",
+    "只用海运",
+    "公司自行处理进口文件并使用古晋机场空运"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Import documents handled by company; air freight direct clearance at Kuching airport.",
+   "explanation_zh": "公司自行处理进口文件；古晋机场空运直采清关。"
+  },
+  {
+   "code": "HB-OBJECTION-06",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 2,
+   "question_en": "If you do not know the answer to an objection, what should you say?",
+   "question_zh": "如果对异议不确定答案，应该说什么？",
+   "options_en": [
+    "I will help confirm with the company",
+    "Change the subject",
+    "Promise anything",
+    "Guess and invent"
+   ],
+   "options_zh": [
+    "我帮你跟公司确认",
+    "转移话题",
+    "随便承诺",
+    "猜测并编造"
+   ],
+   "correct_index": 0,
+   "explanation_en": "When uncertain, say you will confirm with the company; do not invent.",
+   "explanation_zh": "不确定时说帮跟公司确认；绝不编造。"
+  },
+  {
+   "code": "HB-OBJECTION-07",
+   "bank_type": "daily",
+   "skill_code": "OBJECTION",
+   "difficulty": 3,
+   "question_en": "Customer mentions a negative review about delivery. Best action?",
+   "question_zh": "客人提到负评说配送问题。最好做法？",
+   "options_en": [
+    "Argue the review is wrong",
+    "Acknowledge, focus on our on-time principle and offer to confirm details",
+    "Ignore",
+    "Invent better reviews"
+   ],
+   "options_zh": [
+    "争辩评价是错的",
+    "承认关注，强调准时原则并协助确认细节",
+    "忽略",
+    "虚构好评"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Do not badmouth; be honest and offer to confirm with company.",
+   "explanation_zh": "不贬低他人；诚实并协助跟公司确认。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-01",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 1,
+   "question_en": "You hear a neighbour’s shop is opening. What opportunity is this?",
+   "question_zh": "你听到邻居店铺开幕。这是什么商机？",
+   "options_en": [
+    "Wholesale",
+    "Refined bouquet",
+    "Grand opening basket",
+    "Condolence wreath"
+   ],
+   "options_zh": [
+    "批发",
+    "精致花束",
+    "开张花篮",
+    "帛事花圈"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Openings are opportunities for festive baskets.",
+   "explanation_zh": "开幕是开张花篮的商机。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-02",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 2,
+   "question_en": "A friend mentions their wedding next month. Which lead to pursue?",
+   "question_zh": "朋友提到下个月婚礼。应该跟进哪条？",
+   "options_en": [
+    "Bulk wholesale",
+    "Condolence",
+    "Grand opening basket",
+    "Full wedding & event design"
+   ],
+   "options_zh": [
+    "散装批发",
+    "帛事",
+    "开张花篮",
+    "婚礼与活动全案"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Weddings are leads for full design and setup.",
+   "explanation_zh": "婚礼是全案设计与布置的商机。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-03",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 1,
+   "question_en": "Someone’s birthday is coming. Suitable opportunity?",
+   "question_zh": "有人生日快到了。适合的商机？",
+   "options_en": [
+    "Refined bouquet",
+    "Wholesale",
+    "Condolence wreath",
+    "Grand opening basket"
+   ],
+   "options_zh": [
+    "精致花束",
+    "批发",
+    "帛事花圈",
+    "开张花篮"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Birthdays are refined bouquet occasions.",
+   "explanation_zh": "生日是精致花束的场合。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-04",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 3,
+   "question_en": "You meet a wedding planner who often needs volume. What lead is this?",
+   "question_zh": "你遇到经常需要大量花材的婚礼策划。这是什么商机？",
+   "options_en": [
+    "Grand opening basket",
+    "Flower wholesale",
+    "Condolence",
+    "Refined bouquet"
+   ],
+   "options_zh": [
+    "开张花篮",
+    "鲜花批发",
+    "帛事",
+    "精致花束"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Planners needing bulk are wholesale leads.",
+   "explanation_zh": "需要大量的策划是鲜花批发商机。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-05",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 2,
+   "question_en": "A family is preparing for a memorial service. Which opportunity?",
+   "question_zh": "一个家庭正在准备追悼会。哪项商机？",
+   "options_en": [
+    "Refined bouquet",
+    "Grand opening basket",
+    "Condolence wreath",
+    "Wedding"
+   ],
+   "options_zh": [
+    "精致花束",
+    "开张花篮",
+    "帛事花圈",
+    "婚礼"
+   ],
+   "correct_index": 2,
+   "explanation_en": "Memorials and wakes are condolence wreath opportunities.",
+   "explanation_zh": "追悼会与治丧是帛事花圈商机。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-06",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 1,
+   "question_en": "Valentine’s Day is approaching. What should you look for?",
+   "question_zh": "情人节快到了。你应该留意什么商机？",
+   "options_en": [
+    "Bulk foliage wholesale",
+    "Condolence",
+    "Grand opening basket",
+    "Refined bouquet"
+   ],
+   "options_zh": [
+    "批发大量叶材",
+    "帛事",
+    "开张花篮",
+    "精致花束"
+   ],
+   "correct_index": 3,
+   "explanation_en": "Valentine’s is a refined bouquet occasion.",
+   "explanation_zh": "情人节是精致花束场合。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-07",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 2,
+   "question_en": "A new exhibition is being set up. Possible lead?",
+   "question_zh": "有新展会正在筹备。可能的商机？",
+   "options_en": [
+    "Grand opening basket",
+    "Condolence wreath",
+    "Personal birthday",
+    "Refined bouquet"
+   ],
+   "options_zh": [
+    "开张花篮",
+    "帛事花圈",
+    "个人生日",
+    "精致花束"
+   ],
+   "correct_index": 0,
+   "explanation_en": "Exhibitions can use large festive baskets.",
+   "explanation_zh": "展会可使用大型喜庆花篮。"
+  },
+  {
+   "code": "HB-LEAD-FINDING-08",
+   "bank_type": "daily",
+   "skill_code": "LEAD-FINDING",
+   "difficulty": 3,
+   "question_en": "Which of these is NOT a typical lead for refined bouquets?",
+   "question_zh": "以下哪项通常不是精致花束的商机？",
+   "options_en": [
+    "Proposal",
+    "Funeral wake",
+    "Anniversary",
+    "Birthday"
+   ],
+   "options_zh": [
+    "求婚",
+    "丧礼治丧",
+    "纪念日",
+    "生日"
+   ],
+   "correct_index": 1,
+   "explanation_en": "Funeral wakes use condolence wreaths, not refined bouquets.",
+   "explanation_zh": "丧礼治丧使用帛事花圈，不是精致花束。"
+  }
+ ]
+}
