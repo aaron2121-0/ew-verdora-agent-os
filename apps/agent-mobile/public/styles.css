@@ -383,8 +383,7 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 .handbook-photo-actions{display:flex;gap:10px}
 .spotlight-layer{position:fixed;inset:0;z-index:85;background:rgba(8,24,18,.52)}
 .spotlight-target{position:relative!important;z-index:90!important;box-shadow:0 0 0 5px rgba(255,255,255,.85);border-radius:12px}
-body:has(.spotlight-layer) .app-root,body:has(.spotlight-layer) #nav{z-index:86;position:relative}
-body:has(.spotlight-layer) #nav{position:fixed}
+body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .spotlight-bubble{position:fixed;z-index:92;max-width:240px;min-width:160px;background:var(--surface,#fff);color:var(--text,#173f35);border-radius:15px;padding:12px;box-shadow:0 10px 35px rgba(0,0,0,.28)}
 .spotlight-bubble p{font-size:.8rem;margin:0 0 10px}
 .spotlight-bubble .btn{margin-right:4px}
