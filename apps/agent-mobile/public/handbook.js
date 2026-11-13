@@ -65,10 +65,25 @@ function simpleModal(className){
   return {backdrop,close};
 }
 
-export function createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate}){
-  let handbookData=null,fetching=null,currentLine=null,slideIndex=0;
+export function createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate,onJourneyChange}){
+  let handbookData=null,fetching=null,currentLine=null,currentCourse=null,slideIndex=0;
+  let slideTimer=null,slideToken=0;
+  const readStates=new Map(),readRequests=new Map();
   const userKey=()=>String(getUserId()||"unknown");
-  const readKey=line=>"ew_handbook_read_v1_"+userKey()+"_"+line;
+  const clearSlideTimer=()=>{slideToken++;if(slideTimer!==null){clearTimeout(slideTimer);slideTimer=null}};
+  const readStatus=code=>readStates.get(code)||null;
+  async function syncReadState(code){
+    if(readRequests.has(code))return readRequests.get(code);
+    const promise=api.training({action:"module_read",module_code:code,card_codes:[]})
+      .then(r=>{readStates.set(code,r);onJourneyChange?.();return r})
+      .catch(()=>{const cached=readStates.get(code);if(!cached)readStates.set(code,{required_card_codes:[],read_card_codes:[],ready_for_quiz:false,unavailable:true});return readStates.get(code)})
+      .finally(()=>readRequests.delete(code));
+    readRequests.set(code,promise);return promise;
+  }
+  function hydrateJourney(){
+    const next=firstOpenCode();
+    if(next&&!readStates.has(next)&&!readRequests.has(next))void syncReadState(next);
+  }
   const seenKey=page=>"ew_page_tip_v1_"+userKey()+"_"+page;
 
   function sectionForCourse(code){
@@ -110,7 +125,12 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     return getLang()==="zh"?(row?.title_zh||row?.title_en||""):(row?.title_en||row?.title_zh||"");
   }
   function approvedSlides(line){
-    return rows(line,"product_line").flatMap(x=>cardsFromBody(content(x)).map(body=>({body,title:title(x)}))).slice(0,4);
+    return rows(line,"product_line")
+      .filter(x=>x.kind==="card"&&typeof x.code==="string"&&x.code.length>0)
+      .slice(0,4).map(x=>({
+        code:x.code,title:title(x),body:content(x),
+        points:(getLang()==="zh"?x.key_points_zh:x.key_points_en)||[]
+      }));
   }
   function handbookCard(line){
     const card=element("button",{className:"handbook-line-card",attrs:{type:"button","data-handbook-line":line.id}});
