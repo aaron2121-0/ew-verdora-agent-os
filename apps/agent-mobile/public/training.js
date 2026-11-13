@@ -28,6 +28,10 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
   let clockOffset=0;
   let timeoutSubmitting=false;
   let expandedModule=null;
+  let handbookModuleOpen=null;
+  let handbookLoading=false;
+  let handbookError=null;
+  const handbookCache=new Map();
 
   function lang(en,zh){return getLang()==="zh"?zh:en}
   function stopTimer(){if(timer){clearInterval(timer);timer=null}}
@@ -182,6 +186,28 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
     });
   }
 
+
+  async function toggleHandbook(code,section){
+    if(handbookLoading)return;
+    if(handbookModuleOpen===code){handbookModuleOpen=null;render();return}
+    handbookModuleOpen=code;handbookError=null;
+    if(handbookCache.has(section)){render();return}
+    handbookLoading=true;render();
+    try{
+      const j=await api.agent({action:"handbook",section});
+      handbookCache.set(section,Array.isArray(j.entries)?j.entries:[]);
+    }catch(e){
+      handbookError=section;
+      toast(api.friendlyError(e?.message),{tone:"danger"});
+    }finally{handbookLoading=false;render()}
+  }
+
+  const sectionName=section=>tr(({
+    story:"handbookSectionStory",product_line:"handbookSectionProductLine",
+    service_rule:"handbookSectionServiceRule",delivery:"handbookSectionDelivery",
+    script:"handbookSectionScript",announcement:"handbookSectionAnnouncement"
+  })[section]||"handbookSectionProductLine");
+
   function modules(){
     const card=element("section",{className:"training3-card"});
     const head=element("div",{className:"training3-section-head"});
@@ -198,12 +224,11 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
         element("small",{text:moduleStatus(x.status,tr)+" · "+Number(x.best_score||0)+"/100"}));
       r.append(left);
       if(x.status==="passed")r.append(element("span",{className:"badge badge-success",text:tr("passed")}));
-      else{
-        const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button","aria-expanded":expandedModule===code?"true":"false"}});
-        b.append(createIcon("graduationCap",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
-        b.addEventListener("click",()=>expandModule(code));
-        r.append(b);
-      }
+      // Passed courses also remain readable as handbook reference.
+      const b=element("button",{className:"btn btn-secondary btn-small",attrs:{type:"button","aria-expanded":expandedModule===code?"true":"false"}});
+      b.append(createIcon("graduationCap",{size:16}),element("span",{text:expandedModule===code?tr("unlockCourseClose"):tr("unlockCourseRead")}));
+      b.addEventListener("click",()=>expandModule(code));
+      r.append(b);
       item.append(r);
       if(expandedModule===code){
         const detail=element("div",{className:"training3-course-content"});
@@ -221,6 +246,31 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
           practice.append(createIcon("graduationCap",{size:16}),element("span",{text:tr("practice")}));
           practice.addEventListener("click",()=>api.openPractice(code));
           detail.append(practice);
+        }
+        const section=String(mod.handbook_section||"");
+        if(section){
+          const handbookButton=element("button",{className:"btn btn-secondary btn-small training3-handbook-button",
+            attrs:{type:"button","aria-expanded":handbookModuleOpen===code?"true":"false",disabled:handbookLoading}});
+          handbookButton.append(createIcon("bookOpen",{size:16}),
+            element("span",{text:tr("handbookReadFirst",{section:sectionName(section)})}));
+          handbookButton.addEventListener("click",()=>toggleHandbook(code,section));
+          detail.append(handbookButton);
+          if(handbookModuleOpen===code){
+            const panel=element("section",{className:"training3-handbook-panel",attrs:{"aria-live":"polite"}});
+            if(handbookLoading)panel.append(element("p",{text:tr("handbookLoading")}));
+            else if(handbookError===section)panel.append(element("p",{text:tr("handbookLoadError")}));
+            else{
+              const entries=handbookCache.get(section)||[];
+              if(!entries.length)panel.append(element("p",{text:tr("handbookEmpty")}));
+              entries.forEach(row=>{
+                const article=element("article",{className:"training3-handbook-entry"});
+                article.append(element("h3",{text:getLang()==="zh"?row.title_zh:row.title_en}),
+                  element("p",{text:getLang()==="zh"?row.body_zh:row.body_en}));
+                panel.append(article);
+              });
+            }
+            detail.append(panel);
+          }
         }
         item.append(detail);
       }
