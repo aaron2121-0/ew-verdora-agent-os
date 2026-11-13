@@ -56,7 +56,7 @@ export function createAIChat({api,tr,getData,getLang}){
   }catch(e){loading.remove();message("system",String(e?.message||"")==="daily_limit"?tr("aiLimit"):tr("errorRequestFailed"),"template",null);aiEnd(false)}
   finally{clearInterval(timer);busy=false;send.disabled=false;input.focus()}
  }
- function open(){if(opened)return;opened=true;previousFocus=document.activeElement;overlay.classList.remove("hidden");sheet.classList.remove("hidden");document.body.classList.add("ai-chat-open");renderSuggestions();loadHistory();input.focus()}
+ function open(prefill=""){if(opened){if(prefill)input.value=String(prefill);input.focus();return}opened=true;previousFocus=document.activeElement;overlay.classList.remove("hidden");sheet.classList.remove("hidden");document.body.classList.add("ai-chat-open");renderSuggestions();loadHistory();if(prefill)input.value=String(prefill);input.focus()}
  function closeChat(){if(!opened)return;opened=false;overlay.classList.add("hidden");sheet.classList.add("hidden");document.body.classList.remove("ai-chat-open");previousFocus?.focus?.()}
  close.addEventListener("click",closeChat);overlay.addEventListener("click",closeChat);
  sheet.addEventListener("keydown",e=>{if(e.key==="Escape")closeChat();if(e.key==="Tab"){const focusables=[...sheet.querySelectorAll("button:not([disabled]),textarea")];const i=focusables.indexOf(document.activeElement);if(e.shiftKey&&i===0){e.preventDefault();focusables.at(-1)?.focus()}else if(!e.shiftKey&&i===focusables.length-1){e.preventDefault();focusables[0]?.focus()}}});
