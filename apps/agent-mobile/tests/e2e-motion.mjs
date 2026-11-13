@@ -11,6 +11,8 @@ const screenshots=path.join(root,"artifacts","ui-motion");
 await fs.mkdir(screenshots,{recursive:true});
 const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2e-token\",refresh_token:\"e2e-refresh\",user:{id:\"e2e-agent\"}};return {auth:{onAuthStateChange(cb){window.__testAuthChange=cb;return {data:{subscription:{unsubscribe(){}}}}},async getSession(){return {data:{session}}},async setSession(value){session={...value,user:{id:\"e2e-agent\"}};return {error:null}},async signInWithOtp(){return {error:null}},async signOut(){session=null;return {error:null}}},storage:{from(){return {uploadToSignedUrl:async()=>({error:null})}}}}}};";
 const dashboard={agent:{id:"e2e-agent",display_name:"Test Agent",agent_code:"T001",status:"active",tier:"starter"},phase1:{can_sell:true,due_followups:[],recent_leads:[{id:"mock-lead",customer_label:"𠮷野 · 龘龖",status:"new",budget:200,source:"instagram",lead_score:78,lead_score_reason:{zh:"今天可以优先联系",en:"Prioritize today"},next_best_action:"follow_up",best_followup_time:"2026-11-13T02:00:00+08:00"}],tier_progress:{commission_rate:0.1},money:{today_earned:0,pending:0,month_earned:0},training_pending:false},selling_kits:[],campaigns:[],channel_playbooks:[],training:[]};
+const mockReads=new Map();
+const requiredBouquet=["BOUQ-1","BOUQ-2","BOUQ-3","BOUQ-4"];
 const mime={".html":"text/html",".css":"text/css",".js":"text/javascript",".woff2":"font/woff2",".svg":"image/svg+xml"};
 const server=createServer(async(req,res)=>{
  const u=new URL(req.url,"http://localhost");
@@ -28,15 +30,47 @@ const server=createServer(async(req,res)=>{
    return json({ok:true});
   }
   if(body.action==="handbook")return json({ok:true,knowledge:[
-  {id:"h-fixture-1",section:"product_line",title_en:"bouquet: training fixture",title_zh:"bouquet: 测试内容",
-   body_en:JSON.stringify(["Fixture card 1","Fixture card 2","Fixture card 3","Fixture card 4"]),
-   body_zh:JSON.stringify(["测试卡 1","测试卡 2","测试卡 3","测试卡 4"]),
-   active:true,visible_to_agent:true,needs_owner_confirm:false,sort:1},
-  {id:"h-fixture-2",section:"script",title_en:"bouquet: test script",title_zh:"bouquet: 测试话术",
-   body_en:JSON.stringify(["Example only A","Example only B","Example only C"]),
-   body_zh:JSON.stringify(["仅作测试 A","仅作测试 B","仅作测试 C"]),
-   active:true,visible_to_agent:true,needs_owner_confirm:false,sort:2}
- ],photos:[],content_pending:false});
+    ...requiredBouquet.map((code,index)=>({
+      id:"h-"+code,code,kind:"card",product_line:"bouquet",section:"product_line",
+      title_en:"Approved test card "+(index+1),title_zh:"核准测试卡 "+(index+1),
+      body_en:"Fixture content for "+code,body_zh:"测试资料 "+code,
+      key_points_en:["Test example"],key_points_zh:["测试内容"],
+      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:index+1
+    })),
+    {id:"h-script",code:"S-1",kind:"script",product_line:"bouquet",section:"script",
+      title_en:"Test script",title_zh:"测试话术",body_en:"Example script",body_zh:"仅作测试的话术",
+      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:5},
+    {id:"h-faq",code:"F-1",kind:"faq",product_line:"bouquet",section:"faq",
+      title_en:"Is stock guaranteed?",title_zh:"保证有现货吗？",body_en:"No, confirm with Owner.",body_zh:"不保证，请先向 Owner 确认。",
+      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:6}
+  ],photos:[],content_pending:false});
+  if(body.action==="module_read"){
+    const code=String(body.module_code||""),read=mockReads.get(code)||new Set();
+    const incoming=body.card_codes||[];
+    if(incoming.some(x=>!requiredBouquet.includes(x))){
+      res.writeHead(400,{"content-type":"application/json","access-control-allow-origin":"*"});
+      res.end(JSON.stringify({error:"invalid_card_codes"}));return;
+    }
+    incoming.forEach(x=>read.add(x));mockReads.set(code,read);
+    return json({ok:true,module_code:code,required_card_codes:requiredBouquet,
+      read_card_codes:requiredBouquet.filter(x=>read.has(x)),remaining_card_codes:requiredBouquet.filter(x=>!read.has(x)),
+      ready_for_quiz:requiredBouquet.every(x=>read.has(x))});
+  }
+  if(body.action==="module_quiz_start"){
+    const read=mockReads.get(String(body.module_code||""))||new Set();
+    if(!requiredBouquet.every(x=>read.has(x))){
+      res.writeHead(403,{"content-type":"application/json","access-control-allow-origin":"*"});
+      res.end(JSON.stringify({error:"must_read_handbook_first"}));return;
+    }
+    return json({ok:true,quiz:{attempt_id:"e2e-attempt",module_code:body.module_code,completed:false,question:{
+      position:1,question_en:"Fixture: which card explains occasions?",question_zh:"测试：哪一张说明适用场合？",
+      options_en:["One","Two","Three","Four"],options_zh:["一","二","三","四"]}}});
+  }
+  if(body.action==="module_quiz_answer")return json({ok:true,correct:false,
+    explanation_en:"Check the approved occasions card.",explanation_zh:"请查阅核准的适用场合卡片。",
+    related_card_code:"BOUQ-2",quiz:{attempt_id:"e2e-attempt",completed:false,question:{
+      position:2,question_en:"Fixture question two",question_zh:"测试第二题",
+      options_en:["One","Two","Three","Four"],options_zh:["一","二","三","四"]}}});
  if(body.action==="dashboard")return json(dashboard);
   return json({ok:true,server_now:new Date().toISOString()});
  }
@@ -154,11 +188,59 @@ try{
   await page.screenshot({path:path.join(screenshots,"handbook-detail-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.locator(".handbook-slide-controls button").last().click();
   assert.match(await page.locator(".handbook-slide-body").innerText(),/2 \/ 4/);
+  await page.locator(".handbook-head button").click();
+  await page.locator(".handbook-head button").click();
+  await page.locator(".journey-day.current button").click();
+  await page.locator(".handbook-slide-body h2").waitFor();
+  assert.equal(await page.locator('[data-reading-complete="true"]').count(),0);
+  await page.screenshot({path:path.join(screenshots,"course-reading-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
   assert.ok(size.scroll<=size.view+1,"handbook horizontal overflow "+width+"/"+lang+"/"+theme);
   assert.deepEqual(errors,[],"onboarding/handbook page errors "+width+"/"+lang+"/"+theme);
   await ctx.close();
  }
+
+ // Reading must be persisted server-side and block early quiz requests.
+ mockReads.clear();
+ const lessonCtx=await browser.newContext({viewport:{width:360,height:850}});
+ await lessonCtx.addInitScript(()=>{
+  localStorage.setItem("ew_onboarding_v1_e2e-agent","1");
+  for(const p of ["today","customers","training","handbook","order","performance"])
+    localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+ });
+ const lesson=await lessonCtx.newPage();
+ await lesson.goto(origin);
+ await lesson.locator(".journey-day.current button").click();
+ await lesson.locator(".handbook-slide-body h2").waitFor();
+ const early=await lesson.evaluate(async()=>{
+  const response=await fetch("/functions/v1/agent-training",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({action:"module_quiz_start",module_code:"CORE-BRAND"})});
+  return {status:response.status,body:await response.json()};
+ });
+ assert.equal(early.status,403);
+ assert.equal(early.body.error,"must_read_handbook_first");
+ assert.equal(await lesson.locator('[data-reading-complete="true"]').count(),0);
+ assert.ok(await lesson.locator(".handbook-slide-controls button").last().isDisabled(),"fast swipe blocked");
+ for(let i=0;i<4;i++){
+  await lesson.locator(".handbook-read-status").filter({hasText:/saved to your learning progress/}).waitFor({timeout:7500});
+  if(i<3)await lesson.locator(".handbook-slide-controls button").last().click();
+ }
+ assert.equal((mockReads.get("CORE-BRAND")||new Set()).size,4);
+ await lesson.locator('[data-reading-complete="true"]').waitFor();
+ await lesson.screenshot({path:path.join(screenshots,"course-read-complete-360-en.png"),fullPage:true});
+ await lesson.reload();
+ await lesson.locator(".journey-current-status").filter({hasText:/Quiz ready/}).waitFor({timeout:15000});
+ await lesson.locator(".journey-day.current button").click();
+ await lesson.locator(".handbook-slide-body h2").waitFor();
+ for(let i=0;i<3;i++)await lesson.locator(".handbook-slide-controls button").last().click();
+ await lesson.locator('[data-reading-complete="true"]').click();
+ await lesson.locator(".handbook-quiz-option").first().click();
+ await lesson.locator(".handbook-quiz-feedback").filter({hasText:/Check the approved occasions card/}).waitFor();
+ await lesson.locator(".handbook-quiz-options button").filter({hasText:"Review this handbook card"}).click();
+ await lesson.locator(".handbook-slide-body").filter({hasText:/2 \/ 4/}).waitFor();
+ await lesson.screenshot({path:path.join(screenshots,"wrong-answer-related-card.png"),fullPage:true});
+ await lessonCtx.close();
+
  dashboard.agent.status="active";
  dashboard.phase1.can_sell=true;
  dashboard.phase1.training_pending=false;
