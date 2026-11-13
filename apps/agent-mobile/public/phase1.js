@@ -183,7 +183,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   function pageSwap(next){
     const old=document.querySelector(".section.active");
     const target=document.querySelector('.section[data-page="'+next+'"]');
-    if(!target)return;
+    if(!target)return Promise.resolve();
+    let ready=Promise.resolve();
     const nextIndex=NAV.findIndex(x=>x[0]===next);
     const direction=nextIndex>=0&&previousNavIndex>=0&&nextIndex<previousNavIndex?-1:1;
     const swap=()=>{
@@ -192,7 +193,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     if(document.startViewTransition&&!reduced){
-      document.startViewTransition(swap);
+      ready=document.startViewTransition(swap).updateCallbackDone;
     }else{
       swap();
       if(!reduced)target.animate(
@@ -201,12 +202,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       );
     }
     if(nextIndex>=0)previousNavIndex=nextIndex;
+    return ready;
   }
 
   function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
     active=next;
-    pageSwap(next);
+    const navigationReady=pageSwap(next);
     updateNavIndicator();
     if(next==="today")renderToday();
     else if(next==="customers")renderCustomers();
@@ -215,7 +217,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     else if(next==="performance")renderPerformance();
     else if(next==="selling")renderSelling();
     else if(next==="handbook")renderHandbook();
-    requestAnimationFrame(()=>{
+    navigationReady.then(()=>requestAnimationFrame(()=>{
+      if(active!==next)return;
       if(["today","customers","order","training","performance","handbook"].includes(next)){
         const selectors={
           today:[["#todayPage .guide-roadmap","tourToday"],["#todayPage .quick-grid","tourTraining"]],
@@ -230,7 +233,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       }
       if(scrollTo)document.getElementById(scrollTo)?.scrollIntoView({behavior:"smooth",block:"start"});
       else if(!focusModule&&!focusExam)window.scrollTo({top:0,behavior:"instant"});
-    });
+    })).catch(()=>{});
   }
 
   async function refreshUnlockSummary(){
