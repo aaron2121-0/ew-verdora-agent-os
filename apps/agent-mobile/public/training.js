@@ -205,7 +205,7 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
   const sectionName=section=>tr(({
     story:"handbookSectionStory",product_line:"handbookSectionProductLine",
     service_rule:"handbookSectionServiceRule",delivery:"handbookSectionDelivery",
-    script:"handbookSectionScript",announcement:"handbookSectionAnnouncement"
+    script:"handbookSectionScript",announcement:"handbookSectionAnnouncement",faq:"handbookSectionFaq"
   })[section]||"handbookSectionProductLine");
 
   function modules(){
@@ -266,6 +266,12 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
                 const article=element("article",{className:"training3-handbook-entry"});
                 article.append(element("h3",{text:getLang()==="zh"?row.title_zh:row.title_en}),
                   element("p",{text:getLang()==="zh"?row.body_zh:row.body_en}));
+                const points=getLang()==="zh"?row.key_points_zh:row.key_points_en;
+                if(Array.isArray(points)&&points.length){
+                  const list=element("ul",{className:"training3-course-list"});
+                  points.forEach(p=>list.append(element("li",{text:String(p)})));
+                  article.append(list);
+                }
                 panel.append(article);
               });
             }
