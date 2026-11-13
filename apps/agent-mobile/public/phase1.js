@@ -5,6 +5,7 @@ import {greetingPeriod,kuchingDateKey,formatKuchingDateTime} from "./date.js";
 import {createOrderWizard} from "./order.js";
 import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
+import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -64,6 +65,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let lastAllDone=false;
   let customerSegment="all";
+  let unlockSummary=null,unlockLoading=false;
 
   const order=createOrderWizard({
     getData,getLang,getUserId,tr,api,
@@ -75,7 +77,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   const performance=createPerformanceDashboard({
     getUserId,getLang,tr,api
   });
-  const training=createTrainingUI({getData,getLang,tr,api});
+  const training=createTrainingUI({getData,getLang,tr,api,onSummary:today=>{
+    unlockSummary=today;
+    if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
+  }});
 
   function langText(value){
     const key=categoryKey(value);
@@ -194,7 +199,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(nextIndex>=0)previousNavIndex=nextIndex;
   }
 
-  function navigate(next,{scrollTo=null}={}){
+  function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
     active=next;
     pageSwap(next);
@@ -202,13 +207,38 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(next==="today")renderToday();
     else if(next==="customers")renderCustomers();
     else if(next==="order")order.open();
-    else if(next==="training")renderTraining();
+    else if(next==="training")renderTraining({focusModule,focusExam});
     else if(next==="performance")renderPerformance();
     else if(next==="selling")renderSelling();
     requestAnimationFrame(()=>{
       if(scrollTo)document.getElementById(scrollTo)?.scrollIntoView({behavior:"smooth",block:"start"});
-      else window.scrollTo({top:0,behavior:"instant"});
+      else if(!focusModule&&!focusExam)window.scrollTo({top:0,behavior:"instant"});
     });
+  }
+
+  async function refreshUnlockSummary(){
+    if(unlockLoading)return;
+    unlockLoading=true;
+    try{
+      const result=await api.training({action:"today",start:false});
+      unlockSummary=result?.today||null;
+      if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
+    }catch{
+      // Training data is optional here. Never show an exam as ready before its state is confirmed.
+    }finally{unlockLoading=false}
+  }
+
+  function renderLockChecklist(){
+    const checklist=document.getElementById("lockChecklist");
+    if(!checklist)return;
+    const state=getUnlockProgress(getData(),unlockSummary);
+    checklist.replaceChildren(buildUnlockChecklist({
+      data:getData(),summary:unlockSummary,tr,
+      onCourse:code=>{lockController?.close();navigate("training",{focusModule:code})},
+      onExam:()=>{lockController?.close();navigate("training",{focusExam:true})}
+    }));
+    const action=document.getElementById("lockAction");
+    if(action)action.textContent=state.firstIncompleteCode?tr("unlockOpenNextCourse"):state.examStatus==="ready"?tr("unlockStartExam"):tr("unlockAction");
   }
 
   function showLock(){
@@ -218,9 +248,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     document.getElementById("lockStatus").textContent=status.toUpperCase();
     document.getElementById("lockTitle").textContent=tr("lockTitle");
     document.getElementById("lockDesc").textContent=status==="trainee"?tr("lockDescTrainee"):tr("lockDescRestricted");
-    document.getElementById("lockHow").textContent=tr("unlockHow");
-    document.getElementById("lockAction").textContent=tr("unlockAction");
+    const details=document.getElementById("lockHow");
+    if(details)details.open=false;
+    document.getElementById("lockHowSummary").textContent=tr("unlockHow");
+    renderLockChecklist();
     sheet.classList.remove("hidden");
+    if(!unlockSummary)refreshUnlockSummary();
     vibrate([12,35,12]);
   }
 
@@ -228,7 +261,11 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     lockController=setupBottomSheet(document.getElementById("lockSheet"));
     detailController=setupBottomSheet(document.getElementById("leadDetailSheet"));
     document.getElementById("closeLock")?.addEventListener("click",()=>lockController?.close());
-    document.getElementById("lockAction")?.addEventListener("click",()=>{lockController?.close();navigate("training")});
+    document.getElementById("lockAction")?.addEventListener("click",()=>{
+      const state=getUnlockProgress(getData(),unlockSummary);
+      lockController?.close();
+      navigate("training",{focusModule:state.firstIncompleteCode,focusExam:!state.firstIncompleteCode&&state.examStatus==="ready"});
+    });
     document.getElementById("closeLeadDetail")?.addEventListener("click",()=>detailController?.close());
   }
 
@@ -708,10 +745,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     sheet.classList.remove("hidden");
   }
 
-  function renderTraining(){
+  function renderTraining(options={}){
     const host=document.getElementById("trainingPage");
     if(!host)return;
-    training.open(host);
+    training.open(host,options);
   }
 
   function renderPerformance(){
@@ -819,6 +856,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     await order.init();
     renderAll();
     navigate("today");
+    refreshUnlockSummary();
   }
 
   return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training};
