@@ -296,3 +296,76 @@ input:focus-visible,textarea:focus-visible{outline:2px solid #3FB6A8;box-shadow:
 @media(prefers-reduced-motion:reduce){.unlock-step-action,.unlock-progress-fill{transition:none}}
 /* Keep TRAINEE unlock sheet above interactive AI orb and its dismissible tip. */
 #lockSheet{z-index:100}
+
+
+/* Self-guided onboarding and Owner-approved product handbook */
+.guide-roadmap{margin:10px 0 18px;padding:17px;border:1px solid #dce8de;border-radius:23px;background:linear-gradient(145deg,#f4f9f1,#ecf4ea);box-shadow:var(--shadow-1);color:#173f35}
+.guide-roadmap-top{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.guide-roadmap-copy{min-width:0;flex:1}.guide-roadmap-copy h2{font-size:1.04rem;font-weight:900;line-height:1.3}
+.guide-roadmap-copy p{font-size:.71rem;line-height:1.45;margin-top:6px;color:#556b5d}
+.guide-roadmap-copy small{display:block;font-size:.7rem;font-weight:800;margin-top:9px}
+.guide-progress-ring{--percentage:0;flex:none;width:80px;height:80px;border-radius:50%;background:conic-gradient(#397d5a calc(var(--percentage)*1%),#cfdfcf 0);display:grid;place-items:center;position:relative;font-variant-numeric:tabular-nums}
+.guide-progress-ring:before{content:"";position:absolute;inset:9px;background:#f3f9f2;border-radius:50%}
+.guide-progress-ring strong{z-index:1;font-size:1.12rem;letter-spacing:-.04em}
+.guide-day-list{display:grid;gap:7px;margin:15px 0}
+.guide-day{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:#fff;border:1px solid #e0e9df;border-radius:14px;padding:11px;min-width:0}
+.guide-day.is-current{border-color:#9abfa5;box-shadow:0 0 0 1px #b1d2b7}.guide-day.is-locked{opacity:.6}
+.guide-day-content{display:flex;flex-direction:column;gap:2px;min-width:0}.guide-day-label{font-size:.63rem;font-weight:900;color:#407a5a}
+.guide-day-content strong{font-size:.75rem;line-height:1.3;overflow-wrap:anywhere}.guide-day-content small{font-size:.61rem;color:#66766b}
+.guide-day-action,.guide-day-course{border-radius:10px;padding:9px;border:1px solid #bdd2be;background:#f4faf3;color:#194c37;font-size:.66rem;font-weight:850;cursor:pointer;min-height:42px}
+.guide-day-course{grid-column:1/-1;justify-self:start;background:transparent;min-height:36px}
+.guide-day-action:disabled,.guide-day-course:disabled{cursor:not-allowed}
+.guide-handbook>.screen-subtitle{margin:6px 0 18px}.guide-line-grid{display:grid;gap:11px;margin-top:17px}
+.guide-line-card{display:flex;gap:13px;align-items:center;padding:15px;background:var(--surface);border:1px solid var(--line);border-radius:18px;color:var(--text-950);text-align:left;width:100%;min-height:80px;box-shadow:var(--shadow-1);cursor:pointer}
+.guide-line-card>strong{flex:1;font-weight:800;font-size:.9rem}.guide-icon-motion{position:relative;display:grid;place-items:center;width:52px;height:52px;flex:none;border-radius:16px;background:#e9f1e6;color:#245f41;overflow:hidden}
+.guide-icon-motion img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.guide-icon-motion .guide-image-fallback{display:none}
+.guide-line-card:active .guide-icon-motion,.guide-day-action:active,.guide-ai-suggestion:active,.guide-line-card:active{transform:scale(.97)}
+.guide-line-card,.guide-day-action,.guide-ai-suggestion{transition:transform .12s ease-out}
+.guide-modal{position:fixed;inset:0;background:rgba(10,26,17,.69);z-index:210;display:flex;align-items:flex-end;justify-content:center;padding:0 0 env(safe-area-inset-bottom)}
+.guide-modal-surface{width:min(100%,480px);max-height:93dvh;min-height:300px;border-radius:26px 26px 0 0;background:var(--surface);color:var(--text-950);overflow-y:auto;overscroll-behavior:contain;padding:19px 19px 28px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sheet)}
+.guide-modal-header{display:flex;align-items:center;justify-content:space-between;min-height:34px;gap:12px}.guide-modal-header strong{font-size:.92rem}.guide-close,.guide-skip{border:0;background:transparent;color:var(--text-650);min-width:40px;min-height:40px;cursor:pointer;font-size:1.3rem}
+.guide-skip{font-size:.75rem}.guide-onboarding-image{aspect-ratio:1.45;position:relative;width:100%;border-radius:18px;background:radial-gradient(circle at 78% 25%,#a4c1ad,#315b48 72%);color:#fff;overflow:hidden;display:grid;place-items:center;margin-bottom:7px}
+.guide-onboarding-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.guide-image-fallback{display:grid;place-items:center;text-align:center;padding:12px;font-size:.75rem;font-weight:750;letter-spacing:.08em}
+.guide-kicker{font-size:.69rem;font-weight:850;letter-spacing:.12em;color:var(--verdora-700)}
+.guide-onboarding-title{font-size:1.35rem;line-height:1.18;color:var(--verdora-900)}
+.guide-onboarding-description{font-size:.83rem;line-height:1.6;color:var(--text-650);min-height:48px}
+.guide-dots{display:flex;gap:6px;justify-content:center;padding:8px}.guide-dot{display:block;width:7px;height:7px;border-radius:99px;background:#d1d7d0}
+.guide-dot.active{width:24px;background:#286344}.guide-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+.guide-actions .btn{flex:1;min-height:44px}.guide-section-title{font-size:.82rem;color:var(--verdora-900);margin:17px 0 2px}
+.guide-learning-card{background:#f0f6ee;border:1px solid #d9e7d7;border-radius:16px;padding:17px;min-height:164px;display:flex;flex-direction:column;gap:12px;touch-action:pan-y}
+.guide-learning-card h4{font-size:1rem;color:#193e30}.guide-learning-card p{font-size:.83rem;line-height:1.65;white-space:pre-line;color:#304839}
+.guide-empty{font-size:.77rem;color:var(--text-650);line-height:1.55;padding:11px 13px;border:1px dashed var(--line);border-radius:12px}
+.guide-photo-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+.guide-photo-thumb{position:relative;flex:0 0 46%;aspect-ratio:3/4;border-radius:12px;background:#d6dfd6;overflow:hidden;scroll-snap-align:start;cursor:pointer}
+.guide-photo-thumb img{position:absolute;width:100%;height:100%;object-fit:cover;inset:0}.guide-photo-large{display:block;width:100%;max-height:65dvh;object-fit:contain;border-radius:12px;background:#152b21}
+.guide-photo-caption{font-size:.73rem;line-height:1.55}.guide-script{display:flex;align-items:flex-start;gap:9px;padding:12px;border-radius:12px;border:1px solid var(--line)}
+.guide-script p{flex:1;white-space:pre-line;font-size:.76rem;line-height:1.55;overflow-wrap:anywhere}.guide-script button{flex:none}
+.guide-faq{border-bottom:1px solid var(--line);padding:11px 0}.guide-faq summary{font-size:.8rem;font-weight:750;cursor:pointer}.guide-faq p{padding-top:8px;font-size:.76rem;line-height:1.6}
+.guide-course-cta{margin-top:18px;min-height:48px}.guide-help-empty{display:grid;justify-items:start;gap:13px;padding:18px;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin:12px 0}
+.guide-help-empty p{font-size:.8rem;line-height:1.5}
+.guide-tour-layer{position:fixed;inset:0;z-index:205;pointer-events:none}.guide-spotlight{position:fixed;border:2px solid #e8e2b1;border-radius:14px;box-shadow:0 0 0 9999px rgba(12,24,17,.72);pointer-events:auto}
+.guide-tour-tip{pointer-events:auto;position:fixed;left:15px;right:15px;bottom:calc(108px + env(safe-area-inset-bottom));width:min(calc(100% - 30px),400px);margin:0 auto;padding:14px 15px;background:var(--surface);border-radius:17px;box-shadow:0 9px 25px rgba(0,0,0,.18)}
+.guide-tour-tip p{font-size:.8rem;line-height:1.5;margin-top:6px}.guide-tour-tip .btn{flex:1}
+.guide-ai-tips{position:fixed;z-index:75;right:12px;bottom:calc(107px + env(safe-area-inset-bottom));width:min(308px,calc(100vw - 24px));padding:13px;border-radius:17px;background:var(--surface);box-shadow:0 12px 38px rgba(12,39,26,.24);border:1px solid var(--line);display:grid;gap:8px}
+.guide-ai-tips>strong{font-size:.81rem;padding-right:35px}.guide-ai-tips>.guide-close{position:absolute;top:6px;right:7px}
+.guide-ai-suggestion{border:1px solid var(--line);border-radius:11px;background:transparent;text-align:left;min-height:42px;padding:9px;color:var(--text-950);cursor:pointer;font-size:.76rem;line-height:1.4}
+.guide-celebrate{position:fixed;inset:0;z-index:220;display:grid;place-items:center;pointer-events:none;background:rgba(18,50,35,.16)}
+.guide-celebrate img{max-width:85vw;max-height:75vh;object-fit:contain}
+:root[data-theme="dark"] .guide-roadmap{background:linear-gradient(145deg,#1f3c2e,#193328);border-color:#476351;color:#e7f2e8}
+:root[data-theme="dark"] .guide-roadmap-copy p,:root[data-theme="dark"] .guide-day-content small{color:#b8d0c0}
+:root[data-theme="dark"] .guide-progress-ring:before{background:#1d392b}
+:root[data-theme="dark"] .guide-day{background:#254234;border-color:#496856;color:#eaf3e9}
+:root[data-theme="dark"] .guide-day-action,:root[data-theme="dark"] .guide-day-course{background:#30533b;border-color:#668674;color:#e9f3e9}
+:root[data-theme="dark"] .guide-learning-card{background:#263f31;border-color:#52725a}
+:root[data-theme="dark"] .guide-learning-card h4,:root[data-theme="dark"] .guide-learning-card p,:root[data-theme="dark"] .guide-onboarding-title,:root[data-theme="dark"] .guide-section-title{color:#e3f3e8}
+:root[data-theme="dark"] .guide-line-card{color:#eaf3e9}
+:root[data-theme="dark"] .guide-icon-motion{background:#315b46;color:#def4df}
+@media(max-width:380px){.guide-roadmap{padding:13px}.guide-progress-ring{width:68px;height:68px}.guide-day{padding:9px}.guide-day-action{font-size:.62rem;padding:7px}.guide-onboarding-title{font-size:1.2rem}}
+@media(prefers-reduced-motion:reduce){.guide-line-card,.guide-day-action,.guide-ai-suggestion{transition:none}}
+
+.guide-question{font-size:1rem;line-height:1.5;overflow-wrap:anywhere}
+.guide-quiz-options{display:grid;gap:9px}.guide-quiz-option{width:100%;min-height:48px;text-align:left;padding:11px 12px;border:1px solid var(--line);background:var(--surface);color:var(--text-950);border-radius:12px;font-size:.78rem;line-height:1.5;cursor:pointer}
+.guide-quiz-option.selected{border-color:#40865e;box-shadow:0 0 0 2px rgba(45,107,82,.16)}
+.guide-handbook-course{display:inline-flex!important;align-items:center;gap:5px;margin:0 0 11px 10px}
+@media(max-width:380px){.guide-day-course{width:100%}}
