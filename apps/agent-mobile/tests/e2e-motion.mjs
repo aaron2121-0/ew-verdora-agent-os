@@ -27,7 +27,17 @@ const server=createServer(async(req,res)=>{
    if(body.action==="my_profile")return json({profile:{summary_zh:"你很擅长跟进",summary_en:"You are good at follow-ups",strengths:["客户沟通"],weaknesses:["跟进时间"],writing_style:"warm",agent_notes:"",stats:{score:70}}});
    return json({ok:true});
   }
-  if(body.action==="dashboard")return json(dashboard);
+  if(body.action==="handbook")return json({ok:true,knowledge:[
+  {id:"h-fixture-1",section:"product_line",title_en:"bouquet: training fixture",title_zh:"bouquet: 测试内容",
+   body_en:JSON.stringify(["Fixture card 1","Fixture card 2","Fixture card 3","Fixture card 4"]),
+   body_zh:JSON.stringify(["测试卡 1","测试卡 2","测试卡 3","测试卡 4"]),
+   active:true,visible_to_agent:true,needs_owner_confirm:false,sort:1},
+  {id:"h-fixture-2",section:"script",title_en:"bouquet: test script",title_zh:"bouquet: 测试话术",
+   body_en:JSON.stringify(["Example only A","Example only B","Example only C"]),
+   body_zh:JSON.stringify(["仅作测试 A","仅作测试 B","仅作测试 C"]),
+   active:true,visible_to_agent:true,needs_owner_confirm:false,sort:2}
+ ],photos:[],content_pending:false});
+ if(body.action==="dashboard")return json(dashboard);
   return json({ok:true,server_now:new Date().toISOString()});
  }
  let pathname=decodeURIComponent(u.pathname);if(pathname==="/")pathname="/index.html";
@@ -42,6 +52,11 @@ const browser=await chromium.launch({headless:true,args:["--no-sandbox"],executa
 try{
  for(const width of [360,430])for(const lang of ["en","zh"])for(const theme of ["dark","light"]){
   const ctx=await browser.newContext({viewport:{width,height:850},locale:lang==="zh"?"zh-CN":"en-US",colorScheme:theme});
+  await ctx.addInitScript(()=>{
+    localStorage.setItem("ew_onboarding_v1_e2e-agent","1");
+    for(const p of ["today","customers","training","handbook","order","performance"])
+      localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+  });
   const page=await ctx.newPage();const errors=[];page.on("pageerror",e=>errors.push(e.message));
   await page.goto(origin,{waitUntil:"domcontentloaded"});
   await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
@@ -80,6 +95,11 @@ try{
    content_zh:{lesson:["请遵守 EW VERDORA 核准的定价与收款规定。"]}}}));
  for(const width of [360,430])for(const lang of ["en","zh"]){
   const ctx=await browser.newContext({viewport:{width,height:850},locale:lang==="zh"?"zh-CN":"en-US",colorScheme:"light"});
+  await ctx.addInitScript(()=>{
+    localStorage.setItem("ew_onboarding_v1_e2e-agent","1");
+    for(const p of ["today","customers","training","handbook","order","performance"])
+      localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+  });
   const page=await ctx.newPage(),errors=[];
   page.on("pageerror",e=>errors.push(e.message));
   await page.goto(origin,{waitUntil:"domcontentloaded"});
@@ -103,6 +123,40 @@ try{
   assert.ok(size.scroll<=size.view+1,"TRAINEE unlock horizontal overflow "+width+"/"+lang+" "+JSON.stringify(size));
   await page.screenshot({path:path.join(screenshots,`unlock-${width}-${lang}-course.png`),fullPage:true});
   assert.deepEqual(errors,[],"TRAINEE page errors "+width+" "+lang);
+  await ctx.close();
+ }
+
+ // New-agent 4-slide tour, bilingual and full responsive handbook.
+ for(const width of [360,430])for(const lang of ["en","zh"])for(const theme of ["dark","light"]){
+  const ctx=await browser.newContext({viewport:{width,height:850},colorScheme:theme});
+  await ctx.addInitScript(({lang,theme})=>{
+    localStorage.setItem("ew_lang",lang);
+    localStorage.setItem("ew_theme",theme);
+    for(const p of ["today","customers","training","handbook","order","performance"])
+      localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+  },{lang,theme});
+  const page=await ctx.newPage(),errors=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  await page.goto(origin);
+  await page.locator(".onboarding-layer").waitFor({timeout:15000});
+  await page.screenshot({path:path.join(screenshots,"onboarding-"+width+"-"+lang+"-"+theme+".png")});
+  for(let i=0;i<4;i++)await page.locator(".onboarding-panel > .btn-primary").click();
+  assert.equal(await page.locator(".onboarding-layer").count(),0,"tour closed");
+  assert.equal(await page.evaluate(()=>localStorage.getItem("ew_onboarding_v1_e2e-agent")),"1");
+  await page.locator(".journey-card").waitFor();
+  assert.match(await page.locator(".journey-ring").innerText(),/0\/7/);
+  await page.locator(".quick-tile").filter({hasText:lang==="zh"?"产品手册":"Product handbook"}).click();
+  await page.locator(".handbook-line-card").first().waitFor();
+  await page.screenshot({path:path.join(screenshots,"handbook-overview-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
+  await page.locator('[data-handbook-line="bouquet"]').click();
+  await page.locator(".handbook-slide-body h2").waitFor({timeout:15000});
+  assert.match(await page.locator(".handbook-slide-body").innerText(),/1 \/ 4/);
+  await page.screenshot({path:path.join(screenshots,"handbook-detail-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
+  await page.locator(".handbook-slide-controls button").last().click();
+  assert.match(await page.locator(".handbook-slide-body").innerText(),/2 \/ 4/);
+  const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
+  assert.ok(size.scroll<=size.view+1,"handbook horizontal overflow "+width+"/"+lang+"/"+theme);
+  assert.deepEqual(errors,[],"onboarding/handbook page errors "+width+"/"+lang+"/"+theme);
   await ctx.close();
  }
  dashboard.agent.status="active";
@@ -132,6 +186,8 @@ try{
   await fs.writeFile(path.join(screenshots,"lighthouse-mobile.json"),JSON.stringify(report,null,2));
   await fs.writeFile(path.join(screenshots,"lighthouse-details.json"),JSON.stringify(lh.lhr,null,2));
   console.log("LIGHTHOUSE_MOBILE "+JSON.stringify(report));
+  assert.ok(scores.performance>=90,"Lighthouse Performance must be >=90; got "+scores.performance);
+  assert.ok(cls!==null&&cls<0.05,"Lighthouse CLS must be <0.05; got "+cls);
  }finally{await lhChrome.kill()}
  console.log("PASS: 360/430 EN/ZH light/dark, mocked AI chat, profile, invite");
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
