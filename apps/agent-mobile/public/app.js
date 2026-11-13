@@ -151,6 +151,7 @@ function setupAppearance(){
   $("themeToggle")?.addEventListener("click",()=>{localStorage.setItem("ew_theme",document.documentElement.dataset.theme==="dark"?"light":"dark");apply()});
   $("aiProfileOpen")?.addEventListener("click",()=>aiProfile?.open());
   document.addEventListener("ew-open-ai",()=>aiChat?.open());
+  document.addEventListener("ew-open-ai-question",event=>aiChat?.open(event.detail?.text||""));
 }
 
 function setupHandlers(){
