@@ -1,5 +1,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getApprovedModuleCardCodes } from "../_shared/module-cards.mjs";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -101,6 +102,14 @@ Deno.serve(async (req) => {
   if (!agent) return reply({ ok: true, needs_registration: true, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
+
+  // Authenticated Agent only. The resolver checks required course status and
+  // filters all card codes to Owner-approved visible entries on the server.
+  if (action === "module_cards") {
+    const result=await getApprovedModuleCardCodes(admin,body.module_code);
+    if(result.error)return reply({error:result.error},result.status||400);
+    return reply(result);
+  }
 
   // Handbook is always server-filtered; unpublished Grok imports never reach Agents.
   if (action === "handbook") {
