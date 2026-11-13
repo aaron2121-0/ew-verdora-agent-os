@@ -15,7 +15,7 @@ function safeErr(e){
   const allowed=[
     "agent_not_found","attempt_not_found","attempt_already_finished","all_questions_answered",
     "question_not_current","duplicate_answer","question_not_served","invalid_answer","questions_remaining",
-    "question_bank_not_ready","exam_attempt_not_found","exam_prerequisites_incomplete","exam_bank_not_ready"
+    "question_bank_not_ready","handbook_not_ready","must_read_handbook_first","previous_module_incomplete","exam_attempt_not_found","exam_prerequisites_incomplete","exam_bank_not_ready"
   ];
   const found=allowed.find(x=>m.includes(x));
   if(found)return found;
@@ -25,7 +25,7 @@ function safeErr(e){
 function statusFor(code){
   if(["duplicate_answer","question_not_current","attempt_already_finished","all_questions_answered"].includes(code))return 409;
   if(["attempt_not_found","exam_attempt_not_found","agent_not_found"].includes(code))return 404;
-  if(["invalid_answer","question_not_served","questions_remaining","exam_prerequisites_incomplete","question_bank_not_ready","exam_bank_not_ready"].includes(code))return 400;
+  if(["invalid_answer","question_not_served","questions_remaining","exam_prerequisites_incomplete","question_bank_not_ready","handbook_not_ready","must_read_handbook_first","exam_bank_not_ready"].includes(code))return 400;
   return 400;
 }
 function kuchingToday(){return new Date(Date.now()+8*3600*1000).toISOString().slice(0,10)}
@@ -51,6 +51,31 @@ function uuid(v){const s=clean(v,80);return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a
 
 
 const COURSE_CODES=["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"];
+
+async function requiredReadState(admin,agentId,moduleCode){
+  const {data:module,error:moduleError}=await admin.from("training_modules")
+    .select("code,handbook_section,required,active")
+    .eq("code",moduleCode).eq("required",true).eq("active",true).maybeSingle();
+  if(moduleError||!module?.handbook_section)throw new Error("handbook_not_ready");
+  // Needs the separately Owner-reviewed handbook metadata migration.
+  // Fail closed: legacy seed entries or unapproved cards do NOT count.
+  const {data:cards,error:cardsError}=await admin.from("company_knowledge")
+    .select("code,sort").eq("section","product_line").eq("kind","card")
+    .eq("product_line",module.handbook_section)
+    .eq("active",true).eq("visible_to_agent",true)
+    .eq("needs_owner_confirm",false).order("sort",{ascending:true});
+  if(cardsError)throw new Error("handbook_not_ready");
+  const required=[...new Set((cards||[]).map(x=>String(x.code||"").trim()).filter(Boolean))];
+  if(!required.length)throw new Error("handbook_not_ready");
+  const {data:reads,error:readError}=await admin.from("training_module_reads")
+    .select("card_code").eq("agent_id",agentId).eq("module_code",moduleCode)
+    .in("card_code",required);
+  if(readError)throw readError;
+  const readSet=new Set((reads||[]).map(x=>x.card_code));
+  const read=required.filter(x=>readSet.has(x));
+  return {required,read,remaining:required.filter(x=>!readSet.has(x))};
+}
+
 function shuffle(list){
   const a=[...list];
   for(let i=a.length-1;i>0;i--){
@@ -95,6 +120,37 @@ Deno.serve(async req=>{
 
   try{
 
+
+    if(action==="module_read"){
+      const code=clean(body.module_code,40);
+      if(!COURSE_CODES.includes(code))return reply({error:"invalid_module"},400);
+      const incoming=body.card_codes===undefined?[]:body.card_codes;
+      if(!Array.isArray(incoming)||incoming.length>30||
+        incoming.some(x=>typeof x!=="string"||x.length>80))
+        return reply({error:"invalid_card_codes"},400);
+      const codes=[...new Set(incoming.map(x=>x.trim()))];
+      const state=await requiredReadState(admin,agent.id,code);
+      if(codes.some(x=>!state.required.includes(x)))
+        return reply({error:"invalid_card_codes"},400);
+      if(codes.length){
+        const {data:allProgress,error:progressError}=await admin.from("training_progress")
+          .select("status,training_modules(code)").eq("agent_id",agent.id);
+        if(progressError)throw progressError;
+        const progress=new Map((allProgress||[]).map(x=>[x.training_modules?.code,x.status]));
+        const first=COURSE_CODES.find(x=>progress.get(x)!=="passed");
+        if(code!==first&&progress.get(code)!=="passed")
+          return reply({error:"previous_module_incomplete"},403);
+        const {error:writeError}=await admin.from("training_module_reads")
+          .upsert(codes.map(card_code=>({agent_id:agent.id,module_code:code,card_code})),
+           {onConflict:"agent_id,module_code,card_code",ignoreDuplicates:true});
+        if(writeError)throw writeError;
+      }
+      const latest=codes.length?await requiredReadState(admin,agent.id,code):state;
+      return reply({ok:true,module_code:code,required_card_codes:latest.required,
+        read_card_codes:latest.read,remaining_card_codes:latest.remaining,
+        ready_for_quiz:latest.remaining.length===0});
+    }
+
     if(action==="module_quiz_start"){
       const code=clean(body.module_code,40);
       if(!COURSE_CODES.includes(code))return reply({error:"invalid_module"},400);
@@ -110,6 +166,10 @@ Deno.serve(async req=>{
       if(progress.get(code)==="passed")return reply({ok:true,passed:true});
       const pending=COURSE_CODES.find(x=>progress.get(x)!=="passed");
       if(pending!==code)return reply({error:"previous_module_incomplete"},403);
+      const reading=await requiredReadState(admin,agent.id,code);
+      if(reading.remaining.length)
+        return reply({error:"must_read_handbook_first",remaining_count:reading.remaining.length},403);
+
       let {data:attempt,error:attemptError}=await admin.from("training_module_quiz_attempts")
         .select("id,status,attempt_no,module_code,score,passed")
         .eq("agent_id",agent.id).eq("module_code",code).eq("status","active").maybeSingle();
@@ -182,7 +242,7 @@ Deno.serve(async req=>{
         .select("id").maybeSingle();
       if(updateError)throw updateError;
       if(!updated)return reply({error:"duplicate_answer"},409);
-      const feedback={correct,explanation_en:q.explanation_en,explanation_zh:q.explanation_zh};
+      const feedback={correct,explanation_en:q.explanation_en,explanation_zh:q.explanation_zh,related_card_code:q.related_card_code||null};
       if(position===3){
         const right=(items||[]).filter(x=>x.answered_at&&x.is_correct).length+(correct?1:0);
         const score=Math.round(right/3*100*100)/100;
