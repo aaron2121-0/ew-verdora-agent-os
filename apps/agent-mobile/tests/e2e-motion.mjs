@@ -107,11 +107,18 @@ try{
   if(lang==="zh")await page.locator("#lang").click();
   assert.equal(await page.locator("html").getAttribute("lang"),lang==="zh"?"zh-CN":"en");
   assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
-  assert.equal(await page.locator("#todayPage .earning-action").count(),3);
+  assert.equal(await page.locator("#todayPage .vd-ht-item").count(),3);
   assert.ok(await page.locator("#todayPage .earning-actions").evaluate(el=>!!(el.compareDocumentPosition(document.querySelector(".journey-card"))&Node.DOCUMENT_POSITION_FOLLOWING)),"earning actions must come before learning");
   const dims=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
   assert.ok(dims.scroll<=dims.view+1,"horizontal overflow "+width+" "+lang+" "+theme+": "+JSON.stringify(dims));
+  assert.equal(await page.locator(".vd-ht-title").textContent(),lang==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today");
+  assert.equal(await page.locator(".vd-orb-wrap").count(),1,"Approved AI orb not mounted");
+  await page.screenshot({path:path.join(screenshots,"home-today-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.screenshot({path:path.join(screenshots,width+"-"+lang+"-"+theme+".png"),fullPage:true});
+  const before=await page.locator(".vd-ht-title").textContent();
+  await page.locator("#lang").click();
+  assert.notEqual(await page.locator(".vd-ht-title").textContent(),before,"Vendor setLang was not called");
+  await page.locator("#lang").click();
   if(width===360&&lang==="zh"&&theme==="dark"){
    await page.locator(".ai-orb").click();
    await page.locator(".ai-chat-input").fill("怎么跟进客户？");
@@ -191,7 +198,9 @@ try{
   for(let i=0;i<4;i++)await page.locator(".onboarding-panel > .btn-primary").click();
   assert.equal(await page.locator(".onboarding-layer").count(),0);
   await page.locator(".quick-tile").filter({hasText:lang==="zh"?"产品手册":"Product handbook"}).click();
-  await page.locator(".handbook-line-card").first().waitFor();
+  await page.locator("#handbookPage .vd-hero-card").first().waitFor();
+  assert.equal(await page.locator("#handbookPage .vd-hero-card").count(),5);
+  await page.screenshot({path:path.join(screenshots,"business-cards-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.screenshot({path:path.join(screenshots,"handbook-overview-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.locator('[data-handbook-line="bouquet"]').click();
   await page.locator(".handbook-slide-body h2").waitFor();
@@ -212,6 +221,35 @@ try{
   assert.deepEqual(errors,[],"onboarding/handbook errors "+width+"/"+lang+"/"+theme);
   await ctx.close();
  }
+ // Untrusted ids, keys and copy must remain inert in vendor components.
+ {
+  const ctx=await browser.newContext({viewport:{width:360,height:850}});
+  await ctx.addInitScript(()=>localStorage.setItem("ew_onboarding_v1_e2e-agent","1"));
+  const page=await ctx.newPage();await page.goto(origin);
+  await page.locator(".vd-ht-card").waitFor({timeout:15000});
+  const result=await page.evaluate(()=>{
+    const bad='"><img src=x onerror="window.__motionXss=1">';
+    const vm=window.VerdoraMotion,c=document.createElement("div");document.body.append(c);
+    vm.mountCards(c,[{id:bad,icon:"../../bad.svg",title_en:"<script>bad</script>",title_zh:"安全",
+      subtitle_en:'& " <',subtitle_zh:"内容"}],{lang:"en",iconsBase:"/ew-verdora-content/motion/icons"});
+    const id=c.querySelector(".vd-hero-card")?.getAttribute("data-line");
+    const injected=c.querySelector("script")!==null||c.querySelector('img[src="x"]')!==null;
+    c.remove();
+    const h=document.createElement("div");document.body.append(h);
+    vm.mountHomeToday(h,{actions:[
+      {id:bad,type:"lead",title_en:"Safe",title_zh:"安全"},
+      {id:"2",type:"followup",title_en:"B",title_zh:"乙"},
+      {id:"3",type:"post",title_en:"C",title_zh:"丙"}],tip:null},{lang:"en"});
+    const id2=h.querySelector("[d-tg]")?.getAttribute("d-tg");
+    const badNode=h.querySelector('img[src="x"]');h.remove();
+    return {id,id2,injected:injected||Boolean(badNode),executed:window.__motionXss===1};
+  });
+  assert.equal(result.id,'"><img src=x onerror="window.__motionXss=1">');
+  assert.equal(result.id2,result.id);
+  assert.equal(result.injected,false);assert.equal(result.executed,false);
+  await ctx.close();
+ }
+
  // Day 2 has approved cards; quiz is server-blocked until all four are read.
  dashboard.training=["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"].map((code,i)=>({
   status:i===0?"passed":"assigned",best_score:0,training_modules:{code,title_en:code,title_zh:code,
