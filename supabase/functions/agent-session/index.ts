@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     // policy exists on knowledge or portfolio storage: filter with service_role.
     const [knowledgeRes,photoRes] = await Promise.all([
       admin.from("company_knowledge")
-        .select("id,section,title_en,title_zh,body_en,body_zh,sort,active,visible_to_agent,needs_owner_confirm")
+        .select("id,code,kind,product_line,section,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,sort,active,visible_to_agent,needs_owner_confirm")
         .eq("active",true).eq("visible_to_agent",true).eq("needs_owner_confirm",false)
         .order("sort",{ascending:true}).limit(150),
       admin.from("portfolio_photos")
