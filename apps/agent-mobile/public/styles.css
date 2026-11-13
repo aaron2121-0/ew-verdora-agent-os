@@ -409,3 +409,9 @@ body:has(.spotlight-layer) #nav{position:fixed}
  .handbook-line-icon svg,.handbook-line-icon img.is-ready,.onboarding-panel,.handbook-quiz-panel{animation:none!important}
  .handbook-line-card,.handbook-photo,.journey-day button,.handbook-quiz-panel button,.onboarding-panel button{transition:none!important}
 }
+
+.ai-orb-suggestions{display:grid;gap:6px;margin-top:9px;max-height:190px;overflow:auto}
+.ai-orb-suggestions button{font:inherit;text-align:left;border-radius:9px;border:1px solid rgba(55,124,100,.28);background:var(--surface,#fff);color:var(--text,#173f35);font-size:.72rem;line-height:1.35;padding:8px 9px;cursor:pointer;transition:transform 120ms ease,opacity 120ms ease}
+.ai-orb-suggestions button:active{transform:scale(.98)}
+.ai-orb-tip:has(.ai-orb-suggestions){max-width:min(88vw,310px);max-height:min(320px,50dvh);overflow:auto}
+@media(prefers-reduced-motion:reduce){.ai-orb-suggestions button{transition:none}}
