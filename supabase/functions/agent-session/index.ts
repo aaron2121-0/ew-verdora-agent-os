@@ -101,41 +101,45 @@ Deno.serve(async (req) => {
   if (!agent) return reply({ ok: true, needs_registration: true, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
+
+  // Handbook is always server-filtered; unpublished Grok imports never reach Agents.
   if (action === "handbook") {
-    // Authentication and an actual agent row were checked above. No client
-    // policy exists on knowledge or portfolio storage: filter with service_role.
-    const [knowledgeRes,photoRes] = await Promise.all([
-      admin.from("company_knowledge")
-        .select("id,code,kind,product_line,section,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,sort,active,visible_to_agent,needs_owner_confirm")
-        .eq("active",true).eq("visible_to_agent",true).eq("needs_owner_confirm",false)
-        .order("sort",{ascending:true}).limit(150),
-      admin.from("portfolio_photos")
-        .select("id,product_line,storage_path,caption_en,caption_zh,status,sort")
-        .eq("status","approved").neq("product_line","unknown")
-        .order("sort",{ascending:true}).limit(80)
-    ]);
-    // Handbooks must fail closed until the Owner migration and approvals land.
-    if(knowledgeRes.error||photoRes.error){
-      console.error("HANDBOOK_NOT_READY",knowledgeRes.error?.code||photoRes.error?.code||"");
-      return reply({ok:true,knowledge:[],photos:[],content_pending:true});
-    }
-    const approved=(photoRes.data||[]).filter(p=>p.status==="approved"&&p.storage_path);
-    const paths=approved.map(p=>p.storage_path);
-    let signed=[];
-    if(paths.length){
-      const {data,error}=await admin.storage.from("portfolio").createSignedUrls(paths,900);
-      if(error){
-        console.error("HANDBOOK_PHOTO_SIGN_ERROR",error?.message?.slice(0,100));
-      }else signed=data||[];
-    }
-    const photos=approved.flatMap((p,i)=>{
-      const url=signed[i]?.signedUrl||signed[i]?.signed_url||"";
-      return url&&/^https:\/\//.test(url)?[{
-        id:p.id,product_line:p.product_line,caption_en:p.caption_en,
-        caption_zh:p.caption_zh,status:"approved",sort:p.sort,signed_url:url
+    const section = String(body.section || "");
+    const productLine = String(body.product_line || "");
+    const sections = ["story","product_line","service_rule","delivery","script","announcement","faq"];
+    const lines = ["condolence","opening","bouquet","wedding_event","wholesale"];
+    if(!section&&!productLine) return reply({error:"handbook_filter_required"},400);
+    if(section&&!sections.includes(section)) return reply({error:"invalid_handbook_section"},400);
+    if(productLine&&!lines.includes(productLine)) return reply({error:"invalid_product_line"},400);
+    let query=admin.from("company_knowledge")
+      .select("id,code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint,active,visible_to_agent,needs_owner_confirm")
+      .eq("active",true).eq("visible_to_agent",true).eq("needs_owner_confirm",false);
+    if(section)query=query.eq("section",section);
+    if(productLine)query=query.eq("product_line",productLine);
+    const {data,error}=await query.order("sort",{ascending:true}).limit(200);
+    if(error)return reply({error:"handbook_unavailable"},400);
+    return reply({ok:true,section:section||null,product_line:productLine||null,entries:data||[]});
+  }
+
+
+  if(action==="handbook_portfolio"){
+    const {data:found,error:photosError}=await admin.from("portfolio_photos")
+      .select("id,product_line,storage_path,caption_en,caption_zh,status,sort")
+      .eq("status","approved").neq("product_line","unknown")
+      .order("sort",{ascending:true}).limit(80);
+    if(photosError)return reply({ok:true,photos:[],content_pending:true});
+    const approved=(found||[]).filter(x=>x.storage_path);
+    if(!approved.length)return reply({ok:true,photos:[]});
+    const {data:signed,error:signError}=await admin.storage.from("portfolio")
+      .createSignedUrls(approved.map(x=>x.storage_path),900);
+    if(signError)return reply({ok:true,photos:[],content_pending:true});
+    return reply({ok:true,photos:approved.flatMap((p,i)=>{
+      const url=signed?.[i]?.signedUrl||signed?.[i]?.signed_url||"";
+      return /^https:\/\//.test(url)?[{
+        id:p.id,product_line:p.product_line,status:"approved",sort:p.sort,
+        caption_en:p.caption_en,caption_zh:p.caption_zh,signed_url:url
       }]:[];
-    });
-    return reply({ok:true,knowledge:knowledgeRes.data||[],photos,content_pending:false});
+    })});
   }
 
   if (action === "phase1_overview") {
