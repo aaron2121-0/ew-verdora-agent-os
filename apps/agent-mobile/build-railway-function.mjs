@@ -7,8 +7,25 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
+// Bundle the actual EW Verdora animation assets when the content package is
+// supplied. Missing assets are not replaced with invented imagery.
+const contentRoot=path.join(publicDir,"ew-verdora-content","motion");
+const optionalAssets=[];
+function gatherMotion(directory){
+ if(!fs.existsSync(directory))return;
+ for(const entry of fs.readdirSync(directory,{withFileTypes:true})){
+  const full=path.join(directory,entry.name);
+  if(entry.isDirectory()){gatherMotion(full);continue}
+  if(!entry.isFile()||!/\.(svg|png|webp|gif|json)$/i.test(entry.name))continue;
+  const relative=path.relative(publicDir,full).split(path.sep).join("/");
+  files[relative]=fs.readFileSync(full);
+  optionalAssets.push(relative);
+ }
+}
+gatherMotion(contentRoot);
+
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
  const found=fontModuleRoots.map(base=>path.join(base,packageName,"files",filename)).find(p=>fs.existsSync(p));
@@ -55,9 +72,12 @@ const CSP=[
 
 const encoded={"/":gzip(files["index.html"]),"/index.html":gzip(files["index.html"])};
 const types={"/":"text/html; charset=utf-8","/index.html":"text/html; charset=utf-8"};
-for(const name of [...names.slice(1),"vendor/supabase-2.119.0.js"]){
+for(const name of [...names.slice(1),...optionalAssets,"vendor/supabase-2.119.0.js"]){
   encoded["/"+name]=gzip(files[name]);
-  types["/"+name]=name.endsWith(".css")?"text/css; charset=utf-8":name.endsWith(".svg")?"image/svg+xml":"text/javascript; charset=utf-8";
+  types["/"+name]=name.endsWith(".css")?"text/css; charset=utf-8":
+    name.endsWith(".svg")?"image/svg+xml":name.endsWith(".json")?"application/json":
+    name.endsWith(".png")?"image/png":name.endsWith(".webp")?"image/webp":
+    name.endsWith(".gif")?"image/gif":"text/javascript; charset=utf-8";
 }
 
 encoded["/fonts/inter-latin.woff2"]=zlib.gzipSync(inter,{level:9}).toString("base64");
