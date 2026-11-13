@@ -115,7 +115,7 @@ begin
   'id',v_question.id,'question_en',v_question.question_en,
   'question_zh',v_question.question_zh,'options_en',v_question.options_en,
   'options_zh',v_question.options_zh,'correct_index',v_question.correct_index,
-  'explanation_en',v_question.explanation_en,'explanation_zh',v_question.explanation_zh
+  'explanation_en',v_question.explanation_en,'explanation_zh',v_question.explanation_zh,'related_card_code',v_question.related_card_code
  );
 end;
 $$;
