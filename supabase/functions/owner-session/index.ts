@@ -49,69 +49,71 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_review"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
-  // Grok handbook imports are Owner-only and unpublished until explicit review.
+
+  // All handbook mutations are Owner-only. SQL RPCs enforce Owner role again
+  // and record the batch-scoped audit event atomically with each mutation.
   if(action==="handbook_import"){
     let parsed;
     try{parsed=validateHandbookContent(b.content)}
-    catch(e){return reply({error:"handbook_validation_failed",detail:String(e?.message||"invalid_content").slice(0,160)},422)}
-    const rows=parsed.entries.map(row=>({
-      ...row,active:false,visible_to_agent:false,needs_owner_confirm:true,updated_by:uid
-    }));
-    const {data:created,error}=await admin.from("company_knowledge").insert(rows).select("id");
-    if(error||!created||created.length!==rows.length)return reply({error:"handbook_import_failed"},400);
-    const ids=created.map(row=>row.id);
-    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{
-      p_user_id:uid,p_action:"handbook_import_pending",
-      p_entity_type:"company_knowledge",p_entity_id:uid,
-      p_after:{source:"grok",schema_version:parsed.schema_version,count:ids.length,ids}
+    catch(e){return reply({error:"handbook_validation_failed",detail:String(e?.message||"invalid_content").slice(0,180)},422)}
+    const {data,error}=await admin.rpc("handbook_import_internal",{
+      p_user_id:uid,p_source_version:parsed.source_version,p_entries:parsed.entries
     });
-    if(auditError){
-      await admin.from("company_knowledge").delete().in("id",ids)
-        .eq("needs_owner_confirm",true).eq("visible_to_agent",false);
-      return reply({error:"audit_failed"},500);
-    }
-    return reply({ok:true,imported:ids.length,pending_owner_review:true,ids});
+    if(error)return reply({error:publicError(error,"handbook_import_failed")},400);
+    return reply({...data,counts:parsed.counts});
   }
   if(action==="handbook_pending"){
-    const {data,error}=await admin.from("company_knowledge")
-      .select("id,section,title_en,title_zh,body_en,body_zh,sort,updated_at")
-      .eq("needs_owner_confirm",true)
-      .order("updated_at",{ascending:false}).limit(100);
+    const {data:entries,error}=await admin.from("company_knowledge")
+      .select("id,code,kind,section,product_line,sort,title_en,title_zh,body_en,body_zh,key_points_en,key_points_zh,icon_hint,import_batch_id,updated_at")
+      .eq("needs_owner_confirm",true).order("updated_at",{ascending:false}).limit(400);
     if(error)return reply({error:"handbook_list_failed"},400);
-    return reply({ok:true,entries:data||[]});
+    const ids=[...new Set((entries||[]).map(row=>row.import_batch_id).filter(Boolean))];
+    let batches=[];
+    if(ids.length){
+      const {data:found,error:batchError}=await admin.from("handbook_import_batches")
+        .select("id,source_version,created_at,inserted_count,updated_count,unchanged_count,status")
+        .in("id",ids);
+      if(batchError)return reply({error:"handbook_list_failed"},400);
+      batches=found||[];
+    }
+    return reply({ok:true,entries:entries||[],batches});
+  }
+  if(action==="handbook_update"){
+    const id=String(b.id||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!uuid.test(id))return reply({error:"invalid_handbook_id"},422);
+    const {data,error}=await admin.rpc("handbook_update_internal",{
+      p_user_id:uid,p_id:id,
+      p_title_en:b.title_en,p_title_zh:b.title_zh,
+      p_body_en:b.body_en,p_body_zh:b.body_zh
+    });
+    if(error)return reply({error:publicError(error,"handbook_update_failed")},400);
+    return reply(data);
   }
   if(action==="handbook_review"){
-    const id=String(b.id||"");
-    const decision=String(b.decision||"");
-    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)||
-       !["approve","reject"].includes(decision))
-      return reply({error:"invalid_handbook_review"},400);
-    const {data:before,error:readErr}=await admin.from("company_knowledge")
-      .select("id,section,title_en,title_zh,active,visible_to_agent,needs_owner_confirm")
-      .eq("id",id).eq("needs_owner_confirm",true).maybeSingle();
-    if(readErr)return reply({error:"handbook_review_failed"},400);
-    if(!before)return reply({error:"handbook_not_pending"},409);
-    const approved=decision==="approve";
-    const {data:changed,error:writeErr}=await admin.from("company_knowledge")
-      .update({active:approved,visible_to_agent:approved,needs_owner_confirm:false,updated_by:uid,updated_at:new Date().toISOString()})
-      .eq("id",id).eq("needs_owner_confirm",true).select("id").maybeSingle();
-    if(writeErr)return reply({error:"handbook_review_failed"},400);
-    if(!changed)return reply({error:"handbook_not_pending"},409);
-    const {error:auditError}=await admin.rpc("owner_audit_action_internal",{
-      p_user_id:uid,p_action:"handbook_"+decision,p_entity_type:"company_knowledge",p_entity_id:id,
-      p_after:{id,section:before.section,title_en:before.title_en,title_zh:before.title_zh,approved}
+    const id=String(b.id||""),decision=String(b.decision||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!uuid.test(id)||!["approve","reject"].includes(decision))return reply({error:"invalid_handbook_review"},422);
+    const {data,error}=await admin.rpc("handbook_review_item_internal",{
+      p_user_id:uid,p_id:id,p_decision:decision
     });
-    if(auditError){
-      await admin.from("company_knowledge").update({
-        active:before.active,visible_to_agent:before.visible_to_agent,needs_owner_confirm:true,updated_by:uid
-      }).eq("id",id).eq("needs_owner_confirm",false);
-      return reply({error:"audit_failed"},500);
-    }
-    return reply({ok:true,id,decision,visible_to_agent:approved});
+    if(error)return reply({error:publicError(error,"handbook_review_failed")},400);
+    return reply(data);
+  }
+  if(action==="handbook_bulk_approve"){
+    const id=String(b.batch_id||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+    if(!uuid.test(id))return reply({error:"invalid_handbook_batch"},422);
+    if(b.confirm!==true)return reply({error:"confirmation_required"},400);
+    const {data,error}=await admin.rpc("handbook_review_batch_internal",{
+      p_user_id:uid,p_batch_id:id,p_confirm:true
+    });
+    if(error)return reply({error:publicError(error,"handbook_batch_review_failed")},400);
+    return reply(data);
   }
 
   if(action==="create_owner_recovery_link"){
