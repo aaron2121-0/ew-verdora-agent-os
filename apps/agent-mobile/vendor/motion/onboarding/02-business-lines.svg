@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" fill="none" role="img" aria-label="Five floral business lines network">
+  <style>
+    .ob-2-root {
+      --c-bg: var(--surface-2, #F5EFE4);
+      --c-card: var(--surface, #FFFFFF);
+      --c-brand: var(--brand, #1F4D3A);
+      --c-brand-soft: var(--verdora-700, #2d6b52);
+      --c-gold: var(--gold, #9D783D);
+      --c-gold-soft: var(--gold-300, #D8BD86);
+      --c-ink: var(--text, #173629);
+      --c-line: var(--border, rgba(31,77,58,0.16));
+    }
+    @media (prefers-color-scheme: dark) {
+      .ob-2-root {
+        --c-bg: var(--surface-2, #1D2222);
+        --c-card: var(--surface, #161A1A);
+        --c-brand: var(--brand, #2E7D5B);
+        --c-brand-soft: var(--verdora-800, #277A56);
+        --c-gold: var(--gold, #D4B47A);
+        --c-gold-soft: var(--gold-300, #D4B47A);
+        --c-ink: var(--text, #ECEFEE);
+        --c-line: var(--border, rgba(255,255,255,0.12));
+      }
+    }
+    .ob-2-hub { animation: ob-2-pop .5s cubic-bezier(.2,.9,.28,1.04) .05s both; transform-box: fill-box; transform-origin: center; }
+    .ob-2-links { animation: ob-2-fade .45s ease-out .15s both; }
+    .ob-2-n1 { animation: ob-2-pop .48s cubic-bezier(.2,.9,.28,1.04) .20s both; transform-box: fill-box; transform-origin: center; }
+    .ob-2-n2 { animation: ob-2-pop .48s cubic-bezier(.2,.9,.28,1.04) .30s both; transform-box: fill-box; transform-origin: center; }
+    .ob-2-n3 { animation: ob-2-pop .48s cubic-bezier(.2,.9,.28,1.04) .40s both; transform-box: fill-box; transform-origin: center; }
+    .ob-2-n4 { animation: ob-2-pop .48s cubic-bezier(.2,.9,.28,1.04) .50s both; transform-box: fill-box; transform-origin: center; }
+    .ob-2-n5 { animation: ob-2-pop .48s cubic-bezier(.2,.9,.28,1.04) .60s both; transform-box: fill-box; transform-origin: center; }
+    .ob-2-float { animation: ob-2-drift 4s ease-in-out 1.2s infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes ob-2-pop {
+      from { opacity: 0; transform: scale(0.75) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes ob-2-fade {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes ob-2-drift {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2.5px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ob-2-hub, .ob-2-links, .ob-2-n1, .ob-2-n2, .ob-2-n3, .ob-2-n4, .ob-2-n5, .ob-2-float {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+  </style>
+  <g class="ob-2-root">
+    <rect x="8" y="8" width="344" height="204" rx="22" fill="var(--c-bg)" stroke="var(--c-line)" stroke-width="1.2"/>
+    <g class="ob-2-links" stroke="var(--c-brand)" stroke-opacity="0.28" stroke-width="1.6" stroke-dasharray="4 4">
+      <line x1="180" y1="114" x2="72" y2="74"/>
+      <line x1="180" y1="114" x2="180" y2="50"/>
+      <line x1="180" y1="114" x2="288" y2="74"/>
+      <line x1="180" y1="114" x2="110" y2="168"/>
+      <line x1="180" y1="114" x2="250" y2="168"/>
+      <circle cx="180" cy="114" r="64" stroke-opacity="0.14"/>
+    </g>
+    <g class="ob-2-hub">
+      <circle cx="180" cy="114" r="24" fill="var(--c-brand)" fill-opacity="0.14" stroke="var(--c-brand)" stroke-width="1.8"/>
+      <path d="M180 102C184 107.5 184 114.5 180 120C176 114.5 176 107.5 180 102Z" fill="var(--c-brand)" fill-opacity="0.3" stroke="var(--c-brand)" stroke-width="1.5"/>
+      <path d="M180 120C174 119 170 115 171 110C175.5 110.5 179 114.5 180 120Z" fill="var(--c-gold-soft)" fill-opacity="0.4" stroke="var(--c-gold)" stroke-width="1.4"/>
+      <path d="M180 120C186 119 190 115 189 110C184.5 110.5 181 114.5 180 120Z" fill="var(--c-gold-soft)" fill-opacity="0.4" stroke="var(--c-gold)" stroke-width="1.4"/>
+    </g>
+    <g class="ob-2-float">
+      <g class="ob-2-n1">
+        <rect x="44" y="48" width="56" height="50" rx="14" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.4"/>
+        <circle cx="72" cy="70" r="9" stroke="var(--c-brand)" stroke-width="1.7" fill="var(--c-brand)" fill-opacity="0.1"/>
+        <path d="M68 81L66 87M76 81L78 87" stroke="var(--c-brand)" stroke-width="1.5" stroke-linecap="round"/>
+      </g>
+      <g class="ob-2-n2">
+        <rect x="152" y="24" width="56" height="50" rx="14" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.4"/>
+        <path d="M180 35C182.5 38.5 182.5 43 180 46.5C177.5 43 177.5 38.5 180 35Z" fill="var(--c-gold-soft)" fill-opacity="0.45" stroke="var(--c-gold)" stroke-width="1.5"/>
+        <rect x="171" y="47" width="18" height="4.5" rx="2.2" stroke="var(--c-brand)" stroke-width="1.4"/>
+        <path d="M174 51.5L171.5 62M186 51.5L188.5 62" stroke="var(--c-brand)" stroke-width="1.5" stroke-linecap="round"/>
+      </g>
+      <g class="ob-2-n3">
+        <rect x="260" y="48" width="56" height="50" rx="14" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.4"/>
+        <circle cx="288" cy="65" r="5" fill="var(--c-gold-soft)" fill-opacity="0.4" stroke="var(--c-gold)" stroke-width="1.5"/>
+        <path d="M279 71L288 86L297 71" stroke="var(--c-brand)" stroke-width="1.6" stroke-linejoin="round" fill="var(--c-brand)" fill-opacity="0.1"/>
+      </g>
+      <g class="ob-2-n4">
+        <rect x="82" y="144" width="56" height="50" rx="14" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.4"/>
+        <circle cx="105" cy="171" r="7" stroke="var(--c-brand)" stroke-width="1.6" fill="var(--c-brand)" fill-opacity="0.08"/>
+        <circle cx="115" cy="171" r="7" stroke="var(--c-gold)" stroke-width="1.6" fill="var(--c-gold-soft)" fill-opacity="0.14"/>
+      </g>
+      <g class="ob-2-n5">
+        <rect x="222" y="144" width="56" height="50" rx="14" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.4"/>
+        <rect x="237" y="166" width="26" height="14" rx="3" stroke="var(--c-brand)" stroke-width="1.6" fill="var(--c-brand)" fill-opacity="0.1"/>
+        <circle cx="245" cy="160" r="2.5" fill="var(--c-gold)"/>
+        <circle cx="255" cy="160" r="2.5" fill="var(--c-brand-soft)"/>
+      </g>
+    </g>
+  </g>
+</svg>

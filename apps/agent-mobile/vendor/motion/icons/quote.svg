@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="Instant quotation">
+  <style>
+    .ic-quot-seal {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ic-quot-pop 1.6s cubic-bezier(.34,1.35,.64,1) infinite;
+    }
+    .ic-quot-bars {
+      transform-box: fill-box;
+      transform-origin: left center;
+      animation: ic-quot-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes ic-quot-pop {
+      0%, 100% { transform: scale(0.92) rotate(-3deg); opacity: 0.85; }
+      50% { transform: scale(1.14) rotate(3deg); opacity: 1; }
+    }
+    @keyframes ic-quot-pulse {
+      0%, 100% { transform: scaleX(0.84); opacity: 0.62; }
+      50% { transform: scaleX(1.04); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ic-quot-seal, .ic-quot-bars { animation: none !important; }
+    }
+  </style>
+  <rect x="11" y="8.5" width="23" height="31" rx="3.5" stroke="currentColor" stroke-width="1.8" fill="currentColor" fill-opacity="0.08"/>
+  <path d="M16.5 16H28.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  <g class="ic-quot-bars">
+    <path d="M16.5 22H26.5M16.5 27.5H23" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </g>
+  <g class="ic-quot-seal">
+    <circle cx="32.5" cy="32.5" r="7" stroke="currentColor" stroke-width="1.8" fill="currentColor" fill-opacity="0.24"/>
+    <path d="M29.6 32.5L31.6 34.5L35.6 30.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

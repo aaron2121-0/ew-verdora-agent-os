@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" fill="none" role="img" aria-label="Unlock agent order acceptance in three steps">
+  <style>
+    .ob-4-root {
+      --c-bg: var(--surface-2, #F5EFE4);
+      --c-card: var(--surface, #FFFFFF);
+      --c-brand: var(--brand, #1F4D3A);
+      --c-brand-soft: var(--verdora-700, #2d6b52);
+      --c-gold: var(--gold, #9D783D);
+      --c-gold-soft: var(--gold-300, #D8BD86);
+      --c-ink: var(--text, #173629);
+      --c-line: var(--border, rgba(31,77,58,0.16));
+    }
+    @media (prefers-color-scheme: dark) {
+      .ob-4-root {
+        --c-bg: var(--surface-2, #1D2222);
+        --c-card: var(--surface, #161A1A);
+        --c-brand: var(--brand, #2E7D5B);
+        --c-brand-soft: var(--verdora-800, #277A56);
+        --c-gold: var(--gold, #D4B47A);
+        --c-gold-soft: var(--gold-300, #D4B47A);
+        --c-ink: var(--text, #ECEFEE);
+        --c-line: var(--border, rgba(255,255,255,0.12));
+      }
+    }
+    .ob-4-step1 { animation: ob-4-slide .48s cubic-bezier(.2,.8,.2,1) .06s both; }
+    .ob-4-step2 { animation: ob-4-slide .48s cubic-bezier(.2,.8,.2,1) .18s both; }
+    .ob-4-step3 { animation: ob-4-slide .48s cubic-bezier(.2,.8,.2,1) .30s both; }
+    .ob-4-badge { animation: ob-4-pop .55s cubic-bezier(.2,.9,.28,1.04) .42s both; transform-box: fill-box; transform-origin: center; }
+    .ob-4-shackle { animation: ob-4-unlock .6s cubic-bezier(.2,.9,.28,1.04) .56s both; transform-box: fill-box; transform-origin: right bottom; }
+    .ob-4-seal { animation: ob-4-pop .45s cubic-bezier(.2,.9,.28,1.04) .68s both; transform-box: fill-box; transform-origin: center; }
+    @keyframes ob-4-slide {
+      from { opacity: 0; transform: translateX(-14px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes ob-4-pop {
+      from { opacity: 0; transform: scale(0.76); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes ob-4-unlock {
+      from { transform: translateY(4px) rotate(0deg); }
+      to { transform: translateY(-5px) rotate(-14deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ob-4-step1, .ob-4-step2, .ob-4-step3, .ob-4-badge, .ob-4-shackle, .ob-4-seal {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+  </style>
+  <g class="ob-4-root">
+    <rect x="8" y="8" width="344" height="204" rx="22" fill="var(--c-bg)" stroke="var(--c-line)" stroke-width="1.2"/>
+    <g class="ob-4-step1">
+      <rect x="34" y="40" width="176" height="40" rx="12" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.3"/>
+      <circle cx="56" cy="60" r="10" fill="var(--c-brand)" fill-opacity="0.16" stroke="var(--c-brand)" stroke-width="1.5"/>
+      <path d="M51.5 60L54.5 63L60.5 57" stroke="var(--c-brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M76 56H156M76 64H132" stroke="var(--c-ink)" stroke-opacity="0.6" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g class="ob-4-step2">
+      <rect x="34" y="90" width="176" height="40" rx="12" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.3"/>
+      <circle cx="56" cy="110" r="10" fill="var(--c-brand)" fill-opacity="0.16" stroke="var(--c-brand)" stroke-width="1.5"/>
+      <path d="M51.5 110L54.5 113L60.5 107" stroke="var(--c-brand)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M76 106H164M76 114H142" stroke="var(--c-ink)" stroke-opacity="0.6" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g class="ob-4-step3">
+      <rect x="34" y="140" width="176" height="40" rx="12" fill="var(--c-card)" stroke="var(--c-gold)" stroke-opacity="0.55" stroke-width="1.5"/>
+      <circle cx="56" cy="160" r="10" fill="var(--c-gold-soft)" fill-opacity="0.34" stroke="var(--c-gold)" stroke-width="1.5"/>
+      <path d="M51.5 160L54.5 163L60.5 157" stroke="var(--c-gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M76 156H172M76 164H148" stroke="var(--c-ink)" stroke-opacity="0.72" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g class="ob-4-badge">
+      <rect x="230" y="48" width="96" height="124" rx="18" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.4"/>
+      <path class="ob-4-shackle" d="M262 96V84C262 75.2 269.2 68 278 68C286.8 68 294 75.2 294 84V90" stroke="var(--c-gold)" stroke-width="3.2" stroke-linecap="round"/>
+      <rect x="252" y="96" width="52" height="42" rx="12" fill="var(--c-brand)" fill-opacity="0.16" stroke="var(--c-brand)" stroke-width="2"/>
+      <g class="ob-4-seal">
+        <circle cx="278" cy="117" r="10" fill="var(--c-brand)"/>
+        <path d="M273.5 117L276.5 120L282.5 114" stroke="var(--c-card)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <path d="M254 152H302" stroke="var(--c-brand)" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

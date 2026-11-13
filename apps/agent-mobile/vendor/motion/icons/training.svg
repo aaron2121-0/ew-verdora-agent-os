@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="Agent training and certification">
+  <style>
+    .ic-trai-cap {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ic-trai-lift 1.6s cubic-bezier(.34,1.3,.64,1) infinite;
+    }
+    .ic-trai-tassel {
+      transform-box: fill-box;
+      transform-origin: center top;
+      animation: ic-trai-swing 1.6s ease-in-out infinite;
+    }
+    .ic-trai-leaf {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ic-trai-glow 1.6s ease-in-out infinite;
+    }
+    @keyframes ic-trai-lift {
+      0%, 100% { transform: translateY(0.5px) scale(0.98); }
+      50% { transform: translateY(-3px) scale(1.04); }
+    }
+    @keyframes ic-trai-swing {
+      0%, 100% { transform: rotate(-7deg); }
+      50% { transform: rotate(9deg); }
+    }
+    @keyframes ic-trai-glow {
+      0%, 100% { transform: scale(0.88); opacity: 0.65; }
+      50% { transform: scale(1.16); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ic-trai-cap, .ic-trai-tassel, .ic-trai-leaf { animation: none !important; }
+    }
+  </style>
+  <g class="ic-trai-cap">
+    <path d="M8 18.5L24 11L40 18.5L24 26L8 18.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="currentColor" fill-opacity="0.16"/>
+    <path class="ic-trai-tassel" d="M36.5 20.5V29" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    <circle class="ic-trai-tassel" cx="36.5" cy="30.5" r="1.5" fill="currentColor"/>
+  </g>
+  <path d="M14.5 22.5V31.5C14.5 34.5 18.8 37 24 37C29.2 37 33.5 34.5 33.5 31.5V22.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="ic-trai-leaf" d="M24 28.5C25.6 29.8 25.6 32.2 24 33.5C22.4 32.2 22.4 29.8 24 28.5Z" fill="currentColor" opacity="0.9"/>
+</svg>

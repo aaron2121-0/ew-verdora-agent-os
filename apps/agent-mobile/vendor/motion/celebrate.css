@@ -1,0 +1,9 @@
+.vd-celebrate-layer{position:fixed;inset:0;z-index:9999;overflow:hidden;pointer-events:none;user-select:none}
+.vd-petal{position:fixed;top:0;left:0;width:14px;height:18px;pointer-events:none;opacity:0;animation:vd-fall var(--d,1180ms) cubic-bezier(.22,.68,.35,1) var(--dl,0ms) forwards}
+.vd-petal--exam{animation-name:vd-burst}
+.vd-petal--full{width:16px;height:21px;animation-name:vd-gather}
+@keyframes vd-fall{0%{opacity:0;transform:translate3d(var(--x0),var(--y0),0) rotate(var(--r0)) scale(.7)}16%{opacity:.96}75%{opacity:.9}100%{opacity:0;transform:translate3d(var(--x1),var(--y1),0) rotate(var(--r1)) scale(1)}}
+@keyframes vd-burst{0%{opacity:0;transform:translate3d(var(--x0),var(--y0),0) rotate(var(--r0)) scale(.5)}18%{opacity:1;transform:translate3d(var(--xm),var(--ym),0) rotate(var(--rm)) scale(1.08)}100%{opacity:0;transform:translate3d(var(--x1),var(--y1),0) rotate(var(--r1)) scale(.88)}}
+@keyframes vd-gather{0%{opacity:0;transform:translate3d(var(--x0),var(--y0),0) rotate(var(--r0)) scale(.4)}38%{opacity:1;transform:translate3d(var(--xm),var(--ym),0) rotate(var(--rm)) scale(1.15)}100%{opacity:0;transform:translate3d(var(--x1),var(--y1),0) rotate(var(--r1)) scale(.12)}}
+@media (prefers-reduced-motion:reduce){.vd-celebrate-layer,.vd-petal{display:none!important;animation:none!important}}
+:root[data-motion="reduced"] .vd-celebrate-layer,:root[data-motion="reduced"] .vd-petal{display:none!important;animation:none!important}
