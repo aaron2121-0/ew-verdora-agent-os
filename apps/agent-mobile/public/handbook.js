@@ -1,6 +1,7 @@
 import {element,clear,toast,stagger} from "./components.js";
 import {createIcon} from "./icons.js";
-import {celebrate} from "./motion.js";
+import {celebrate as fallbackCelebrate} from "./motion.js";
+import {vendorMotion,trackMotion} from "./motion-vendor.js";
 import {REQUIRED_COURSE_CODES} from "./unlock.js";
 import {loadReviewedContent,reviewed,dayForCode,localized,marks,sectionFromFocus,emptyCopy} from "./approved-content.js";
 
@@ -64,7 +65,7 @@ function simpleModal(className){
 
 export function createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate,onJourneyChange}){
   let handbookData=null,fetching=null,currentLine=null,currentCourse=null,slideIndex=0;
-  let slideTimer=null,slideToken=0;
+  let slideTimer=null,slideToken=0,welcomeRedraw=null;
   const readStates=new Map(),readRequests=new Map();
   const userKey=()=>String(getUserId()||"unknown");
   const clearSlideTimer=()=>{slideToken++;if(slideTimer!==null){clearTimeout(slideTimer);slideTimer=null}};
@@ -134,12 +135,43 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
         points:(getLang()==="zh"?x.key_points_zh:x.key_points_en)||[]
       }));
   }
-  function handbookCard(line){
-    const card=element("button",{className:"handbook-line-card",attrs:{type:"button","data-handbook-line":line.id}});
-    card.append(iconAsset(line),element("strong",{text:getLang()==="zh"?line.zh:line.en}),
-      element("span",{text:t(getLang,"Open the approved handbook","查看已核准手册")}));
-    card.addEventListener("click",()=>{currentCourse=null;currentLine=line.id;slideIndex=0;renderPage()});
-    return card;
+  function businessCards(grid){
+    // Only Owner-approved handbook entries feed the Gemini visual card.
+    // Static labels come from the existing five official business categories.
+    const lines=HANDBOOK_LINES.map(line=>{
+      const first=(handbookData?.knowledge||[]).find(row=>
+        row.kind==="card"&&row.section==="product_line"&&row.product_line===line.id);
+      return {
+        id:line.id==="wedding_event"?"wedding":line.id,
+        product_line:line.id,
+        icon:(line.id==="wedding_event"?"wedding":line.id)+".svg",
+        kicker:line.id.replaceAll("_"," ").toUpperCase(),
+        title_en:line.en,title_zh:line.zh,
+        subtitle_en:String(first?.key_points_en?.[0]||""),
+        subtitle_zh:String(first?.key_points_zh?.[0]||"")
+      };
+    });
+    const vm=vendorMotion();
+    if(vm?.mountCards){
+      trackMotion("business-cards",vm.mountCards(grid,lines,{
+        lang:getLang(),iconsBase:"/ew-verdora-content/motion/icons",
+        onSelect:line=>{
+          currentCourse=null;currentLine=line.product_line;slideIndex=0;renderPage();
+        }
+      }));
+      // Known, static enum data only; no server-provided id/key is interpolated.
+      grid.querySelectorAll(".vd-hero-card").forEach((node,i)=>{
+        node.setAttribute("data-handbook-line",HANDBOOK_LINES[i].id);
+      });
+    }else{
+      HANDBOOK_LINES.forEach(line=>{
+        const card=element("button",{className:"handbook-line-card",
+          attrs:{type:"button","data-handbook-line":line.id}});
+        card.append(iconAsset(line),element("strong",{text:getLang()==="zh"?line.zh:line.en}));
+        card.addEventListener("click",()=>{currentCourse=null;currentLine=line.id;slideIndex=0;renderPage()});
+        grid.append(card);
+      });
+    }
   }
   function renderPage(){
     const host=document.getElementById("handbookPage");if(!host)return;
@@ -157,7 +189,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     if(!currentLine){
       page.append(element("p",{className:"screen-subtitle",text:t(getLang,"Only Owner-approved material is shown.","仅显示 Owner 已核准的资料。")}));
       const grid=element("div",{className:"handbook-line-grid"});
-      HANDBOOK_LINES.forEach(x=>grid.append(handbookCard(x)));page.append(grid);
+      businessCards(grid);page.append(grid);
       if(!handbookData.knowledge.length){
         const copy=emptyCopy("handbook");
         if(copy){
@@ -400,7 +432,14 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
       list.append(item);
     });
     details.append(list);wrap.append(details);
-    if(state.done===7)celebrate(ring,t(getLang,"Courses completed","课程已完成"));
+    if(state.done===7){
+      const milestone="ew_motion_7_courses_"+userKey().replace(/[^a-zA-Z0-9-]/g,"");
+      if(safeStore(milestone)!=="1"){
+        safeStore(milestone,"1");
+        if(vendorMotion()?.celebrate)vendorMotion().celebrate({type:"course",originEl:ring});
+        else fallbackCelebrate(ring,t(getLang,"Courses completed","课程已完成"));
+      }
+    }
     return wrap;
   }
   function showWelcome(){
@@ -427,16 +466,19 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     let startX=null;
     panel.addEventListener("touchstart",e=>{startX=e.changedTouches[0]?.clientX??null},{passive:true});
     panel.addEventListener("touchend",e=>{if(startX===null)return;const d=(e.changedTouches[0]?.clientX??startX)-startX;startX=null;if(Math.abs(d)>55){index=Math.max(0,Math.min(3,index+(d<0?1:-1)));draw()}},{passive:true});
-    function finish(){safeStore(key,"1");close();requestAnimationFrame(()=>spotlight("today"))}
+    function finish(){safeStore(key,"1");welcomeRedraw=null;close();requestAnimationFrame(()=>spotlight("today"))}
     function draw(){
       const s=steps[index];title.textContent=localized(s,"title",getLang());sub.textContent=localized(s,"body",getLang());
       img.classList.remove("is-ready");fallback.classList.remove("hidden");
-      img.src="/ew-verdora-content/motion/onboarding/"+String(index+1).padStart(2,"0")+".svg";
+      img.src=["/ew-verdora-content/motion/onboarding/01-company.svg",
+        "/ew-verdora-content/motion/onboarding/02-business-lines.svg",
+        "/ew-verdora-content/motion/onboarding/03-commission.svg",
+        "/ew-verdora-content/motion/onboarding/04-unlock.svg"][index];
       back.disabled=index===0;
       next.textContent=index===3?t(getLang,"Get started","开始上手"):t(getLang,"Next","下一张");
       dots.replaceChildren();for(let i=0;i<4;i++)dots.append(element("span",{className:i===index?"active":""}));
     }
-    panel.append(top,artwork,title,sub,dots,next);backdrop.append(panel);draw();
+    panel.append(top,artwork,title,sub,dots,next);backdrop.append(panel);welcomeRedraw=draw;draw();
   }
   function spotlight(page){
     if(safeStore(seenKey(page))==="1"||document.querySelector(".onboarding-layer"))return;
@@ -508,7 +550,8 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
         question.textContent=t(getLang,"Score: ","分数：")+Number(current.score||0)+"/100";
         options.replaceChildren();
         if(current.passed){
-          celebrate(panel,t(getLang,"Course passed","课程通过"));
+          if(vendorMotion()?.celebrate)vendorMotion().celebrate({type:"course",originEl:panel});
+          else fallbackCelebrate(panel,t(getLang,"Course passed","课程通过"));
           toast(t(getLang,"Course passed! Next day unlocked.","课程通过！已解锁下一天。"),{tone:"success"});
         }else options.append(btn(t(getLang,"Try again","重新作答"),()=>{current=null;start()}));
         onRefresh().finally(()=>{});
@@ -543,5 +586,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     }
     start();
   }
-  return {initContent,journey,open,openQuiz,spotlight,showWelcome,openForCourse,reRender:renderPage,refresh:()=>{handbookData=null},destroy:clearSlideTimer};
+  return {initContent,journey,open,openQuiz,spotlight,showWelcome,openForCourse,
+    onLanguageChange:()=>{welcomeRedraw?.();if(currentLine)renderPage()},
+    reRender:renderPage,refresh:()=>{handbookData=null},destroy:clearSlideTimer};
 }
