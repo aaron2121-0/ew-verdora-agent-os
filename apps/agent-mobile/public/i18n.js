@@ -31,7 +31,8 @@ export const I18N={
     handbookSectionScript:"Sales scripts",handbookSectionAnnouncement:"Announcements",
     handbookLoading:"Loading Owner-approved handbook…",
     handbookEmpty:"No Owner-approved handbook content in this section yet.",
-    handbookLoadError:"Unable to load handbook. Try again."
+    handbookLoadError:"Unable to load handbook. Try again.",
+    handbookSectionFaq:"FAQ",
     aiEmptyCustomerAction:"Ask AI to write an IG post",
     aiDailyFocus:"Today's focus",aiDailyFollowup:"Review follow-ups",aiDailyViewTasks:"View today's plan",
     aiStatsTitle:"Your activity",
@@ -538,7 +539,8 @@ export const I18N={
     handbookSectionScript:"销售话术",handbookSectionAnnouncement:"公告",
     handbookLoading:"正在读取 Owner 已核准的手册…",
     handbookEmpty:"这个分类暂时没有 Owner 已核准的手册内容。",
-    handbookLoadError:"手册暂时无法读取，请重试。"
+    handbookLoadError:"手册暂时无法读取，请重试。",
+    handbookSectionFaq:"常见问题",
     aiEmptyCustomerAction:"要不要让 AI 帮你写 IG 贴文？",
     aiDailyFocus:"今日重点",aiDailyFollowup:"查看该跟进的客户",aiDailyViewTasks:"查看今日任务",
     aiStatsTitle:"你的使用记录",
