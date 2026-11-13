@@ -7,7 +7,7 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","unlock.js","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 // Bundle only the actual Claude-reviewed JSON from the repository.
 // No duplicate or rewritten onboarding/microcopy strings in frontend code.
