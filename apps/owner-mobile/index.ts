@@ -8,7 +8,7 @@ const HTML=[
 '<div class="card"><div class="grid"><div><div class="muted">Active Agents</div><div id="active" class="metric"></div></div><div><div class="muted">Dormant</div><div id="dormant" class="metric"></div></div><div><div class="muted">Commission Liability</div><div id="comm" class="metric"></div></div><div><div class="muted">Bonus Liability</div><div id="bonus" class="metric"></div></div></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
-'<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload handbook_content.json. Every item stays hidden until you approve it. / 上传后需 Owner 逐项核准才可供 Agent 查阅。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
+'<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload Claude-reviewed handbook_content.json. Review by batch and product line, edit drafts, then approve the batch. / 上传已审核 JSON，依批次与业务线检查、编辑草稿，然后整批核准。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
 '<div class="card" id="baselineCard"><div class="title">Global Reference Cost Baseline / 全局成本基准</div><div class="muted" style="color:#D4B47A">会影响之后所有同类报价。此操作与单笔报价审核完全分开，必须二次确认。</div><div class="form" style="margin-top:10px"><select id="bSize"><option>small</option><option selected>medium</option><option>large</option><option>xl</option><option>structure</option></select><select id="bDensity"><option>light</option><option selected>medium</option><option>full</option><option>very_full</option></select><select id="bPremium"><option>low</option><option selected>medium</option><option>high</option><option>very_high</option></select><select id="bComplexity"><option>low</option><option selected>medium</option><option>high</option><option>special</option></select><input id="bCost" type="number" min="0" step="0.01" placeholder="安全生产成本 RM"><button id="baselineBtn" class="btn">修改全局基准 / Change global baseline</button><div id="baselineMsg" class="muted"></div></div></div>',
 '<div class="card"><div class="title">Agent Access Link</div><div class="muted">Create a one-time login link valid for 24 hours. Use this when email delivery is delayed or rate-limited.</div><div class="form" style="margin-top:11px"><input id="inviteEmail" type="email" placeholder="agent@email.com"><button id="inviteBtn" class="btn primary">Create one-time Agent link</button><div id="inviteOut" class="muted"></div><button id="copyInvite" class="btn hidden">Copy link</button></div></div>',
 '<div class="card"><div class="title">Owner Recovery Link</div><div class="muted">Create a one-time Owner recovery link valid for 24 hours. Save it securely in case email sign-in is unavailable.</div><div class="form" style="margin-top:11px"><button id="recoveryBtn" class="btn primary">Create Owner recovery link</button><div id="recoveryOut" class="muted"></div><button id="copyRecovery" class="btn hidden">Copy recovery link</button></div></div>',
@@ -34,23 +34,90 @@ async function call(body){let r=await fetch(CFG.url+"/functions/v1/owner-session
 function show(x){$("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
 async function refreshHandbook(){
   const j=await call({action:"handbook_pending"});
-  const entries=j.entries||[];
-  $("handbookPending").innerHTML=entries.length?entries.map(row=>{
-    const id=escapeHtml(row.id);
-    return "<div class='item'><div><b>"+escapeHtml(row.title_zh)+" / "+escapeHtml(row.title_en)+"</b></div>"
-      +"<div class='muted'>"+escapeHtml(row.section)+"</div>"
-      +"<p class='muted' style='white-space:pre-line;max-height:110px;overflow:auto'>"+escapeHtml(row.body_zh)+"</p>"
-      +"<p class='muted' style='white-space:pre-line;max-height:110px;overflow:auto'>"+escapeHtml(row.body_en)+"</p>"
-      +"<div class='row'><button class='btn primary hb-review' data-id='"+id+"' data-decision='approve'>Approve / 核准</button>"
-      +"<button class='btn hb-review' data-id='"+id+"' data-decision='reject'>Reject / 拒绝</button></div></div>";
+  const entries=j.entries||[],batchById=new Map((j.batches||[]).map(b=>[b.id,b]));
+  const group=new Map();
+  for(const row of entries){
+    const batch=row.import_batch_id||"legacy";
+    if(!group.has(batch))group.set(batch,[]);
+    group.get(batch).push(row);
+  }
+  const lineNames={
+    condolence:"Condolence / 帛事花圈",opening:"Grand Opening / 开张",
+    bouquet:"Bouquet / 花束",wedding_event:"Wedding & Event / 婚礼活动",
+    wholesale:"Wholesale / 批发",general:"FAQ & General / FAQ 与通用"
+  };
+  $("handbookPending").innerHTML=entries.length?[...group].map(([batchId,items])=>{
+    const batch=batchById.get(batchId);
+    const byLine=new Map();
+    for(const row of items){
+      const key=row.product_line||"general";
+      if(!byLine.has(key))byLine.set(key,[]);
+      byLine.get(key).push(row);
+    }
+    const lineGroups=[...byLine].map(([line,rows])=>
+      "<details class='hb-line' open><summary><b>"+escapeHtml(lineNames[line]||line)+"</b> · "+rows.length+" pending</summary>"
+      +rows.sort((a,b)=>Number(a.sort||0)-Number(b.sort||0)).map(row=>{
+        const id=escapeHtml(row.id);
+        return "<div class='item hb-item' data-id='"+id+"'>"
+          +"<div class='muted'>"+escapeHtml(row.kind)+" · "+escapeHtml(row.code||"Seed")+"</div>"
+          +"<label class='muted'>English title<input class='hb-title-en' maxlength='120' value='"+escapeHtml(row.title_en)+"'></label>"
+          +"<label class='muted'>中文标题<input class='hb-title-zh' maxlength='120' value='"+escapeHtml(row.title_zh)+"'></label>"
+          +"<label class='muted'>English content<textarea class='hb-body-en' rows='3' maxlength='10000'>"+escapeHtml(row.body_en)+"</textarea></label>"
+          +"<label class='muted'>中文内文<textarea class='hb-body-zh' rows='3' maxlength='10000'>"+escapeHtml(row.body_zh)+"</textarea></label>"
+          +"<div class='row' style='flex-wrap:wrap'>"
+          +"<button class='btn hb-save' data-id='"+id+"'>Save edit / 保存修改</button>"
+          +"<button class='btn primary hb-review' data-id='"+id+"' data-decision='approve'>Approve / 核准</button>"
+          +"<button class='btn hb-review' data-id='"+id+"' data-decision='reject'>Reject / 拒绝</button>"
+          +"</div></div>";
+      }).join("")+"</details>"
+    ).join("");
+    const batchTitle=batch
+      ?escapeHtml(batch.source_version)+" · "+escapeHtml(kuchingDateTime(batch.created_at))
+      :"Legacy pending entries / 旧版待确认";
+    return "<section class='card hb-batch' style='margin-top:12px;padding:12px'>"
+      +"<div class='title'>Import batch / 导入批次</div>"
+      +"<div class='muted'>"+batchTitle+" · "+items.length+" pending</div>"
+      +(batch?"<button class='btn primary hb-bulk' style='margin-top:8px' data-batch='"+escapeHtml(batchId)+"' data-count='"+items.length+"'>Approve entire batch / 整批核准 ("+items.length+")</button>":"")
+      +lineGroups+"</section>";
   }).join(""):"<div class='item muted'>No pending handbook entries. / 目前没有待审核内容。</div>";
+  document.querySelectorAll(".hb-bulk").forEach(btn=>btn.onclick=async()=>{
+    const n=Number(btn.dataset.count||0);
+    // One tap + explicit second confirmation: do not publish silently.
+    if(!confirm("Publish ALL "+n+" pending entries in this batch to Agents?\n确认将该批次所有 "+n+" 项内容发布给 Agent？"))return;
+    btn.disabled=true;
+    try{
+      const j=await call({action:"handbook_bulk_approve",batch_id:btn.dataset.batch,confirm:true});
+      $("handbookMsg").textContent=String(j.approved)+" entries approved / 已整批核准并发布。";
+      await refreshHandbook();
+    }catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}
+    finally{btn.disabled=false}
+  });
+  document.querySelectorAll(".hb-save").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".hb-item");
+    const fields={
+      title_en:wrap.querySelector(".hb-title-en").value,
+      title_zh:wrap.querySelector(".hb-title-zh").value,
+      body_en:wrap.querySelector(".hb-body-en").value,
+      body_zh:wrap.querySelector(".hb-body-zh").value
+    };
+    if(Object.values(fields).some(x=>!x.trim())){
+      $("handbookMsg").textContent="All bilingual fields required / 中英文标题及内文均必填";return;
+    }
+    btn.disabled=true;
+    try{
+      await call({action:"handbook_update",id:btn.dataset.id,...fields});
+      $("handbookMsg").textContent="Draft saved (still pending Owner approval) / 草稿已更新，尚未发布。";
+      await refreshHandbook();
+    }catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}
+    finally{btn.disabled=false}
+  });
   document.querySelectorAll(".hb-review").forEach(btn=>btn.onclick=async()=>{
-    const approve=btn.dataset.decision==="approve";
-    if(!confirm(approve?"Approve this content for ALL Agents? / 确认发布给所有 Agent？":"Reject this handbook entry? / 确认拒绝？"))return;
+    const approved=btn.dataset.decision==="approve";
+    if(!confirm(approved?"Publish this entry to Agents? / 确认发布此条？":"Reject this pending entry? / 确认拒绝此条？"))return;
     btn.disabled=true;
     try{
       await call({action:"handbook_review",id:btn.dataset.id,decision:btn.dataset.decision});
-      $("handbookMsg").textContent=approve?"Approved and published / 已核准发布":"Rejected / 已拒绝";
+      $("handbookMsg").textContent=approved?"Approved / 已核准":"Rejected / 已拒绝";
       await refreshHandbook();
     }catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}
     finally{btn.disabled=false}
@@ -202,7 +269,7 @@ $("handbookImportBtn").onclick=async()=>{
   try{
     const content=JSON.parse(await file.text());
     const j=await call({action:"handbook_import",content});
-    msg.textContent=String(j.imported||0)+" drafts imported. Owner approval required before Agent visibility. / 已导入待审核，发布前必须经 Owner 核准。";
+    msg.textContent="Added "+Number(j.inserted||0)+" · updated "+Number(j.updated||0)+" · unchanged "+Number(j.unchanged||0)+". "+(j.pending_owner_review?"Owner approval required / 需要 Owner 核准":"No changes / 内容未变，未产生新批次");
     $("handbookFile").value="";
     await refreshHandbook();
   }catch(e){msg.textContent="Import failed: "+String(e?.message||"invalid_json").slice(0,140)}
