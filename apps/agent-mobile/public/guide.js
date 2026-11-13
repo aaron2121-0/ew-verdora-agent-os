@@ -21,7 +21,7 @@ const WORDS={
     introText2:"Learn what to ask, how to follow up and when to request an approved quote.",introText3:"Training and certification are verified by the system, not by your phone.",
     tourNext:"Next tip",tourDone:"Got it",tourSkip:"Skip tips",tourToday:"This is your learning roadmap.",tourCustomers:"Start here when you have a new customer.",tourOrder:"Use the approved order process.",tourTraining:"Your seven required courses are here.",tourPerformance:"Review your results here.",tourHandbook:"Open an approved product line here.",
     hintsTitle:"Ask your AI partner",hint1:"Who should I recommend an opening flower stand to?",hint2:"What should I ask before offering a quote?",hint3:"How do I follow up without pressuring a customer?",
-    noCustomers:"No customers yet? Start by finding a real occasion, then add the enquiry.",noOrders:"No orders yet? Learn the product lines and start with your first qualified enquiry.",
+    noCustomers:"No customers yet? Start by finding a real occasion, then add the enquiry.",noOrders:"No orders in the last 30 days? Review the product lines and start with a qualified enquiry.",
     startHandbook:"Browse product handbook",startTraining:"Learn how to qualify a lead",
     viewed:"Handbook reviewed",notViewed:"Read a handbook card first",practice:"3-question review",practiceNote:"Review only. Your required course status comes from the secure training system.",
     answer:"Check answer",practicePassed:"Review complete. Continue to the required course to unlock the next day.",
@@ -45,7 +45,7 @@ const WORDS={
     introText2:"学会询问需求、安排跟进和提交系统报价。",introText3:"课程通过与认证状态由后端核对，不靠手机本地记录。",
     tourNext:"下一个提示",tourDone:"明白了",tourSkip:"跳过提示",tourToday:"这里是你的 7 天学习路线。",tourCustomers:"收到新客户时从这里开始。",tourOrder:"使用公司批准的订单流程。",tourTraining:"现有 7 门必修课程在这里。",tourPerformance:"在这里查看自己的表现。",tourHandbook:"点这里打开已批准的产品线。",
     hintsTitle:"问问你的 AI 伙伴",hint1:"开张花篮适合推荐给谁？",hint2:"报价前要先确认什么资料？",hint3:"怎么跟进客户才不会造成压力？",
-    noCustomers:"还没有客户？先找有真实用花需求的场合，再记录客户询盘。",noOrders:"还没有订单？先熟悉业务线，再从第一个合格询盘开始。",
+    noCustomers:"还没有客户？先找有真实用花需求的场合，再记录客户询盘。",noOrders:"最近30天还没有订单？先熟悉业务线，再从合格询盘开始。",
     startHandbook:"查看产品手册",startTraining:"学习如何确认客户需求",
     viewed:"手册已看",notViewed:"先看一张上手卡",practice:"3 题知识检查",practiceNote:"仅供复习，正式课程通过状态以安全训练系统为准。",
     answer:"检查答案",practicePassed:"知识检查完成。请继续完成现有必修课程，才会解锁下一天。",
@@ -325,7 +325,11 @@ export function createAgentGuide({getData,getLang,getUserId,api,onNavigate,onRef
     PRODUCT_LINES.forEach(id=>{
       const row=button("",()=>openLine(id),"guide-line-card");
       const mediaNode=imgOrFallback(media().icons?.[id],"","guide-icon-motion");
-      if(!mediaNode.querySelector("img"))mediaNode.append(createIcon("flower2",{size:27}));
+      if(!mediaNode.querySelector("img")){
+        const glyph={condolence:"✽",opening:"✿",bouquet:"❀",wedding_event:"✾",wholesale:"✤"}[id];
+        const fallback=create("span","guide-static-icon",glyph);fallback.setAttribute("aria-hidden","true");
+        mediaNode.append(fallback);
+      }
       row.append(mediaNode,create("strong","",displayTitle(id)),createIcon("arrowRight",{size:17}));
       grid.append(row);
     });page.append(grid);

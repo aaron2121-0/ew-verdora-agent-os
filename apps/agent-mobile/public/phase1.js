@@ -431,6 +431,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     }
     moneyCard.append(tierWrap);
     page.append(moneyCard);
+    if(tp.orders_30d!==undefined&&tp.orders_30d!==null&&Number(tp.orders_30d)===0){
+      page.append(guide.emptyAction("orders"));
+    }
 
     const daily=document.createElement("div");daily.id="aiDailyBrief";daily.dataset.priorityCard="brief";page.append(daily);
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
