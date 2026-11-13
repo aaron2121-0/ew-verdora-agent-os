@@ -13,6 +13,8 @@ const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2
 const dashboard={agent:{id:"e2e-agent",display_name:"Test Agent",agent_code:"T001",status:"active",tier:"starter"},phase1:{can_sell:true,due_followups:[],recent_leads:[{id:"mock-lead",customer_label:"𠮷野 · 龘龖",status:"new",budget:200,source:"instagram",lead_score:78,lead_score_reason:{zh:"今天可以优先联系",en:"Prioritize today"},next_best_action:"follow_up",best_followup_time:"2026-11-13T02:00:00+08:00"}],tier_progress:{commission_rate:0.1},money:{today_earned:0,pending:0,month_earned:0},training_pending:false},selling_kits:[],campaigns:[],channel_playbooks:[],training:[]};
 const mockReads=new Map();
 const requiredBouquet=["BOUQ-1","BOUQ-2","BOUQ-3","BOUQ-4"];
+const requiredStory=["SEED-story-fixture-1","SEED-story-fixture-2","SEED-story-fixture-3","SEED-story-fixture-4"];
+const courseRequired=code=>code==="CORE-BRAND"?requiredStory:requiredBouquet;
 const mime={".html":"text/html",".css":"text/css",".js":"text/javascript",".woff2":"font/woff2",".svg":"image/svg+xml"};
 const server=createServer(async(req,res)=>{
  const u=new URL(req.url,"http://localhost");
@@ -29,36 +31,48 @@ const server=createServer(async(req,res)=>{
    if(body.action==="my_profile")return json({profile:{summary_zh:"你很擅长跟进",summary_en:"You are good at follow-ups",strengths:["客户沟通"],weaknesses:["跟进时间"],writing_style:"warm",agent_notes:"",stats:{score:70}}});
    return json({ok:true});
   }
-  if(body.action==="handbook")return json({ok:true,knowledge:[
-    ...requiredBouquet.map((code,index)=>({
+  if(body.action==="handbook"){
+    const section=body.section;
+    const product=requiredBouquet.map((code,index)=>({
       id:"h-"+code,code,kind:"card",product_line:"bouquet",section:"product_line",
       title_en:"Approved test card "+(index+1),title_zh:"核准测试卡 "+(index+1),
       body_en:"Fixture content for "+code,body_zh:"测试资料 "+code,
       key_points_en:["Test example"],key_points_zh:["测试内容"],
       active:true,visible_to_agent:true,needs_owner_confirm:false,sort:index+1
-    })),
-    {id:"h-script",code:"S-1",kind:"script",product_line:"bouquet",section:"script",
-      title_en:"Test script",title_zh:"测试话术",body_en:"Example script",body_zh:"仅作测试的话术",
-      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:5},
-    {id:"h-faq",code:"F-1",kind:"faq",product_line:"bouquet",section:"faq",
-      title_en:"Is stock guaranteed?",title_zh:"保证有现货吗？",body_en:"No, confirm with Owner.",body_zh:"不保证，请先向 Owner 确认。",
-      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:6}
-  ],photos:[],content_pending:false});
+    }));
+    const story=requiredStory.map((code,index)=>({
+      id:code.slice(5),code:null,kind:"seed",product_line:null,section:"story",
+      title_en:"Story fixture "+(index+1),title_zh:"品牌故事测试卡 "+(index+1),
+      body_en:"Owner approved story fixture",body_zh:"核准品牌故事测试资料",
+      active:true,visible_to_agent:true,needs_owner_confirm:false,sort:index+1
+    }));
+    const extras=[
+      {id:"h-script",code:"S-1",kind:"script",product_line:"bouquet",section:"script",
+        title_en:"Test script",title_zh:"测试话术",body_en:"Example script",body_zh:"仅作测试的话术",
+        active:true,visible_to_agent:true,needs_owner_confirm:false,sort:5},
+      {id:"h-faq",code:"F-1",kind:"faq",product_line:"bouquet",section:"faq",
+        title_en:"Is stock guaranteed?",title_zh:"保证有现货吗？",
+        body_en:"No, confirm with Owner.",body_zh:"不保证，请先向 Owner 确认。",
+        active:true,visible_to_agent:true,needs_owner_confirm:false,sort:6}
+    ];
+    return json({ok:true,entries:([...story,...product,...extras]).filter(x=>x.section===section)});
+  }
+  if(body.action==="handbook_portfolio")return json({ok:true,photos:[]});
   if(body.action==="module_read"){
     const code=String(body.module_code||""),read=mockReads.get(code)||new Set();
-    const incoming=body.card_codes||[];
-    if(incoming.some(x=>!requiredBouquet.includes(x))){
+    const required=courseRequired(code),incoming=body.card_codes||[];
+    if(incoming.some(x=>!required.includes(x))){
       res.writeHead(400,{"content-type":"application/json","access-control-allow-origin":"*"});
       res.end(JSON.stringify({error:"invalid_card_codes"}));return;
     }
     incoming.forEach(x=>read.add(x));mockReads.set(code,read);
-    return json({ok:true,module_code:code,required_card_codes:requiredBouquet,
-      read_card_codes:requiredBouquet.filter(x=>read.has(x)),remaining_card_codes:requiredBouquet.filter(x=>!read.has(x)),
-      ready_for_quiz:requiredBouquet.every(x=>read.has(x))});
+    return json({ok:true,module_code:code,required_card_codes:required,
+      read_card_codes:required.filter(x=>read.has(x)),remaining_card_codes:required.filter(x=>!read.has(x)),
+      ready_for_quiz:required.every(x=>read.has(x))});
   }
   if(body.action==="module_quiz_start"){
     const read=mockReads.get(String(body.module_code||""))||new Set();
-    if(!requiredBouquet.every(x=>read.has(x))){
+    if(!courseRequired(String(body.module_code||"")).every(x=>read.has(x))){
       res.writeHead(403,{"content-type":"application/json","access-control-allow-origin":"*"});
       res.end(JSON.stringify({error:"must_read_handbook_first"}));return;
     }
