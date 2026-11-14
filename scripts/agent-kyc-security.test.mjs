@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname,resolve } from "node:path";
 import {
-  validateAgentKyc,KYC_CONSENT_VERSION,
+  validateAgentKyc,KYC_CONSENT_VERSION,registerAgentWithKycGate,
   matchesKycImage,KYC_MAX_BYTES
 } from "../supabase/functions/_shared/agent-kyc-validate.mjs";
 
@@ -55,7 +55,7 @@ test("migration explicitly isolates identity and photo access",()=>{
   assert.match(sql,/alter table private\.agent_kyc enable row level security/i);
   assert.match(sql,/revoke all on private\.agent_kyc,private\.agent_kyc_upload_tokens from public,anon,authenticated/i);
   assert.match(sql,/values \('agent-kyc','agent-kyc',false,5242880/i);
-  assert.match(sql,/v_exam_passed and v_kyc_approved then/i);
+  assert.match(sql,/v_exam_passed and \(not v_kyc_required or v_kyc_approved\) then/i);
   assert.match(sql,/expires_at>now\(\)/i);
   assert.match(sql,/now\(\)\+interval '60 seconds'/i);
   assert.match(sql,/not exists\(select 1 from storage\.objects/i);
@@ -70,11 +70,100 @@ test("Edge routes keep KYC off AI and use bound, one-use upload tokens",()=>{
   assert.match(agent,/agent_kyc_consume_upload_internal/);
   assert.match(agent,/p_user_id:uid,p_token_hash:tokenHash/);
   assert.match(agent,/matchesKycImage\(bytes,mime\)/);
-  assert.match(agent,/kyc_required: kycRes\.data\?\.kyc_required/);
+  assert.match(agent,/kyc_required: kycRequired && kycRes\.data\?\.kyc_required/);
   assert.match(owner,/owner_kyc_view_internal/);
   assert.match(owner,/createSignedUrl\(data\.ic_front_path,60\)/);
   assert.match(owner,/owner_kyc_delete_ready_internal/);
   assert.match(ai,/preferred_name:String\(p\.preferred_name/);
   assert.match(ai,/text:redact\(instructions\)/);
   assert.doesNotMatch(ai,/from\(["']agent_kyc["']\)/);
+});
+
+function mockAgentAdmin() {
+  const calls=[];
+  const admin={
+    rpc:async (action,payload)=>{
+      calls.push({action,payload});
+      return {data:"00000000-0000-4000-8000-000000000001",error:null};
+    },
+    from:table=>{
+      assert.equal(table,"agents");
+      return {
+        select:()=>({
+          eq:()=>({
+            single:async()=>({data:{agent_code:"AG-QA12345"},error:null})
+          })
+        })
+      };
+    }
+  };
+  return {admin,calls};
+}
+
+test("flag OFF: legacy register with display_name/language succeeds without IC",async()=>{
+  const {admin,calls}=mockAgentAdmin();
+  const result=await registerAgentWithKycGate({
+    body:{action:"register",display_name:"Old Agent",language:"zh"},
+    uid:"00000000-0000-4000-8000-000000000010",admin,kycRequired:false
+  });
+  assert.equal(result.status,200);
+  assert.equal(result.payload.ok,true);
+  assert.equal(result.payload.agent_code,"AG-QA12345");
+  assert.equal("kyc_status" in result.payload,false);
+  assert.deepEqual(calls.map(v=>v.action),["register_agent_internal"]);
+  assert.equal(calls[0].payload.p_display_name,"Old Agent");
+  assert.equal(calls[0].payload.p_language,"zh");
+});
+
+test("flag ON: missing IC returns HTTP 422 without calling any registration RPC",async()=>{
+  const {admin,calls}=mockAgentAdmin();
+  const {ic_number,...withoutIc}=base;
+  const result=await registerAgentWithKycGate({
+    body:{...withoutIc,language:"en"},
+    uid:"00000000-0000-4000-8000-000000000010",admin,kycRequired:true
+  });
+  assert.equal(result.status,422);
+  assert.equal(result.payload.error,"kyc_invalid_ic_format");
+  assert.equal(calls.length,0);
+});
+
+test("flag ON: valid IC takes KYC registration path only",async()=>{
+  const {admin,calls}=mockAgentAdmin();
+  const result=await registerAgentWithKycGate({
+    body:{...base,language:"en"},
+    uid:"00000000-0000-4000-8000-000000000010",admin,kycRequired:true
+  });
+  assert.equal(result.status,200);
+  assert.equal(result.payload.kyc_status,"draft");
+  assert.deepEqual(calls.map(v=>v.action),["agent_kyc_register_internal"]);
+});
+
+test("default OFF, certification opt-in, owner-only SQL and merged Owner routes",()=>{
+  const sql=read("supabase/migrations/20261114170000_agent_kyc_private_review.sql");
+  const agent=read("supabase/functions/agent-session/index.ts");
+  const owner=read("supabase/functions/owner-session/index.ts");
+  assert.match(sql,/create table if not exists private\.app_settings/);
+  assert.match(sql,/values \('AGENT_KYC_REQUIRED',false\)/);
+  assert.match(sql,/agent_kyc_required_internal\(\)/);
+  assert.match(sql,/v_exam_passed and \(not v_kyc_required or v_kyc_approved\) then/);
+  assert.match(agent,/admin\.rpc\("agent_kyc_required_internal"\)/);
+  assert.match(agent,/registerAgentWithKycGate\(/);
+  assert.match(owner,/if\(action==="launch_confirm_payment"\)/);
+  assert.match(owner,/if\(action==="handbook_bulk_approve"\)/);
+  for(const functionName of [
+    "owner_kyc_list_internal","owner_kyc_view_internal","owner_kyc_review_internal",
+    "owner_kyc_delete_ready_internal","owner_kyc_delete_internal"
+  ]){
+    const start=sql.indexOf("create or replace function public."+functionName);
+    assert.ok(start>=0,"missing function "+functionName);
+    const finish=sql.indexOf("end $$;",start);
+    assert.ok(finish>start,"missing SQL delimiter "+functionName);
+    const body=sql.slice(start,finish+7);
+    assert.match(body,/where user_id=p_user_id and role='owner'/);
+    assert.doesNotMatch(body,/role in\('owner','admin'\)/);
+  }
+  const ownerOnly=owner.match(/const ownerOnly=new Set\(\[([^\]]+)\]\)/)?.[1]||"";
+  for(const action of ["kyc_list","kyc_view","kyc_review","kyc_delete"]){
+    assert.ok(ownerOnly.includes('"'+action+'"'),"owner guard missing "+action);
+  }
 });
