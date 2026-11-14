@@ -8,8 +8,11 @@ const HTML=[
 '<div class="card"><div class="grid"><div><div class="muted">Active Agents</div><div id="active" class="metric"></div></div><div><div class="muted">Dormant</div><div id="dormant" class="metric"></div></div><div><div class="muted">Commission Liability</div><div id="comm" class="metric"></div></div><div><div class="muted">Bonus Liability</div><div id="bonus" class="metric"></div></div></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
+'<div class="card hidden" id="launchOrdersCard"><div class="title">Order & Payment / 订单与收款</div><div class="muted">Only create an order after the Agent has accepted a formal quote. Confirm payment only after checking actual bank evidence. 仅确认真实收到的款项。</div><div id="launchQuoteOrders"></div><div class="title" style="margin-top:15px">Orders / 订单</div><div id="launchPayments"></div></div>',
+'<div class="card hidden" id="launchProgressCard"><div class="title">Agent Progress / 代理上手进度</div><div class="muted">Required courses, certification and order access / 必修课、认证及接单权限</div><div id="launchAgentProgress"></div></div>',
 '<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload Claude-reviewed handbook_content.json. Review by batch and product line, edit drafts, then approve the batch. / 上传已审核 JSON，依批次与业务线检查、编辑草稿，然后整批核准。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
 '<div class="card" id="baselineCard"><div class="title">Global Reference Cost Baseline / 全局成本基准</div><div class="muted" style="color:#D4B47A">会影响之后所有同类报价。此操作与单笔报价审核完全分开，必须二次确认。</div><div class="form" style="margin-top:10px"><select id="bSize"><option>small</option><option selected>medium</option><option>large</option><option>xl</option><option>structure</option></select><select id="bDensity"><option>light</option><option selected>medium</option><option>full</option><option>very_full</option></select><select id="bPremium"><option>low</option><option selected>medium</option><option>high</option><option>very_high</option></select><select id="bComplexity"><option>low</option><option selected>medium</option><option>high</option><option>special</option></select><input id="bCost" type="number" min="0" step="0.01" placeholder="安全生产成本 RM"><button id="baselineBtn" class="btn">修改全局基准 / Change global baseline</button><div id="baselineMsg" class="muted"></div></div></div>',
+'<div class="card hidden" id="signupToggleCard"><div class="title">开放新 Agent 自己用 Google 注册 / Google self-registration</div><div id="signupSettingNote" class="muted">正在读取目前设定… / Checking current setting…</div><div class="row" style="margin-top:11px"><button id="signupToggleBtn" type="button" class="btn primary">读取中… / Loading…</button><span id="signupSettingState" class="pill"></span></div><div id="signupSettingMsg" class="muted" role="status" aria-live="polite"></div></div>',
 '<div class="card"><div class="title">Agent Access Link</div><div class="muted">Create a one-time login link valid for 24 hours. Use this when email delivery is delayed or rate-limited.</div><div class="form" style="margin-top:11px"><input id="inviteEmail" type="email" placeholder="agent@email.com"><button id="inviteBtn" class="btn primary">Create one-time Agent link</button><div id="inviteOut" class="muted"></div><button id="copyInvite" class="btn hidden">Copy link</button></div></div>',
 '<div class="card"><div class="title">Owner Recovery Link</div><div class="muted">Create a one-time Owner recovery link valid for 24 hours. Save it securely in case email sign-in is unavailable.</div><div class="form" style="margin-top:11px"><button id="recoveryBtn" class="btn primary">Create Owner recovery link</button><div id="recoveryOut" class="muted"></div><button id="copyRecovery" class="btn hidden">Copy recovery link</button></div></div>',
 '<div class="card"><div class="title">Add OPEX</div><div class="form" style="margin-top:11px"><input id="date" type="date"><input id="category" placeholder="Category"><input id="amount" type="number" step="0.01" placeholder="Amount RM"><input id="note" placeholder="Note"><button id="opexBtn" class="btn primary">Save OPEX & Recalculate</button><div id="opexMsg" class="muted"></div></div></div></div>',
@@ -123,6 +126,104 @@ async function refreshHandbook(){
     finally{btn.disabled=false}
   });
 }
+
+async function refreshLaunchPanels(){
+  const [p,o]=await Promise.all([
+    call({action:"launch_agent_progress"}),
+    call({action:"launch_orders"})
+  ]);
+  const es=escapeHtml;
+  $("launchAgentProgress").innerHTML=(p.agents||[]).length?(p.agents||[]).map(a=>
+    "<div class='item'><b>"+es(a.display_name||a.agent_code)+"</b> <span class='pill'>"+es(a.status)+"</span>"+
+    "<div class='muted'>"+es(a.agent_code)+" · Courses "+Number(a.passed_modules||0)+"/"+Number(p.required_count||7)+
+    " · Exam "+(a.exam_passed?"Passed / 已通过":es(a.exam_status||"Not started"))+"</div></div>"
+  ).join(""):"<div class='muted item'>No registered agents / 暂无代理。</div>";
+  const eligible=o.eligible_quotes||[],orders=o.orders||[];
+  $("launchQuoteOrders").innerHTML=eligible.length?eligible.map(q=>{
+    const id=es(q.id);
+    return "<div class='item launch-quote' data-quote='"+id+"'><b>"+es(q.customer_label)+
+      "</b> <span class='pill'>"+es(q.agent_name)+"</span>"+
+      "<div class='muted'>Approved flower amount RM "+Number(q.selling_price||0).toFixed(2)+" · "+es(q.status)+"</div>"+
+      "<div class='form'><input class='launch-code' maxlength='60' placeholder='Order code / 订单编号 (e.g. EV-2026-0001)' aria-label='Order code'>"+
+      "<input class='launch-fee' type='number' min='0' max='10000' step='0.01' value='0' aria-label='Customer delivery fee RM'>"+
+      "<button class='btn primary launch-create-order' type='button'>Create order / 建立订单</button>"+
+      "<div class='muted launch-qmsg'></div></div></div>";
+  }).join(""):"<div class='muted item'>No eligible accepted quotes / 暂无可建立订单的报价。</div>";
+  const byId=new Map(eligible.map(q=>[q.id,q]));
+  document.querySelectorAll(".launch-create-order").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-quote"),id=wrap.dataset.quote,q=byId.get(id);
+    const code=wrap.querySelector(".launch-code").value.trim();
+    const fee=Number(wrap.querySelector(".launch-fee").value);
+    const msg=wrap.querySelector(".launch-qmsg");
+    if(!q||!code||!Number.isFinite(fee)||fee<0){msg.textContent="Enter a valid order code and delivery fee. / 请填写订单编号及送货费。";return}
+    const total=Number(q.selling_price)+fee;
+    if(!confirm("Create order "+code+"?\nFlower RM "+Number(q.selling_price).toFixed(2)+" + Delivery RM "+fee.toFixed(2)+" = RM "+total.toFixed(2)+"\n确认建立订单？"))return;
+    btn.disabled=true;
+    try{
+      await call({action:"launch_create_order",quote_id:id,order_code:code,delivery_fee:fee,confirm:true});
+      await refresh();
+    }catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
+  $("launchPayments").innerHTML=orders.length?orders.map(o=>{
+    const total=Number(o.commissionable_revenue||0)+Number(o.delivery_fee||0),id=es(o.id);
+    return "<div class='item launch-pay' data-order='"+id+"'><b>"+es(o.order_code)+"</b> <span class='pill'>"+es(o.status)+" / "+es(o.payment_status)+"</span>"+
+      "<div class='muted'>"+es(o.agent_name)+" · Flower RM "+Number(o.commissionable_revenue||0).toFixed(2)+
+      " + Delivery RM "+Number(o.delivery_fee||0).toFixed(2)+" = <b>RM "+total.toFixed(2)+"</b></div>"+
+      (o.payment_status==="pending"?"<div class='form' style='margin-top:10px'>"+
+      "<input class='launch-payment-ref' maxlength='80' placeholder='Bank transaction reference / 银行交易参考号' aria-label='Bank reference'>"+
+      "<label class='muted'><input class='launch-bank-checked' type='checkbox' style='width:auto;min-height:auto'> 我已在银行记录核对真实收款及金额 / I checked bank evidence</label>"+
+      "<button type='button' class='btn primary launch-confirm-payment'>Confirm payment / 确认已收款</button>"+
+      "<div class='muted launch-pmsg'></div></div>":"")+
+      (o.status==="completed"?"<div class='muted'>Commission accrued / 已入账佣金：RM "+(o.commission_amount==null?"—":Number(o.commission_amount).toFixed(2))+(o.commission_status?" · "+es(o.commission_status):"")+"</div>":"")+
+      (o.payment_status==="paid"&&o.status!=="completed"?
+        "<div class='form launch-completion' style='margin-top:10px'>"+
+        [["production_cost","Production cost / 制作成本"],["delivery_cost","Delivery cost / 配送成本"],["payment_cost","Payment cost / 支付手续费"],["refund_cost","Refund cost / 退款成本"],["risk_cost","Risk cost / 风险成本"]].map(([key,label])=>
+          "<label class='muted'>"+es(label)+" (RM)<input class='completion-"+key+"' type='number' min='0' max='100000' step='0.01' value='0'></label>").join("")+
+        "<label class='muted'>Fulfilment / 制作方式<select class='completion-type'><option value='internal'>Internal / 内部制作</option><option value='external'>External / 外部制作</option></select></label>"+
+        "<label class='muted'><input type='checkbox' class='completion-qc' style='width:auto;min-height:auto'> QC passed (required) / 品质检查通过（必须）</label>"+
+        "<label class='muted'><input type='checkbox' class='completion-rework' style='width:auto;min-height:auto'> Rework / 返工</label>"+
+        "<button type='button' class='btn primary launch-complete-order'>Complete order / 完成订单</button>"+
+        "<div class='muted launch-cmsg'></div></div>":"")+"</div>";
+  }).join(""):"<div class='muted item'>No orders / 暂无订单。</div>";
+  document.querySelectorAll(".launch-complete-order").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-pay"),id=wrap.dataset.order,form=wrap.querySelector(".launch-completion");
+    const msg=wrap.querySelector(".launch-cmsg");
+    const payload={action:"launch_complete_order",order_id:id,fulfilment_type:form.querySelector(".completion-type").value,
+      qc_pass:form.querySelector(".completion-qc").checked,rework:form.querySelector(".completion-rework").checked};
+    for(const key of ["production_cost","delivery_cost","payment_cost","refund_cost","risk_cost"]){
+      const raw=form.querySelector(".completion-"+key).value;
+      const value=Number(raw);
+      if(raw.trim()===""||!Number.isFinite(value)||value<0||value>100000){
+        msg.textContent="Enter valid costs between RM 0 and RM 100,000. / 请输入有效成本。";return;
+      }
+      payload[key]=value;
+    }
+    if(!payload.qc_pass){msg.textContent="QC must pass before completion. / 品质检查通过后才能完成订单。";return}
+    if(!confirm("Complete this paid order and accrue commission? / 确认完成已付款订单并入账佣金？"))return;
+    btn.disabled=true;
+    try{await call({...payload,confirm:true});await refresh()}
+    catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
+  const orderMap=new Map(orders.map(o=>[o.id,o]));
+  document.querySelectorAll(".launch-confirm-payment").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-pay"),id=wrap.dataset.order,o=orderMap.get(id);
+    const ref=wrap.querySelector(".launch-payment-ref").value.trim();
+    const checked=wrap.querySelector(".launch-bank-checked").checked;
+    const msg=wrap.querySelector(".launch-pmsg");
+    if(!o||!checked||ref.length<5){msg.textContent="Check actual bank evidence and enter the reference first. / 请先核实实际收款和参考号。";return}
+    const total=Number(o.commissionable_revenue)+Number(o.delivery_fee);
+    if(!confirm("BANK VERIFIED? Confirm RM "+total.toFixed(2)+" received for "+o.order_code+"?\n请再次核对银行交易后确认。"))return;
+    btn.disabled=true;
+    try{
+      await call({action:"launch_confirm_payment",order_id:id,bank_reference:ref,bank_evidence_checked:true,confirm:true});
+      await refresh();
+    }catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
+}
+
 async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboard"}),call({action:"quote_queue"})]),d=j.dashboard||{};show("app");$("mode").textContent=String(d.profit_mode||"normal").toUpperCase();$("margin").textContent=(Number(d.net_margin_30d||0)*100).toFixed(1)+"%";$("orders").textContent=d.orders_today||0;$("revenue").textContent="RM "+Number(d.revenue_today||0).toFixed(0);$("avg").textContent=Number(d.avg_orders_per_active_agent||0).toFixed(2);$("active").textContent=d.active_agents||0;$("dormant").textContent=d.dormant_agents||0;$("comm").textContent="RM "+Number(d.commission_liability||0).toFixed(0);$("bonus").textContent="RM "+Number(d.bonus_liability||0).toFixed(0);$("exCount").textContent=(d.serious_exceptions||0)+" open";let ex=j.exceptions||[];$("exceptions").innerHTML=ex.length?ex.map(e=>"<div class=item><div class=row style='justify-content:space-between'><div><b class=damage>"+escapeHtml(String(e.severity||"").toUpperCase())+" · "+escapeHtml(e.type)+"</b><div class=muted>"+escapeHtml(e.summary)+"</div></div><div class=row><button class='btn ex' data-id='"+escapeHtml(e.id)+"' data-a='freeze'>Freeze</button><button class='btn ex' data-id='"+escapeHtml(e.id)+"' data-a='dismiss'>Dismiss</button></div></div></div>").join(""):"<div class='item muted'>No serious exceptions.</div>";document.querySelectorAll(".ex").forEach(b=>b.onclick=async()=>{await call({action:"decide_exception",exception_id:b.dataset.id,decision:b.dataset.a});await refresh()});
 let qq=qj.queue||[];
 $("quoteCount").textContent=qq.length+" pending";
@@ -156,8 +257,17 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
 }));
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
 $("handbookCard").classList.toggle("hidden",j.role!=="owner");
+$("signupToggleCard").classList.toggle("hidden",j.role!=="owner");
+if(j.role==="owner")await refreshSignupSetting();
 if(j.role==="owner"){try{await refreshHandbook()}catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}}
 $("recoveryBtn").closest(".card").classList.toggle("hidden",j.role!=="owner");
+ $("launchOrdersCard").classList.toggle("hidden",j.role!=="owner");
+ $("launchProgressCard").classList.toggle("hidden",j.role!=="owner");
+ if(j.role==="owner")try{await refreshLaunchPanels()}catch(e){
+   $("launchPayments").textContent="Unable to load orders. / 订单读取失败。";
+   $("launchAgentProgress").textContent="Unable to load Agent progress. / 代理进度读取失败。";
+ }
+
 
 }catch(e){
   const m=String(e?.message||e||"");
@@ -200,6 +310,47 @@ $("loginBtn").onclick=async()=>{
   }
 };
 $("logout").onclick=async()=>{await sb.auth.signOut();session=null;show("login")};
+let signupOpen=null;
+function renderSignupSetting(){
+  const on=signupOpen===true;
+  $("signupSettingState").textContent=signupOpen===null?"—":(on?"开放 / Open":"关闭 / Closed");
+  $("signupSettingNote").textContent=signupOpen===null
+    ?"正在读取目前设定… / Checking current setting…"
+    :(on?"新 Agent 现在可以自己用 Google 注册。 / New Agents can register with Google."
+        :"只能用邀请链接加入 / Invitation link only");
+  $("signupToggleBtn").textContent=signupOpen===null
+    ?"读取中… / Loading…"
+    :(on?"关闭自己注册 · 改用邀请 / Close self-registration":"开放 Google 自己注册 / Open Google registration");
+  $("signupToggleBtn").disabled=signupOpen===null;
+}
+async function refreshSignupSetting(){
+  $("signupSettingMsg").textContent="";
+  try{
+    const j=await call({action:"signup_setting_get"});
+    signupOpen=Boolean(j.open);renderSignupSetting();
+  }catch(e){
+    signupOpen=null;renderSignupSetting();
+    $("signupSettingMsg").textContent=friendlyError(e?.message);
+  }
+}
+$("signupToggleBtn").onclick=async()=>{
+  if(signupOpen===null)return;
+  const next=!signupOpen;
+  const promptText=next
+    ?"开放后，新 Agent 可以自己用 Google 注册。确定开放？\nOpen Google self-registration?"
+    :"关闭后，只能用邀请链接加入。确定关闭？\nInvitation link only after closing. Continue?";
+  if(!confirm(promptText))return;
+  $("signupToggleBtn").disabled=true;
+  $("signupSettingMsg").textContent="正在保存… / Saving…";
+  try{
+    const j=await call({action:"signup_setting_set",open:next});
+    signupOpen=Boolean(j.open);renderSignupSetting();
+    $("signupSettingMsg").textContent="已保存 ✓ / Saved ✓";
+  }catch(e){
+    $("signupSettingMsg").textContent=friendlyError(e?.message);
+    renderSignupSetting();
+  }
+};
 let latestInvite="";
 $("inviteBtn").onclick=async()=>{
   const email=$("inviteEmail").value.trim();
