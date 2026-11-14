@@ -12,7 +12,7 @@ const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(p
 // Bundle only the actual Claude-reviewed JSON from the repository.
 // No duplicate or rewritten onboarding/microcopy strings in frontend code.
 const reviewedRoot=path.resolve(root,"..","..","content","handbook");
-const reviewedNames=["onboarding_7day.json","ui_microcopy.json"];
+const reviewedNames=["onboarding_7day.json","ui_microcopy.json","ai_assist_copy.json"];
 const optionalAction=path.join(reviewedRoot,"daily_actions.json");
 if(fs.existsSync(optionalAction))reviewedNames.push("daily_actions.json");
 const reviewedAssets=reviewedNames.map(name=>{

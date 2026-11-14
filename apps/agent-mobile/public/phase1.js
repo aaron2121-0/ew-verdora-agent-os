@@ -7,7 +7,7 @@ import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
-import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
+import {dailyActions,emptyCopy,localized,reviewed,assistCopy} from "./approved-content.js";
 import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
 
 const NAV=[
@@ -59,6 +59,7 @@ function categoryKey(value){
 }
 
 export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
+  const at=k=>assistCopy(k,getLang());
   let active="today";
   let previousNavIndex=0;
   let lockController=null;
@@ -66,9 +67,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let generatedKit=null;
   let generatedKitCode=null;
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
-  let todayFirst=null,todayFirstLoading=false;
-  let repeatCustomers=null,repeatCustomersLoading=false;
-  const microTipCache=new Map(),microTipLoading=new Set();
+  const homeAssist={},homeLoading=new Set(),microTipCache=new Map(),microTipLoading=new Set();
   let lastAllDone=false;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
@@ -77,6 +76,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     getData,getLang,getUserId,tr,api,
     onNavigate:navigate,
     onLocked:showLock,
+    onMicroTip:()=>renderMicroTip("quote"),
     onSent:()=>{markLocalTask("kit",true);renderNavBadges()}
   });
 
@@ -237,7 +237,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       unlockSummary=result?.today||null;
       if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
     }catch{
-      // Training data is optional here. Never show an exam as ready before its state is confirmed.
+
     }finally{unlockLoading=false}
   }
 
@@ -432,8 +432,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    // An empty order state must teach the next permitted action, not just
-    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
+
     if(Number(D?.today_progress?.orders||0)===0){
       const copy=emptyCopy("orders");
       if(copy){
@@ -455,11 +454,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     host.append(page);
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
-    // The 3-action vendor component owns the completion celebration.
+
   }
-
-
-
 
   function renderMicroTip(context,lead=null){
     const wrap=element("div",{className:"ai-micro-tip ai-assist-surface"});
@@ -468,10 +464,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       wrap.replaceChildren();
       const cached=microTipCache.get(key);
       if(cached){
-        const card=createAICard({title:tr("aiMicroTipTitle"),text:String(cached.tip||""),provider:cached.provider||"template",cached:true,tr}).card;
+        const card=createAICard({title:at("aiMicroTipTitle"),text:String(cached.tip||""),provider:cached.provider||"template",cached:true,tr}).card;
         wrap.append(card);return;
       }
-      wrap.append(element("p",{className:"ai-chat-thinking",text:tr("aiMicroTipLoading")}));
+      wrap.append(element("p",{className:"ai-chat-thinking",text:at("aiMicroTipLoading")}));
     };
     draw();
     if(!microTipCache.has(key)&&!microTipLoading.has(key)){
@@ -483,78 +479,34 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return wrap;
   }
 
-  function renderRepeatCustomers(){
-    const sec=element("section",{className:"section-block ai-repeat-customers ai-assist-surface",attrs:{id:"aiRepeatCustomers"}});
-    const head=element("div",{className:"section-heading-row"});
-    const left=element("div",{className:"section-heading-left"});left.append(createIcon("users",{size:20}),element("h2",{className:"section-title",text:tr("aiRepeatTitle")}));
-    head.append(left);sec.append(head,element("p",{className:"muted",text:tr("aiRepeatHint")}));
-    const body=element("div",{className:"ai-repeat-list"});sec.append(body);
+  const homeAI={
+    today_first:["aiTodayFirstTitle","aiTodayFirstHint","aiTodayFirstLoading","aiTodayFirstEmpty","sparkles","ai-today-first"],
+    repeat_customer:["aiRepeatTitle","aiRepeatHint","aiRepeatLoading","aiRepeatEmpty","users","ai-repeat-customers ai-assist-surface"]
+  };
+  function renderHomeAssist(action){
+    const q=homeAI[action],sec=element("section",{className:"section-block "+q[5]});
+    const h=element("div",{className:"section-heading-left"});h.append(createIcon(q[4],{size:20}),element("h2",{className:"section-title",text:at(q[0])}));
+    sec.append(h,element("p",{className:"muted",text:at(q[1])}));
+    const body=element("div");sec.append(body);
     const draw=()=>{
-      body.replaceChildren();
-      if(!repeatCustomers){body.append(element("p",{className:"ai-chat-thinking",text:tr("aiRepeatLoading")}));return}
-      const rows=Array.isArray(repeatCustomers.customers)?repeatCustomers.customers:[];
-      if(!rows.length){body.append(element("p",{className:"muted",text:tr("aiRepeatEmpty")}));return}
+      body.replaceChildren();const data=homeAssist[action];
+      if(!data){body.append(element("p",{className:"ai-chat-thinking",text:at(q[2])}));return}
+      const rows=data.customers||[];if(!rows.length){body.append(element("p",{className:"muted",text:at(q[3])}));return}
       rows.forEach(row=>{
-        const msg=String(row.message||"");
-        const actions=element("div",{className:"ai-message-actions"});actions.append(aiCopyButton(msg));
-        const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-        wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer"));actions.append(wa);
-        const card=createAICard({title:String(row.customer_label||tr("customer")),text:msg,provider:repeatCustomers.provider||"template",cached:false,tr,actions}).card;
-        if(row.why)card.append(element("p",{className:"ai-priority-why",text:String(row.why)}));
-        body.append(card);
+        const chance=action==="today_first"?" · "+tr(Number(row.lead_score)>=70?"aiChanceHigh":Number(row.lead_score)>=45?"aiChanceMedium":"aiChanceLow"):"";
+        body.append(assistMessageCard(String(row.customer_label||at("customer"))+chance,String(row.message||""),data.provider));
       });
     };
     draw();
-    if(!repeatCustomers&&!repeatCustomersLoading)loadRepeatCustomers(draw);
+    if(!homeAssist[action]&&!homeLoading.has(action)){
+      homeLoading.add(action);aiStart();let ok=false;
+      api.ai({action}).then(j=>{homeAssist[action]=j;ok=true;draw()}).catch(()=>{homeAssist[action]={customers:[]};draw()})
+        .finally(()=>{homeLoading.delete(action);aiEnd(ok)});
+    }
     return sec;
   }
-  async function loadRepeatCustomers(draw){
-    repeatCustomersLoading=true;aiStart();let ok=false;
-    try{repeatCustomers=await api.ai({action:"repeat_customer"});ok=true;draw()}
-    catch{repeatCustomers={customers:[]};draw()}
-    finally{repeatCustomersLoading=false;aiEnd(ok)}
-  }
-
-  function renderTodayFirst(){
-    const sec=element("section",{className:"section-block ai-today-first",attrs:{id:"aiTodayFirst"}});
-    const head=element("div",{className:"section-heading-row"});
-    const left=element("div",{className:"section-heading-left"});
-    left.append(createIcon("sparkles",{size:20}),element("h2",{className:"section-title",text:tr("aiTodayFirstTitle")}));
-    head.append(left);sec.append(head,element("p",{className:"muted",text:tr("aiTodayFirstHint")}));
-    const body=element("div",{className:"ai-today-first-list"});sec.append(body);
-    const draw=()=>{
-      body.replaceChildren();
-      if(!todayFirst){
-        body.append(element("p",{className:"ai-chat-thinking",text:tr("aiTodayFirstLoading")}));
-        return;
-      }
-      const rows=Array.isArray(todayFirst.customers)?todayFirst.customers:[];
-      if(!rows.length){body.append(element("p",{className:"muted",text:tr("aiTodayFirstEmpty")}));return}
-      rows.forEach((row,i)=>{
-        const actions=element("div",{className:"ai-message-actions"});
-        const msg=String(row.message||"");
-        actions.append(aiCopyButton(msg));
-        const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-        wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer"));
-        actions.append(wa);
-        const chance=Number(row.lead_score)>=70?tr("aiChanceHigh"):Number(row.lead_score)>=45?tr("aiChanceMedium"):tr("aiChanceLow");
-        const title=(row.customer_label||tr("customer"))+" · "+chance;
-        const card=createAICard({title,text:msg,provider:todayFirst.provider||"template",cached:false,tr,actions}).card;
-        if(row.reason)card.append(element("p",{className:"ai-priority-why",text:String(row.reason)}));
-        if(row.why)card.append(element("small",{className:"muted",text:tr("aiWhy")+"："+String(row.why)}));
-        body.append(card);
-      });
-    };
-    draw();
-    if(!todayFirst&&!todayFirstLoading)loadTodayFirst(draw);
-    return sec;
-  }
-  async function loadTodayFirst(draw){
-    todayFirstLoading=true;aiStart();let ok=false;
-    try{todayFirst=await api.ai({action:"today_first"});ok=true;draw()}
-    catch(e){todayFirst={customers:[]};draw();toast(api.friendlyError(e?.message),{tone:"danger"})}
-    finally{todayFirstLoading=false;aiEnd(ok)}
-  }
+  function renderTodayFirst(){return renderHomeAssist("today_first")}
+  function renderRepeatCustomers(){return renderHomeAssist("repeat_customer")}
 
   function renderDailyBrief(response){
     const g=response?.greeting||{};
@@ -609,8 +561,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"
     }});
     const vm=vendorMotion();
-    // All customer-facing action text comes from Claude-reviewed daily_actions.json
-    // when present, otherwise from the already-approved dashboard/Selling Kits.
+
     const zh=dailyActions(getData()||{},"zh");
     const en=dailyActions(getData()||{},"en");
     const kinds=["lead","followup","post"];
@@ -619,7 +570,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       title_zh:String(row.title||""),title_en:String(en[i]?.title||""),
       detail_zh:String(row.detail||""),detail_en:String(en[i]?.detail||"")
     })),tip:null};
-    // Demo package copy is never displayed.
+
     applyReviewedMotionCopy(reviewed()?.ui);
     const date=String(getData()?.phase1?.kuching_date||kuchingDateKey()).replace(/[^0-9-]/g,"");
     const user=String(getUserId()||"unknown").replace(/[^a-zA-Z0-9-]/g,"");
@@ -649,10 +600,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         });
         card.append(copy,go);
       });
-      // Retain the actual UI with interactive buttons, not any sample data.
+
       if(instance)return section;
     }
-    // The base application remains usable if a vendor script cannot load.
+
     const list=element("div",{className:"earning-action-list"});
     data.actions.forEach((action,i)=>{
       const row=getLang()==="zh"?zh[i]:en[i];
@@ -663,12 +614,17 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return section;
   }
 
-
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
     return b;
+  }
+
+  function assistMessageCard(title,msg,provider,why=""){
+    const actions=element("div",{className:"ai-message-actions"}),wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+    actions.append(aiCopyButton(msg),wa);wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer"));
+    const card=createAICard({title,text:msg,provider:provider||"template",cached:false,tr,actions}).card;
+    if(why)card.append(element("p",{className:"ai-priority-why",text:why}));return card;
   }
   async function aiNextMessage(lead,outcome,host,{customerSaid=""}={}){
     if(isLocked()){showLock();return}
@@ -710,74 +666,22 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return sec;
   }
 
-
   function renderFollowupScheduler(lead){
-    const sec=element("section",{className:"ai-coach-panel ai-assist-surface",attrs:{"data-ai":"followup-scheduler"}});
-    sec.append(element("h3",{text:tr("aiFollowupScheduleTitle")}),element("p",{className:"muted",text:tr("aiFollowupScheduleHint")}));
-    const note=element("textarea",{className:"ai-chat-input",attrs:{rows:"2",maxlength:"800","aria-label":tr("aiCustomerSaidOptional")}});
-    note.placeholder=tr("aiCustomerSaidOptional");
-    const ask=element("button",{className:"btn btn-secondary",text:tr("aiFollowupSuggestBtn"),attrs:{type:"button"}});
-    const out=element("div",{className:"ai-followup-suggest-out"});
+    const sec=element("section",{className:"ai-coach-panel ai-assist-surface"});
+    const ask=element("button",{className:"btn btn-secondary",text:at("aiFollowupSuggestBtn"),attrs:{type:"button"}});
+    sec.append(element("h3",{text:at("aiFollowupScheduleTitle")}),ask);
     ask.addEventListener("click",async()=>{
       setButtonLoading(ask,true,tr("loading"));aiStart();let ok=false;
       try{
-        const j=await api.ai({action:"followup_suggest",lead_id:lead.id,customer_said:note.value.trim()});ok=true;
-        out.replaceChildren();
-        const when=String(j.followup_at||"");
-        const actions=element("div",{className:"ai-message-actions"});
-        const confirm=element("button",{className:"btn btn-primary",text:tr("aiFollowupConfirmBtn"),attrs:{type:"button"}});
-        confirm.addEventListener("click",async()=>{
-          setButtonLoading(confirm,true,tr("loading"));
-          try{
-            await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:when});
-            toast(tr("aiFollowupScheduled"),{tone:"success"});await onRefresh();detailController?.close();
-          }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-          finally{setButtonLoading(confirm,false,tr("aiFollowupConfirmBtn"))}
-        });
-        actions.append(confirm);
-        const card=createAICard({title:tr("aiFollowupSuggested"),text:formatKuchingDateTime(when,getLang()),provider:j.provider||"template",cached:false,tr,actions}).card;
-        if(j.why)card.append(element("p",{className:"ai-priority-why",text:String(j.why)}));
-        out.append(card);
+        const j=await api.ai({action:"followup_suggest",lead_id:lead.id});ok=true;
+        const confirm=element("button",{className:"btn btn-primary",text:at("aiFollowupConfirmBtn"),attrs:{type:"button"}});
+        const card=createAICard({title:at("aiFollowupSuggested"),text:formatKuchingDateTime(j.followup_at,getLang()),provider:j.provider||"template",cached:false,tr,actions:confirm}).card;
+        confirm.addEventListener("click",async()=>{setButtonLoading(confirm,true,tr("loading"));try{await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:j.followup_at});toast(at("aiFollowupScheduled"),{tone:"success"});await onRefresh();detailController?.close()}catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}finally{setButtonLoading(confirm,false,at("aiFollowupConfirmBtn"))}});
+        sec.querySelector(".ai-output-card")?.remove();sec.append(card);
       }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(ask,false,tr("aiFollowupSuggestBtn"));aiEnd(ok)}
+      finally{setButtonLoading(ask,false,at("aiFollowupSuggestBtn"));aiEnd(ok)}
     });
-    sec.append(note,ask,out);return sec;
-  }
-
-  function renderObjectionHelper(){
-    const sec=element("section",{className:"ai-coach-panel ai-assist-surface",attrs:{"data-ai":"objection-helper"}});
-    sec.append(element("h3",{text:tr("aiObjectionTitle")}),element("p",{className:"muted",text:tr("aiObjectionHint")}));
-    const quick=element("div",{className:"ai-outcome-row"});
-    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"1800","aria-label":tr("aiObjectionPaste")}});
-    input.placeholder=tr("aiObjectionPaste");
-    [[tr("aiObjectionExpensive"),getLang()==="zh"?"太贵了":"It's too expensive"],
-     [tr("aiObjectionThink"),getLang()==="zh"?"我再想想":"I'll think about it"],
-     [tr("aiObjectionSame"),getLang()==="zh"?"我要跟参考图一样":"I want it exactly like the reference"]].forEach(([label,text])=>{
-       const b=element("button",{className:"btn btn-secondary btn-small",text:label,attrs:{type:"button"}});
-       b.addEventListener("click",()=>{input.value=text;input.focus()});quick.append(b);
-    });
-    const ask=element("button",{className:"btn btn-primary",text:tr("aiObjectionAsk"),attrs:{type:"button"}});
-    const out=element("div",{className:"ai-objection-results"});
-    ask.addEventListener("click",async()=>{
-      const customerMessage=input.value.trim();if(!customerMessage)return;
-      setButtonLoading(ask,true,tr("loading"));aiStart();let ok=false;
-      try{
-        const j=await api.ai({action:"objection_helper",customer_message:customerMessage});ok=true;
-        out.replaceChildren();
-        (j.replies||[]).forEach(r=>{
-          const actions=element("div",{className:"ai-message-actions"});
-          actions.append(aiCopyButton(String(r.message||"")));
-          const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(r.message||"")),"_blank","noopener,noreferrer"));
-          actions.append(wa);
-          const card=createAICard({title:String(r.label||tr("aiObjectionOption")),text:String(r.message||""),provider:j.provider||"template",cached:false,tr,actions}).card;
-          if(r.why)card.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+String(r.why)}));
-          out.append(card);
-        });
-      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(ask,false,tr("aiObjectionAsk"));aiEnd(ok)}
-    });
-    sec.append(quick,input,ask,out);return sec;
+    return sec;
   }
 
   function renderAILostReview(lead){
@@ -928,47 +832,23 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     section.append(strip);return section;
   }
 
-
   function renderConversationImporter(){
     const sec=element("section",{className:"section-block ai-conversation-import"});
-    sec.append(element("h2",{className:"section-title",text:tr("aiConversationTitle")}),
-      element("p",{className:"muted",text:tr("aiConversationHint")}));
-    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiConversationPaste")}});
-    input.placeholder=tr("aiConversationPaste");
-    const analyse=element("button",{className:"btn btn-primary",text:tr("aiConversationAnalyse"),attrs:{type:"button"}});
-    const result=element("div",{className:"ai-conversation-result"});
+    sec.append(element("h2",{className:"section-title",text:at("aiConversationTitle")}),element("p",{className:"muted",text:at("aiConversationHint")}));
+    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"5",maxlength:"4000","aria-label":at("aiConversationPaste")}});input.placeholder=at("aiConversationPaste");
+    const analyse=element("button",{className:"btn btn-primary",text:at("aiConversationAnalyse"),attrs:{type:"button"}}),result=element("div");
     analyse.addEventListener("click",async()=>{
-      const conversation=input.value.trim();if(!conversation)return;
-      setButtonLoading(analyse,true,tr("loading"));aiStart();let ok=false;
+      if(!input.value.trim())return;setButtonLoading(analyse,true,tr("loading"));aiStart();let ok=false;
       try{
-        const j=await api.ai({action:"conversation_extract",conversation});ok=true;
-        const x=j.extracted||{};result.replaceChildren();
-        const card=createAICard({title:tr("aiConversationReview"),text:tr("aiConversationReviewHint"),provider:j.provider||"template",cached:false,tr}).card;
-        const form=element("div",{className:"detail-grid"});
-        const name=element("input",{attrs:{type:"text",maxlength:"120",placeholder:tr("customerNameTitle")}});name.value=String(x.customer_label||"");
-        const occasion=element("select");
-        [["birthday","categoryBirthday"],["anniversary","categoryAnniversary"],["condolence","categoryCondolence"],["opening","categoryOpening"],["proposal","categoryProposal"],["graduation","categoryGraduation"],["corporate","categoryCorporate"],["wedding","categoryWedding"],["general","categoryGeneral"]].forEach(([v,k])=>{const o=element("option",{text:tr(k),attrs:{value:v}});if(v===x.occasion)o.selected=true;occasion.append(o)});
-        const budget=element("input",{attrs:{type:"number",min:"0",max:"1000000",placeholder:tr("budgetTitle")}});if(x.budget!=null)budget.value=String(x.budget);
-        const date=element("input",{attrs:{type:"date"}});if(x.delivery_date)date.value=String(x.delivery_date);
-        const area=element("input",{attrs:{type:"text",maxlength:"120",placeholder:tr("aiConversationArea")}});area.value=String(x.delivery_area||"");
-        for(const [label,node] of [[tr("customerNameTitle"),name],[tr("occasionTitle"),occasion],[tr("budgetTitle"),budget],[tr("deliveryDateTitle"),date],[tr("aiConversationArea"),area]]){
-          const row=element("label");row.append(element("span",{text:label}),node);form.append(row);
-        }
-        const create=element("button",{className:"btn btn-primary btn-large",text:tr("aiConversationCreate"),attrs:{type:"button"}});
-        create.addEventListener("click",async()=>{
-          if(isLocked()){showLock();return}
-          setButtonLoading(create,true,tr("loading"));
-          try{
-            await api.agent({action:"create_lead",source:"whatsapp",customer_label:name.value.trim(),occasion:occasion.value,budget:budget.value?Number(budget.value):null,delivery_date:date.value||null});
-            toast(tr("aiConversationCreated"),{tone:"success"});input.value="";result.replaceChildren();await onRefresh();navigate("customers");
-          }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-          finally{setButtonLoading(create,false,tr("aiConversationCreate"))}
-        });
-        card.append(form);
-        if(area.value)card.append(element("p",{className:"muted",text:tr("aiConversationAreaNote")+": "+area.value}));
-        card.append(create);result.append(card);
+        const j=await api.ai({action:"conversation_extract",conversation:input.value.trim()}),x=j.extracted||{};ok=true;result.replaceChildren();
+        const names={birthday:"categoryBirthday",anniversary:"categoryAnniversary",condolence:"categoryCondolence",opening:"categoryOpening",proposal:"categoryProposal",graduation:"categoryGraduation",corporate:"categoryCorporate",wedding:"categoryWedding",general:"categoryGeneral"};
+        const summary=[x.customer_label,tr(names[x.occasion]||"categoryGeneral"),x.budget==null?"":"RM "+x.budget,x.delivery_date,x.delivery_area].filter(Boolean).join(" · ");
+        const save=element("button",{className:"btn btn-primary btn-large",text:at("aiConversationCreate"),attrs:{type:"button"}});
+        const card=createAICard({title:at("aiConversationReview"),text:summary||at("aiConversationReviewHint"),provider:j.provider||"template",cached:false,tr,actions:save}).card;
+        save.addEventListener("click",async()=>{if(isLocked())return showLock();setButtonLoading(save,true,tr("loading"));try{await api.agent({action:"create_lead",source:"whatsapp",customer_label:x.customer_label||at("customer"),occasion:x.occasion||"general",budget:x.budget??null,delivery_date:x.delivery_date||null});toast(at("aiConversationCreated"),{tone:"success"});input.value="";result.replaceChildren();await onRefresh();navigate("customers")}catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}finally{setButtonLoading(save,false,at("aiConversationCreate"))}});
+        result.append(card);
       }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(analyse,false,tr("aiConversationAnalyse"));aiEnd(ok)}
+      finally{setButtonLoading(analyse,false,at("aiConversationAnalyse"));aiEnd(ok)}
     });
     sec.append(input,analyse,result);return sec;
   }
@@ -1117,13 +997,24 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
     if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
     else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
-    if(!["won","archived"].includes(String(lead.status||""))){body.append(renderFollowupScheduler(lead));body.append(renderObjectionHelper())}
+    if(!["won","archived"].includes(String(lead.status||"")))body.append(renderFollowupScheduler(lead));
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
     input.placeholder=tr("aiCoachInput");coach.append(input);
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
-    coach.append(ask);
+    const objections=element("button",{className:"btn btn-primary",text:at("aiObjectionAsk"),attrs:{type:"button"}});
+    const coachActions=element("div",{className:"ai-outcome-row"});coachActions.append(ask,objections);coach.append(coachActions);
+    objections.addEventListener("click",async()=>{
+      const customerMessage=input.value.trim();if(!customerMessage)return;
+      objections.disabled=true;aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"objection_helper",customer_message:customerMessage});ok=true;
+        coach.querySelectorAll(".ai-objection-card").forEach(x=>x.remove());
+        (j.replies||[]).forEach(r=>{const card=assistMessageCard(String(r.label||at("aiObjectionOption")),String(r.message||""),j.provider,tr("aiWhy")+"："+String(r.why||""));card.classList.add("ai-objection-card");coach.append(card)});
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{objections.disabled=false;aiEnd(ok)}
+    });
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
       ask.disabled=true;aiStart();let coachOk=false;

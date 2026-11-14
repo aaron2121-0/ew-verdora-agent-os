@@ -1,5 +1,5 @@
-// Published, reviewed UI copy lives in content/handbook/*.json.
-// We serve those exact files from this app; do not create divergent client copy.
+
+
 export const COURSE_CODES=Object.freeze(["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"]);
 const BASE="/content/handbook/";
 let snapshot=null,pending=null;
@@ -15,13 +15,13 @@ export async function loadReviewedContent(){
   if(pending)return pending;
   pending=Promise.all([
     fetchJson("onboarding_7day.json"),fetchJson("ui_microcopy.json"),
-    fetchJson("daily_actions.json",{optional:true})
-  ]).then(([onboarding,ui,daily])=>{
+    fetchJson("daily_actions.json",{optional:true}),fetchJson("ai_assist_copy.json")
+  ]).then(([onboarding,ui,daily,assist])=>{
     if(!Array.isArray(onboarding?.days)||onboarding.days.length!==7||
       !Array.isArray(ui?.tour)||ui.tour.length!==4||
       !Array.isArray(ui?.coach_marks)||!Array.isArray(ui?.empty_states)||
       !Array.isArray(ui?.ai_suggestions))throw new Error("invalid_reviewed_content");
-    snapshot={onboarding,ui,daily};return snapshot;
+    snapshot={onboarding,ui,daily,assist};return snapshot;
   }).finally(()=>{pending=null});
   return pending;
 }
@@ -48,8 +48,7 @@ export function suggestions(screen,lang){
   const list=row?.[lang==="zh"?"prompts_zh":"prompts_en"];
   return Array.isArray(list)?list.filter(x=>typeof x==="string"&&x.trim()).slice(0,3):[];
 }
-// Owner/Grok daily_actions.json may be added later without changing application logic.
-// The fallback is derived exclusively from existing dashboard data, never a fabricated lead.
+
 export function dailyActions(data={},lang="en"){
   const sourced=reviewed()?.daily;
   if(Array.isArray(sourced?.actions)&&sourced.actions.length>=3){
@@ -76,3 +75,5 @@ export function dailyActions(data={},lang="en"){
     {key:"post",title:"Share one Selling Kit",detail:kits.length?"Choose from "+kits.length+" existing Selling Kits":"No Selling Kits are available yet",target:"selling"}
   ];
 }
+
+export function assistCopy(key,lang){const row=reviewed()?.assist?.[key];return String(row?.[lang==="zh"?"zh":"en"]||key)}
