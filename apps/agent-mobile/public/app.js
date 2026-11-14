@@ -65,9 +65,10 @@ function view(name){
   $("register").classList.toggle("hidden",name!=="register");
   $("signupBlocked").classList.toggle("hidden",name!=="signupBlocked");
   $("ownerBlocked").classList.toggle("hidden",name!=="ownerBlocked");
+  $("captchaBlocked").classList.toggle("hidden",name!=="captchaBlocked");
   $("app").classList.toggle("hidden",name!=="app");
   $("nav").classList.toggle("hidden",name!=="app");
-  $("logout").classList.toggle("hidden",!["app","signupBlocked","ownerBlocked"].includes(name));
+  $("logout").classList.toggle("hidden",!["app","signupBlocked","ownerBlocked","captchaBlocked"].includes(name));
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
 }
@@ -96,9 +97,12 @@ async function fn(path,body){
 // Server-authoritative role and signup gate; never infer eligibility from
 // email, user_metadata or the Google callback alone.
 async function routeAuthenticated(){
-  const result=await fn("agent-auth",{action:"google_signup_route"});
+  const proof=sessionStorage.getItem("ew_google_signup_proof")||"";
+  const result=await fn("agent-auth",{action:"google_signup_route",proof});
+  if(result.route!=="captcha_required")sessionStorage.removeItem("ew_google_signup_proof");
   if(result.route==="owner"){view("ownerBlocked");return}
   if(result.route==="invite_only"){view("signupBlocked");return}
+  if(result.route==="captcha_required"){view("captchaBlocked");return}
   if(result.route==="register"){view("register");return}
   if(result.route==="home"){await refresh();return}
   throw new Error("signup_route_failed");
@@ -311,12 +315,12 @@ async function bootstrap(){
       const code=new URLSearchParams(location.search).get("code");
       if(callbackError||code){
         history.replaceState({},document.title,location.pathname||"/");
-        if(callbackError)googleLogin.show(callbackError);
+        if(callbackError){sessionStorage.removeItem("ew_google_signup_proof");googleLogin.show(callbackError)}
         else{
           try{
             const {error}=await sb.auth.exchangeCodeForSession(code);
             if(error)throw error;
-          }catch{googleLogin.show("googleSessionFailed");}
+          }catch{sessionStorage.removeItem("ew_google_signup_proof");googleLogin.show("googleSessionFailed");}
         }
       }
     }
