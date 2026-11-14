@@ -899,13 +899,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
     else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
     const microTip=element("section",{className:"ai-coach-panel ai-micro-tip"});
-    microTip.append(element("small",{className:"muted",text:tr("aiMicroTipLabel")}));
-    const tipText=element("p",{className:"ai-priority-why",text:tr("aiMicroTipLoading")});microTip.append(tipText);
+    microTip.append(element("small",{className:"muted",text:tr("aiWhy")}));
+    const tipText=element("p",{className:"ai-priority-why",text:tr("aiThinking2")});microTip.append(tipText);
     api.ai({action:"micro_tip",context:"reply",lead_id:lead.id}).then(j=>{
       clear(microTip);
-      microTip.append(element("small",{className:"muted",text:j.provider==="gemini"?tr("aiMicroTipLabel"):tr("aiMicroTipTemplate")}),
+      microTip.append(element("small",{className:"muted",text:j.provider==="gemini"?tr("aiWhy"):tr("aiTemplate")}),
         element("p",{className:"ai-priority-why",text:String(j.tip||"")}));
-    }).catch(()=>{tipText.textContent=tr("aiMicroTipFallback")});
+    }).catch(()=>{tipText.textContent=tr("aiDailyUnavailable")});
     body.append(microTip);
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
