@@ -14,10 +14,10 @@ on conflict(setting_key) do nothing;
 -- Called only from service-role Edge functions; no user-facing access.
 create or replace function public.agent_kyc_required_internal()
 returns boolean language sql stable security definer set search_path=''
-as $
+as $$
  select coalesce((select enabled from private.app_settings
                   where setting_key='AGENT_KYC_REQUIRED'),false);
-$;
+$$;
 revoke all on function public.agent_kyc_required_internal() from public,anon,authenticated;
 grant execute on function public.agent_kyc_required_internal() to service_role;
 
@@ -376,7 +376,7 @@ end $$;
 create or replace function public.owner_kyc_delete_ready_internal(
  p_user_id uuid,p_agent_id uuid
 ) returns boolean language plpgsql stable security definer set search_path=''
-as $
+as $$
 begin
  if not exists(select 1 from private.user_roles
   where user_id=p_user_id and role='owner')
@@ -385,7 +385,7 @@ begin
   where agent_id=p_agent_id and delete_requested_at is not null)
  then raise exception 'kyc_delete_request_required'; end if;
  return true;
-end $;
+end $$;
 
 -- Owner must confirm that every file was removed through Storage API first.
 -- This function deletes all KYC details and upload grants; immutable audit survives.
