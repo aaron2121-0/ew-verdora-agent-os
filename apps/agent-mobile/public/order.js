@@ -206,6 +206,7 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
   function renderStep2(host){
     const card=element("section",{className:"wizard-card page-enter"});
     card.append(element("h2",{className:"card-title",text:tr("stepNeeds")}));
+    if(onMicroTip)card.append(onMicroTip());
 
     card.append(fieldTitle(tr("occasionTitle")));
     const occGrid=element("div",{className:"choice-grid choice-grid-2"});

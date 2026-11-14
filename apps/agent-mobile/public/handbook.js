@@ -100,8 +100,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
   async function load(){
     if(handbookData)return handbookData;
     if(fetching)return fetching;
-    // PR #10 owns the authenticated handbook action. Its contract is filtered
-    // section -> entries; do not duplicate the backend endpoint here.
+
     const sections=["story","product_line","service_rule","script","faq"];
     fetching=Promise.all(sections.map(section=>api.agent({action:"handbook",section})))
       .then(all=>{
@@ -136,8 +135,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
       }));
   }
   function businessCards(grid){
-    // Only Owner-approved handbook entries feed the Gemini visual card.
-    // Static labels come from the existing five official business categories.
+
     const lines=HANDBOOK_LINES.map(line=>{
       const first=(handbookData?.knowledge||[]).find(row=>
         row.kind==="card"&&row.section==="product_line"&&row.product_line===line.id);
@@ -159,7 +157,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
           currentCourse=null;currentLine=line.product_line;slideIndex=0;renderPage();
         }
       }));
-      // Known, static enum data only; no server-provided id/key is interpolated.
+
       grid.querySelectorAll(".vd-hero-card").forEach((node,i)=>{
         node.setAttribute("data-handbook-line",HANDBOOK_LINES[i].id);
       });
@@ -261,7 +259,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
       else{
         progress.textContent=t(getLang,"Reading this card · 4 seconds","正在阅读本张卡 · 4 秒");
         const token=slideToken,atIndex=slideIndex;
-        // Server verifies time between read start and completion.
+
         void api.training({action:"module_read",module_code:course,phase:"start",card_code:current.code})
         .then(()=>{if(slideToken!==token)return;slideTimer=setTimeout(async()=>{
           if(slideToken!==token||currentCourse!==course||slideIndex!==atIndex)return;
@@ -412,8 +410,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
       const label=stage?.ready_for_quiz===true?t(getLang,"Start quiz","开始测验"):t(getLang,"Read approved cards","读核准卡片");
       wrap.append(btn(label,()=>openForCourse(state.next),"btn btn-secondary btn-wide"));
     }
-    // Full seven-day detail stays expandable: never pushes earning actions below
-    // the fold and always uses Owner-reviewed day titles, goals and tasks.
+
     const details=element("details",{className:"journey-details"});
     details.append(element("summary",{text:t(getLang,"View all 7 days","查看全部 7 天")}));
     const list=element("div",{className:"journey-days"});

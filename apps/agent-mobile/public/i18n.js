@@ -1035,8 +1035,6 @@ export const I18N={
   }
 };
 
-/* Agent handbook navigation labels retained from the #11 UI; all onboarding,
-   spotlight, empty-state and AI suggestion sentences come from reviewed JSON. */
 I18N.en.handbookTitle="Product handbook";
 I18N.en.handbookSubtitle="Approved product lines, photos and scripts";
 I18N.zh.handbookTitle="产品手册";
