@@ -1106,6 +1106,24 @@ Object.assign(I18N.zh,{
   aiObjectionOption:"可以这样回"
 });
 
+
+Object.assign(I18N.en,{
+  aiFollowupScheduleTitle:"When should I contact this customer again?",
+  aiFollowupScheduleHint:"I’ll suggest a sensible time. You choose whether to save it.",
+  aiFollowupSuggestBtn:"Suggest a follow-up time",
+  aiFollowupSuggested:"Suggested next contact",
+  aiFollowupConfirmBtn:"Save this reminder",
+  aiFollowupScheduled:"Follow-up reminder saved."
+});
+Object.assign(I18N.zh,{
+  aiFollowupScheduleTitle:"这个客人下次几时找？",
+  aiFollowupScheduleHint:"我先建议一个时间，你确认了才会保存。",
+  aiFollowupSuggestBtn:"帮我排下次联系",
+  aiFollowupSuggested:"建议下次联系",
+  aiFollowupConfirmBtn:"保存这个提醒",
+  aiFollowupScheduled:"下次联系时间已经保存。"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){

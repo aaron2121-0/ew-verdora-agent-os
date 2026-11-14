@@ -651,6 +651,40 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return sec;
   }
 
+
+  function renderFollowupScheduler(lead){
+    const sec=element("section",{className:"ai-coach-panel ai-assist-surface",attrs:{"data-ai":"followup-scheduler"}});
+    sec.append(element("h3",{text:tr("aiFollowupScheduleTitle")}),element("p",{className:"muted",text:tr("aiFollowupScheduleHint")}));
+    const note=element("textarea",{className:"ai-chat-input",attrs:{rows:"2",maxlength:"800","aria-label":tr("aiCustomerSaidOptional")}});
+    note.placeholder=tr("aiCustomerSaidOptional");
+    const ask=element("button",{className:"btn btn-secondary",text:tr("aiFollowupSuggestBtn"),attrs:{type:"button"}});
+    const out=element("div",{className:"ai-followup-suggest-out"});
+    ask.addEventListener("click",async()=>{
+      setButtonLoading(ask,true,tr("loading"));aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"followup_suggest",lead_id:lead.id,customer_said:note.value.trim()});ok=true;
+        out.replaceChildren();
+        const when=String(j.followup_at||"");
+        const actions=element("div",{className:"ai-message-actions"});
+        const confirm=element("button",{className:"btn btn-primary",text:tr("aiFollowupConfirmBtn"),attrs:{type:"button"}});
+        confirm.addEventListener("click",async()=>{
+          setButtonLoading(confirm,true,tr("loading"));
+          try{
+            await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:when});
+            toast(tr("aiFollowupScheduled"),{tone:"success"});await onRefresh();detailController?.close();
+          }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+          finally{setButtonLoading(confirm,false,tr("aiFollowupConfirmBtn"))}
+        });
+        actions.append(confirm);
+        const card=createAICard({title:tr("aiFollowupSuggested"),text:formatKuchingDateTime(when,getLang()),provider:j.provider||"template",cached:false,tr,actions}).card;
+        if(j.why)card.append(element("p",{className:"ai-priority-why",text:String(j.why)}));
+        out.append(card);
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{setButtonLoading(ask,false,tr("aiFollowupSuggestBtn"));aiEnd(ok)}
+    });
+    sec.append(note,ask,out);return sec;
+  }
+
   function renderObjectionHelper(){
     const sec=element("section",{className:"ai-coach-panel ai-assist-surface",attrs:{"data-ai":"objection-helper"}});
     sec.append(element("h3",{text:tr("aiObjectionTitle")}),element("p",{className:"muted",text:tr("aiObjectionHint")}));
@@ -1023,7 +1057,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
     if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
     else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
-    if(!["won","archived"].includes(String(lead.status||"")))body.append(renderObjectionHelper());
+    if(!["won","archived"].includes(String(lead.status||""))){body.append(renderFollowupScheduler(lead));body.append(renderObjectionHelper())}
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
