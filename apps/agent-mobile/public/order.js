@@ -203,7 +203,6 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
     host.append(card);
   }
 
-
   function renderStep2(host){
     const card=element("section",{className:"wizard-card page-enter"});
     card.append(element("h2",{className:"card-title",text:tr("stepNeeds")}));
