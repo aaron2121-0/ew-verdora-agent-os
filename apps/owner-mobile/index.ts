@@ -282,10 +282,10 @@ async function reviewKyc(decision){
   const code=$("kycRejectCode").value,note=$("kycRejectNote").value.trim();
   let reason=null;
   if(decision==="reject"){
-    if(!code||(code==="other"&&!note)){
-      $("kycDecisionMessage").textContent="退回必须选择原因；选择「其他」必须填写说明。 / Rejection reason required.";return;
+    if((!code&&!note)||(code==="other"&&!note)){
+      $("kycDecisionMessage").textContent="请选择或填写退回理由；选择「其他」必须填写说明。 / Select or enter a rejection reason.";return;
     }
-    reason=(code==="other"?note:(code+(note?" — "+note:""))).slice(0,500);
+    reason=(code==="other"?note:(code?(code+(note?" — "+note:"")):note)).slice(0,500);
   }
   const buttons=[$("kycApprove"),$("kycReject"),$("kycDelete")];
   buttons.forEach(b=>b.disabled=true);
