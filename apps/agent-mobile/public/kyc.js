@@ -169,7 +169,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     if(!d.kyc_required&&!status)return null;
     const card=element("section",{className:"identity-card","data-identity-status":status||"needed"});
     const icon=element("div",{className:"identity-card-icon"});
-    icon.append(createIcon(status==="approved"?"checkCircle":"shieldCheck",{size:24}));
+    icon.append(createIcon(status==="approved"?"circleCheck":"user",{size:24}));
     card.append(icon);
     statusCardContent(card,status);
     return card;
@@ -312,7 +312,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     body.append(photoGuide());
     const input=element("input",{className:"identity-file-input",attrs:{type:"file",accept:"image/jpeg,image/png,image/webp",capture:"environment"}});
     const pick=element("label",{className:"btn btn-primary identity-photo-pick"});
-    pick.append(createIcon("camera",{size:20}),document.createTextNode(tr("identityTakePhoto")),input);
+    pick.append(createIcon("imagePlus",{size:20}),document.createTextNode(tr("identityTakePhoto")),input);
     const message=element("p",{className:"identity-inline-message",attrs:{role:"status"}});
     const preview=element("div",{className:"identity-preview hidden"});
     const image=element("img",{attrs:{alt:tr("identityPhotoPreview")}});
