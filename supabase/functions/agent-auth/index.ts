@@ -75,7 +75,13 @@ Deno.serve(async (req) => {
           || result.action !== "google_signup") {
         return reply({ error:"captcha_failed" }, 400);
       }
-      return reply({ ok:true });
+      const raw=new Uint8Array(32);crypto.getRandomValues(raw);
+      const nonce=[...raw].map(n=>n.toString(16).padStart(2,"0")).join("");
+      const {error:saveError}=await admin.rpc("agent_signup_challenge_create_internal",{
+        p_nonce_hash:await sha256Hex(nonce)
+      });
+      if(saveError)return reply({error:"captcha_unavailable"},503);
+      return reply({ ok:true,proof:nonce });
     } catch {
       return reply({ error:"captcha_unavailable" }, 503);
     }
@@ -86,10 +92,21 @@ Deno.serve(async (req) => {
     if (!auth.startsWith("Bearer ")) return reply({ error:"authentication_required" }, 401);
     const { data:verified, error:authError } = await publicClient.auth.getUser(auth.slice(7));
     if (authError || !verified.user) return reply({ error:"invalid_session" }, 401);
-    const {data,error} = await admin.rpc("agent_signup_route_internal",{
-      p_user_id:verified.user.id
-    });
-    if (error || !data || typeof data.route!=="string")return reply({error:"signup_route_failed"},503);
+    const lookup=()=>admin.rpc("agent_signup_route_internal",{p_user_id:verified.user.id});
+    let {data,error}=await lookup();
+    if(error || !data || typeof data.route!=="string")return reply({error:"signup_route_failed"},503);
+    // Only a user who just completed a one-use challenge may enter open Google registration.
+    // An existing Agent, Owner, or invited identity never needs this proof.
+    if(data.route==="captcha_required" && typeof body.proof==="string"
+       && /^[a-f0-9]{64}$/.test(body.proof)){
+      const {data:consumed,error:consumeError}=await admin.rpc("agent_signup_challenge_consume_internal",{
+        p_user_id:verified.user.id,p_nonce_hash:await sha256Hex(body.proof)
+      });
+      if(!consumeError && consumed===true){
+        ({data,error}=await lookup());
+        if(error || !data || typeof data.route!=="string")return reply({error:"signup_route_failed"},503);
+      }
+    }
     return reply({ok:true,route:data.route});
   }
 
