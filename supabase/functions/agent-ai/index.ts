@@ -415,7 +415,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["followup_schedule","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -710,6 +710,49 @@ Deno.serve(async req=>{
 
   // AI next message: the agent taps how the customer responded; Gemini writes the
   // exact WhatsApp message to send next, using only this agent's own lead data.
+  if(action==="followup_schedule"){
+    const leadId=String(body.lead_id||"").slice(0,80);
+    if(!/^[0-9a-f-]{36}$/i.test(leadId)) return reply({error:"lead_id_required"},400);
+    const {data:lead,error:leadError}=await admin.from("leads")
+      .select("id,customer_label,occasion,status,source,delivery_date,next_followup_at,updated_at")
+      .eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
+    if(leadError){ console.error("FOLLOWUP_SCHEDULE_LEAD",leadError.code||""); return reply({error:"request_failed"},500); }
+    if(!lead) return reply({error:"lead_not_found"},404);
+    if(["won","lost","archived"].includes(String(lead.status||""))) return reply({error:"lead_closed"},409);
+    const outcome=String(body.outcome||"replied").slice(0,40);
+    const customerSaid=String(body.customer_said||"").slice(0,800);
+    const {data:intel}=await admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
+    const ownIntel=(Array.isArray(intel)?intel:[]).find(x=>String(x.lead_id)===leadId)||{};
+    const ai=await callAI(
+      "You choose a sensible next follow-up time for one EW VERDORA flower customer. Return ONLY JSON {hours:number,reason:string}. hours must be 4-168. Consider the customer's stated urgency, delivery date, current outcome and the system's best follow-up time. Do not create urgency or pressure. reason is one short sentence for the Agent. Never mention internal scores."+RULES+profileBrief(prof),
+      JSON.stringify({outcome,customer_said:customerSaid||null,lead:{occasion:lead.occasion,status:lead.status,source:lead.source,delivery_date:lead.delivery_date,next_followup_at:lead.next_followup_at},system_best_followup_time:ownIntel.best_followup_time||null}),
+      true
+    );
+    const parsed=parseJson(ai||"");
+    const valid=parsed && Number.isFinite(Number(parsed.hours)) && Number(parsed.hours)>=4 && Number(parsed.hours)<=168
+      && typeof parsed.reason==="string"
+      && !containsSensitiveOutput(JSON.stringify(parsed))
+      && !containsMarketingPolicyViolation(JSON.stringify(parsed));
+    const hours=valid?Math.round(Number(parsed.hours)):24;
+    const reason=valid?String(parsed.reason).slice(0,240):(lang==="zh"?"先留一点时间给客人考虑，明天再轻轻跟进一次。":"Give the customer some space, then follow up lightly tomorrow.");
+    const suggestedAt=new Date(Date.now()+hours*3600000).toISOString();
+    return reply({ok:true,provider:valid?"gemini":"fallback",content:{suggested_at:suggestedAt,hours,reason}});
+  }
+
+  if(action==="followup_confirm"){
+    const leadId=String(body.lead_id||"").slice(0,80);
+    const suggestedAt=String(body.suggested_at||"");
+    if(!/^[0-9a-f-]{36}$/i.test(leadId)) return reply({error:"lead_id_required"},400);
+    const when=new Date(suggestedAt);
+    if(!Number.isFinite(when.getTime()) || when.getTime()<Date.now()+5*60000 || when.getTime()>Date.now()+30*86400000) return reply({error:"invalid_followup_time"},400);
+    const {data:lead}=await admin.from("leads").select("id,status").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
+    if(!lead) return reply({error:"lead_not_found"},404);
+    if(["won","lost","archived"].includes(String(lead.status||""))) return reply({error:"lead_closed"},409);
+    const {error}=await admin.from("leads").update({next_followup_at:when.toISOString(),updated_at:new Date().toISOString()}).eq("id",leadId).eq("agent_id",agent.id);
+    if(error){ console.error("FOLLOWUP_CONFIRM",error.code||""); return reply({error:"save_failed"},500); }
+    return reply({ok:true,lead_id:leadId,next_followup_at:when.toISOString()});
+  }
+
   if(action==="next_message"){
     const OUTCOMES=new Set(["followup","no_reply","replied","interested","wants_quote"]);
     const outcome=String(body.outcome||"followup");
