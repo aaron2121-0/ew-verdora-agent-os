@@ -17,6 +17,8 @@ create table if not exists private.agent_google_signup_grants (
   created_at timestamptz not null default now(),
   expires_at timestamptz not null
 );
+alter table private.agent_google_signup_challenges enable row level security;
+alter table private.agent_google_signup_grants enable row level security;
 revoke all on private.agent_google_signup_challenges from public,anon,authenticated;
 revoke all on private.agent_google_signup_grants from public,anon,authenticated;
 
@@ -30,8 +32,12 @@ as $$
 declare v_role text; v_email text; v_open boolean := false;
 begin
   if p_user_id is null then raise exception 'authentication_required' using errcode='42501'; end if;
+  select lower(trim(email)) into v_email from auth.users where id=p_user_id;
   select role into v_role from private.user_roles where user_id = p_user_id;
-  if v_role in ('owner','admin') then return jsonb_build_object('route','owner'); end if;
+  if v_role in ('owner','admin') or exists (
+    select 1 from private.user_roles r join auth.users u on u.id=r.user_id
+    where r.role in ('owner','admin') and lower(trim(u.email))=v_email
+  ) then return jsonb_build_object('route','owner'); end if;
   if exists (select 1 from public.agents where user_id = p_user_id) then
     return jsonb_build_object('route','home');
   end if;
@@ -99,8 +105,12 @@ returns trigger language plpgsql security definer set search_path = ''
 as $$
 declare v_email text; v_open boolean := false; v_role text;
 begin
+  select lower(trim(email)) into v_email from auth.users where id=new.user_id;
   select role into v_role from private.user_roles where user_id = new.user_id;
-  if v_role in ('owner','admin') then
+  if v_role in ('owner','admin') or exists (
+    select 1 from private.user_roles r join auth.users u on u.id=r.user_id
+    where r.role in ('owner','admin') and lower(trim(u.email))=v_email
+  ) then
     raise exception 'owner_cannot_register_as_agent' using errcode='42501';
   end if;
   if not exists (
