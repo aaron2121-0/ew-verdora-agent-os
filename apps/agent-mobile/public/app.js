@@ -60,6 +60,7 @@ function applyI18n(){
 }
 
 function view(name){
+  $("booting")?.classList.add("hidden");
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
   $("app").classList.toggle("hidden",name!=="app");
@@ -303,11 +304,29 @@ async function waitForSupabase(){
   if(!window.supabase)throw new Error("supabase_sdk_unavailable");
 }
 
+// In-app browsers (WhatsApp/FB/IG/Line/WeChat/Android WebView) often break Google OAuth
+// because the login starts and finishes in different cookie jars.
+function isInAppBrowser(){
+  const ua=navigator.userAgent||"";
+  return /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|MicroMessenger|; wv\)/i.test(ua);
+}
+function setupInAppWarning(){
+  if(!isInAppBrowser())return;
+  $("inAppWarn")?.classList.remove("hidden");
+  $("copyLinkBtn")?.addEventListener("click",async()=>{
+    const link=location.origin+"/";
+    try{await navigator.clipboard.writeText(link);$("loginMsg").textContent=tr("linkCopied")}
+    catch{$("loginMsg").textContent=link}
+  });
+}
 async function bootstrap(){
+  // Never leave an agent staring at a blank or half-loaded screen.
+  setTimeout(()=>{if(!$("booting")?.classList.contains("hidden"))view("login")},15000);
   initMotion();
   setupAppearance();
   applyI18n();
   setupHandlers();
+  setupInAppWarning();
   try{
     await waitForSupabase();
     CFG=await fetch("/config",{cache:"no-store"}).then(r=>r.json());

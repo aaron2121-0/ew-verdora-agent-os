@@ -1,6 +1,6 @@
 const PORT=Number(Bun.env.PORT||3000);
 const ROOT=new URL("./public/",import.meta.url);
-const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".woff2":"font/woff2"};
+const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".png":"image/png",".woff2":"font/woff2"};
 const CSP=[
   "default-src 'self'",
   "script-src 'self'",

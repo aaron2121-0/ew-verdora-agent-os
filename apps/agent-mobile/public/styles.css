@@ -525,3 +525,13 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 :root[data-theme="dark"] .auth-wrap{--bg-opacity:.055}
 :root[data-theme="dark"] .today-shell{--bg-opacity:.04}
 @media (prefers-reduced-motion:reduce){.auth-wrap,.today-shell{scroll-behavior:auto}}
+
+/* [D3] Optional install guide with 16px text and 48px actions. */
+.pwa-install-guide{position:fixed;z-index:1250;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 85px);max-width:520px;margin:0 auto;padding:16px;background:#163d32;color:#fff;border:1px solid #7fb88f;border-radius:18px;box-shadow:0 10px 35px #0007;font-size:16px;line-height:1.5}
+.pwa-install-guide strong{font-size:17px}.pwa-install-guide p{margin:8px 0 12px;font-size:16px}.pwa-install-actions{display:flex;flex-wrap:wrap;gap:8px}.pwa-install-actions .btn{min-height:48px;flex:1;font-size:16px}.pwa-install-icon{display:inline-flex;margin-right:8px;vertical-align:middle}
+
+/* D1: payment states use readable touch-friendly rows. */
+.commission-status-list{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15);font-size:16px;line-height:1.6}
+.commission-status-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09);font-size:16px}
+.commission-status-row strong{white-space:nowrap}
+\n/* AI assist accessibility surfaces */\n.ai-assist-surface,.ai-assist-surface *{font-size:16px}\n.ai-assist-surface button,.ai-assist-surface .btn,.ai-assist-surface input,.ai-assist-surface select,.ai-assist-surface textarea{min-height:48px;font-size:16px}\n

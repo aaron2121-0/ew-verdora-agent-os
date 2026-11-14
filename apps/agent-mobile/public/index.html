@@ -6,16 +6,16 @@
   <meta name="theme-color" content="#173f35">
   <title>EW VERDORA Agent OS</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/brand-192.png">
   <link rel="preload" as="image" href="/ew-verdora-content/motion/onboarding/01-company.svg" fetchpriority="high">
   <link rel="stylesheet" href="/ew-verdora-content/motion/tokens.css">
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/ew-verdora-content/motion/feedback.css">
-  <link rel="stylesheet" href="/ew-verdora-content/motion/celebrate.css">
   <link rel="stylesheet" href="/ew-verdora-content/motion/home-today.css">
   <link rel="stylesheet" href="/ew-verdora-content/motion/cards.css">
   <link rel="stylesheet" href="/ew-verdora-content/motion/ai-orb.css">
-  <link rel="stylesheet" href="/ew-verdora-content/motion/transitions.css">
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/pwa-install.js"></script>
 </head>
 <body>
   <div id="celebrationLayer" class="celebration-layer hidden" aria-hidden="true"></div>
@@ -34,7 +34,11 @@
       </div>
     </header>
 
-    <section id="login" class="auth-wrap">
+    <section id="booting" class="auth-wrap" aria-live="polite">
+      <div class="auth-brand-mark" aria-hidden="true"></div>
+      <div class="auth-card"><p class="auth-copy" data-i18n="signingIn">Signing you in…</p></div>
+    </section>
+    <section id="login" class="auth-wrap hidden">
       <div class="auth-brand-mark" aria-hidden="true"></div>
       <div class="auth-card">
         <h1 class="auth-title" data-i18n="loginTitle"></h1>
@@ -43,6 +47,10 @@
         <input id="email" class="hidden" type="email" autocomplete="email">
         <button id="loginBtn" class="btn btn-primary hidden" type="button" data-i18n="sendSignIn"></button>
         <div id="loginMsg" class="auth-msg" role="status" aria-live="polite"></div>
+        <div id="inAppWarn" class="auth-msg hidden" role="alert">
+          <p data-i18n="inAppBrowserWarn"></p>
+          <button id="copyLinkBtn" class="btn btn-secondary" type="button" data-i18n="copyAppLink"></button>
+        </div>
       </div>
     </section>
 

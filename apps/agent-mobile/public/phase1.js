@@ -8,7 +8,8 @@ import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
 import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
-import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
+import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy,loadVendorMotion} from "./motion-vendor.js";
+import {mountD6TodayCoach,mountD6Gallery,styleD6AIMessage,triggerD6Celebration,loadD6Css} from "./d6-motion.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -67,6 +68,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   let generatedKitCode=null;
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let lastAllDone=false;
+  let lastEarnedToday=null;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
 
@@ -192,8 +194,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       target.classList.add("active");
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if(old&&old!==target&&!reduced){
+      loadD6Css("transitions");
+      void loadVendorMotion("transitions").catch(()=>{});
+    }
     const vm=vendorMotion();
-    if(old&&old!==target&&vm?.runSharedSwap){
+    if(old&&old!==target&&vm?.runSharedSwap&&!reduced){
       vm.runSharedSwap(old,swap,()=>target);
     }else if(document.startViewTransition&&!reduced){
       document.startViewTransition(swap);
@@ -308,19 +314,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       let done=false;try{done=localStorage.getItem(key)==="1"}catch{}
       if(!done){
         try{localStorage.setItem(key,"1")}catch{}
-        const layer=document.getElementById("celebrationLayer");
-        if(layer){
-          clear(layer);layer.classList.remove("hidden");
-          for(let i=0;i<14;i++){
-            const p=element("span",{className:"celebration-particle"});
-            p.style.setProperty("--x",String((i%7-3)*18)+"px");
-            p.style.setProperty("--r",String((i*47)%180)+"deg");
-            p.style.setProperty("--d",String((i%5)*35)+"ms");
-            layer.append(p);
-          }
-          setTimeout(()=>{layer.classList.add("hidden");clear(layer)},900);
-        }
-        vibrate([12,25,12]);
+        triggerD6Celebration("course",document.getElementById("celebrationLayer"));
+         vibrate([12,25,12]);
       }
     }
     lastAllDone=all;
@@ -349,12 +344,19 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderTodayPriorityAssist(){
-    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
+    loadD6Css("d6");
+    loadD6Css("coach");
+    const slot=element("section",{className:"section-block ai-coach-panel vc-shell d6-coach-live",attrs:{"data-ai-assist":"today-priority"}});
     slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
     import("./ai-assist-today-first.js").then(m=>{
       const node=m.renderTodayFirst({element,createAICard,api,getLang,setButtonLoading,aiStart,aiEnd,toast});
+      node.classList.add("vc-shell","d6-coach-live");
       slot.replaceWith(node);
-    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    }).catch(()=>{
+      const fallback=mountD6TodayCoach({phase1:getData()?.phase1||{},getLang,onMessage:(lead,holder)=>aiNextMessage(lead,"followup",holder),onOpenLead:openLeadDetail});
+      if(fallback)slot.replaceWith(fallback);
+      else slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")}));
+    });
     return slot;
   }
 
@@ -362,6 +364,11 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const host=document.getElementById("todayPage");if(!host)return;
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
+    if(m.today_earned!=null&&Number.isFinite(Number(m.today_earned))){
+      const earnedNow=Number(m.today_earned);
+      if(lastEarnedToday!==null&&earnedNow>lastEarnedToday)triggerD6Celebration("sale");
+      lastEarnedToday=earnedNow;
+    }
     const page=element("div",{className:"page-shell today-shell"});
     import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
@@ -421,6 +428,27 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       requestAnimationFrame(()=>countTo(n,Number(value||0),{duration:650,formatter:x=>"RM "+Math.round(x).toLocaleString("en-MY")}));
     });
     moneyCard.append(moneyHead,grid);
+    // [D1] Show a human-readable payout status, scoped to the signed-in Agent.
+    const recentCommissions=Array.isArray(getData()?.commissions)?getData().commissions.slice(0,8):[];
+    if(recentCommissions.length){
+      const history=element("div",{className:"commission-status-list"});
+      history.append(element("strong",{text:getLang()==="zh"?"我的佣金进度":"My commission payments"}));
+      for(const entry of recentCommissions){
+        const status=String(entry.status||"");
+        const name=status==="pending"||status==="earned"
+          ?(getLang()==="zh"?"处理中":"Processing")
+          :status==="payable"?(getLang()==="zh"?"可领取":"Ready to withdraw")
+          :status==="paid"?(getLang()==="zh"?"已付":"Paid")
+          :commissionStatusLabel(status,tr);
+        const paymentDate=status==="paid"&&entry.paid_at
+          ?" · "+formatKuchingDateTime(entry.paid_at,getLang()):"";
+        const line=element("div",{className:"commission-status-row"});
+        line.append(element("span",{text:name+paymentDate}),
+          element("strong",{text:money(entry.amount)}));
+        history.append(line);
+      }
+      moneyCard.append(history);
+    }
 
     const tierWrap=element("div",{className:"tier-progress"});
     const tierTop=element("div",{className:"tier-progress-top"});
@@ -599,7 +627,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       });
       actions.append(schedule);
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
-      box.append(out.card);
+      box.append(styleD6AIMessage(out.card));
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
       import("./ai-assist-objection.js").then(m=>m.t(box,api,getLang,createAICard));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
@@ -974,6 +1002,19 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
+    const d=getData()||{};
+    const galleryHost=element("div",{className:"d6-gallery-host"});
+    page.append(galleryHost);
+    const galleryData=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
+    // D2 portfolio_list is authoritative. Never replace a failed request with vendor examples.
+    if(Array.isArray(galleryData))galleryHost.replaceChildren(mountD6Gallery(galleryData,{lang:getLang()}));
+    else {
+      galleryHost.replaceChildren(mountD6Gallery([],{lang:getLang()}));
+      api.agent({action:"portfolio_list"}).then(response=>{
+        if(!galleryHost.isConnected)return;
+        galleryHost.replaceChildren(mountD6Gallery(response,{lang:getLang()}));
+      }).catch(()=>{}); // Remain in explicit empty state when D2 is unavailable.
+    }
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
     const list=element("div",{className:"kit-list"});

@@ -1,5 +1,6 @@
 import {element,clear,setButtonLoading,toast,vibrate} from "./components.js";
 import {createIcon} from "./icons.js";
+import {decorateD6KycCard,decorateD6KycStep} from "./d6-motion.js";
 
 const CONSENT_VERSION="v1.0-2026-11";
 const AREAS=["Kuching","Matang","Batu Kawa","Tabuan Jaya","Petra Jaya","Satok","Padawan","Siburan","Samarahan","Other"];
@@ -196,7 +197,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     icon.append(createIcon(status==="approved"?"circleCheck":"user",{size:24}));
     card.append(icon);
     statusCardContent(card,status);
-    return card;
+    return decorateD6KycCard(card);
   }
   function ensureFlow(){
     if(flow)return flow;
@@ -415,6 +416,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     else if(step===2)renderStep2(body);
     else if(step===3)renderStep3(body);
     else renderStep4(body);
+    decorateD6KycStep(body,step,getLang());
     body.querySelector("input,button")?.focus({preventScroll:true});
   }
   async function open({startStep=1}={}){
