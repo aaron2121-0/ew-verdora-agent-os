@@ -243,7 +243,7 @@ begin
  if p_status not in ('all','draft','submitted','approved','rejected')
  then raise exception 'kyc_invalid_status'; end if;
  select coalesce(jsonb_agg(to_jsonb(x)),'[]'::jsonb) into v_rows from (
-  select k.agent_id,a.agent_code,k.legal_name,k.preferred_name,k.area,
+  select k.agent_id,a.agent_code,k.preferred_name,k.area,
     k.status::text as status,k.ic_last4,k.submitted_at,k.reviewed_at,
     k.delete_requested_at
   from private.agent_kyc k join public.agents a on a.id=k.agent_id
