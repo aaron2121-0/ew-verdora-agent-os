@@ -375,7 +375,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     greet.append(gLeft,badges);
     page.append(greet);
     page.append(renderEarningActions());
-    page.append(renderAIWeekly());
     page.append(handbook.journey());
 
     if(isLocked()){
@@ -560,125 +559,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return section;
   }
 
-
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
-  function aiCopyButton(text){
-    const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
-    b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
-    return b;
-  }
-  async function aiNextMessage(lead,outcome,host,{customerSaid=""}={}){
-    if(isLocked()){showLock();return}
-    host.querySelector(".ai-next-out")?.remove();
-    const box=element("div",{className:"ai-next-out"});
-    const waiting=element("p",{className:"ai-chat-thinking",text:tr("aiThinking2")});box.append(waiting);host.append(box);
-    aiStart();let ok=false;
-    try{
-      const j=await api.ai({action:"next_message",lead_id:lead.id,outcome,customer_said:customerSaid});ok=true;
-      const c=j.content||{},msg=String(c.message||"");
-      waiting.remove();
-      const actions=element("div",{className:"ai-message-actions"});
-      const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
-      actions.append(aiCopyButton(msg),wa);
-      const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
-      box.append(out.card);
-      if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
-      if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
-    }catch(e){waiting.textContent=api.friendlyError(e?.message)}
-    finally{aiEnd(ok)}
-  }
-  function renderAIOutcome(lead){
-    const sec=element("section",{className:"ai-coach-panel",attrs:{"data-ai":"outcome"}});
-    sec.append(element("h3",{text:tr("aiOutcomeTitle")}),element("p",{className:"muted",text:tr("aiOutcomeHint")}));
-    const said=element("textarea",{className:"ai-chat-input",attrs:{rows:"2",maxlength:"800","aria-label":tr("aiCustomerSaidOptional")}});
-    said.placeholder=tr("aiCustomerSaidOptional");
-    const row=element("div",{className:"ai-outcome-row"});
-    [["no_reply","aiOutcomeNoReply"],["replied","aiOutcomeReplied"],["interested","aiOutcomeInterested"],["wants_quote","aiOutcomeWantsQuote"]].forEach(([o,k])=>{
-      const b=element("button",{className:"btn btn-secondary btn-small",text:tr(k),attrs:{type:"button"}});
-      b.addEventListener("click",async()=>{
-        row.querySelectorAll("button").forEach(x=>x.disabled=true);
-        try{await aiNextMessage(lead,o,sec,{customerSaid:said.value.trim()})}
-        finally{row.querySelectorAll("button").forEach(x=>x.disabled=false)}
-      });
-      row.append(b);
-    });
-    sec.append(said,row);
-    return sec;
-  }
-  function renderAILostReview(lead){
-    const sec=element("section",{className:"ai-coach-panel",attrs:{"data-ai":"lost-review"}});
-    const btn=iconButton("sparkles",tr("aiLostReviewBtn"),"btn btn-primary");
-    btn.addEventListener("click",async()=>{
-      if(isLocked()){showLock();return}
-      setButtonLoading(btn,true,tr("loading"));aiStart();let ok=false;
-      try{
-        const j=await api.ai({action:"lost_review",lead_id:lead.id});ok=true;
-        sec.querySelector(".ai-output-card")?.remove();
-        const r=j.review||{};
-        const text=[[tr("aiLostSummary"),r.summary],[tr("aiLostNextTime"),r.next_time],[tr("aiLostModel"),r.model_message],[tr("aiLostAvoid"),r.avoid]]
-          .filter(([,v])=>v).map(([k,v])=>k+"：\n"+v).join("\n\n");
-        const actions=element("div",{className:"ai-message-actions"});
-        if(r.model_message)actions.append(aiCopyButton(String(r.model_message)));
-        sec.append(createAICard({title:tr("aiLostReviewBtn"),text,provider:j.provider||"template",cached:false,tr,actions}).card);
-      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(btn,false,tr("aiLostReviewBtn"));aiEnd(ok)}
-    });
-    sec.append(btn);return sec;
-  }
-  let weeklyPlan=null,weeklyProvider="template";
-  function renderAIWeekly(){
-    const sec=element("section",{className:"section-block ai-week",attrs:{id:"aiWeeklyPlan"}});
-    const h=element("div",{className:"section-heading-row"});
-    const t=element("div",{className:"section-heading-left"});t.append(createIcon("sparkles",{size:20}),element("h2",{className:"section-title",text:tr("aiWeekTitle")}));
-    h.append(t);sec.append(h);
-    const draw=()=>{
-      sec.querySelector(".ai-week-list")?.remove();
-      if(!weeklyPlan?.days)return;
-      const list=element("ol",{className:"ai-week-list"});
-      const todayIdx=((new Date(Date.now()+8*3600e3).getUTCDay()+6)%7);
-      weeklyPlan.days.forEach((d,i)=>{
-        const li=element("li",{className:"ai-week-day"+(i===todayIdx?" is-today":"")});
-        li.append(element("strong",{text:(i===todayIdx?tr("aiWeekToday")+" · ":"")+tr("aiWeekDay",{day:d.day})+" — "+String(d.focus||"")}));
-        const ul=element("ul");(d.actions||[]).slice(0,3).forEach(a=>ul.append(element("li",{text:String(a)})));
-        li.append(ul);list.append(li);
-      });
-      sec.append(list);
-    };
-    const btn=iconButton("sparkles",tr("aiWeekBtn"),"btn btn-secondary");
-    btn.addEventListener("click",async()=>{
-      if(isLocked()){showLock();return}
-      setButtonLoading(btn,true,tr("loading"));aiStart();let ok=false;
-      try{const j=await api.ai({action:"weekly_plan"});ok=true;weeklyPlan=j.plan||null;weeklyProvider=j.provider||"template";draw()}
-      catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(btn,false,tr("aiWeekBtn"));aiEnd(ok)}
-    });
-    sec.append(btn);draw();
-    return sec;
-  }
-  function renderAIPlatformRow(kit,card){
-    const wrap=element("div",{className:"ai-platform"});
-    wrap.append(element("small",{className:"muted",text:tr("aiPlatformTitle")}));
-    const row=element("div",{className:"ai-outcome-row"});
-    [["facebook_group","aiPlatformFacebook"],["instagram","aiPlatformInstagram"],["xiaohongshu","aiPlatformXhs"],["whatsapp_status","aiPlatformStatus"]].forEach(([pf,k])=>{
-      const b=element("button",{className:"btn btn-secondary btn-small",text:tr(k),attrs:{type:"button"}});
-      b.addEventListener("click",async()=>{
-        if(isLocked()){showLock();return}
-        row.querySelectorAll("button").forEach(x=>x.disabled=true);aiStart();let ok=false;
-        try{
-          const j=await api.ai({action:"platform_post",platform:pf,kit_code:kit.code});ok=true;
-          const c=j.content||{};
-          const full=[c.hook,c.copy,c.cta].filter(Boolean).join("\n\n");
-          wrap.querySelector(".ai-output-card")?.remove();
-          const actions=element("div",{className:"ai-message-actions"});actions.append(aiCopyButton(full));
-          wrap.append(createAICard({title:tr(k),text:full,provider:j.provider||"template",cached:false,tr,actions}).card);
-        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-        finally{row.querySelectorAll("button").forEach(x=>x.disabled=false);aiEnd(ok)}
-      });
-      row.append(b);
-    });
-    wrap.append(row);card.append(wrap);
-  }
   function renderDueFollowups(){
     const p=getData()?.phase1||{},rows=p.due_followups||[];
     const section=element("section",{className:"section-block",attrs:{id:"dueFollowups"}});
@@ -721,9 +601,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
         finally{setButtonLoading(done,false,tr("markComplete"))}
       });
-      const aiBtn=iconButton("sparkles",tr("aiWriteFollowup"),"btn btn-primary");
-      aiBtn.addEventListener("click",async()=>{aiBtn.disabled=true;try{await aiNextMessage(lead,"followup",card)}finally{aiBtn.disabled=false}});
-      actions.append(aiBtn,wa,done);
+      actions.append(wa,done);
       card.append(top,meta,actions);list.append(card);
     });
     section.append(list);
@@ -894,8 +772,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       loss.append(select,save);body.append(loss);
     }
 
-    if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
-    else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
@@ -971,7 +847,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         finally{setButtonLoading(gen,false,tr("generateTodayCopy"))}
       });
       card.append(gen);
-      renderAIPlatformRow(k,card);
       if(generatedKit&&generatedKitCode===k.code){
         const out=element("div",{className:"generated-copy "+(generatedProvider==="gemini"?"ai-output-card ai-live":"ai-output-card ai-template")});
         const body=[
