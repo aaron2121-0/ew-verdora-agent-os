@@ -1,7 +1,7 @@
 
 const HTML=[
 '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EW VERDORA Owner</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>',
-'<style>*{box-sizing:border-box}body{margin:0;background:#0E1111;color:#ecf3ee;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.shell{max-width:760px;margin:auto;padding:18px 14px 60px}.top,.row{display:flex;gap:8px;align-items:center}.top{justify-content:space-between}.brand{font-size:21px;font-weight:850}.muted{font-size:16px;color:#a6b6ae;line-height:1.5}.card{background:#161A1A;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:15px;margin-top:12px}.title{font-weight:800;font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{font-size:22px;font-weight:850}.btn{min-height:48px;border:1px solid #384741;border-radius:13px;background:#1d2924;color:#eaf7ee;padding:0 13px;font-weight:700}.primary{background:#2E7D5B;color:white;border-color:#2E7D5B}input,select,textarea{width:100%;background:#101816;color:#ecf3ee;border:1px solid #384741;border-radius:13px;padding:10px 12px;min-height:48px;font-size:16px}.form{display:grid;gap:8px}.hidden{display:none!important}.item{padding:11px 0;border-top:1px solid rgba(255,255,255,0.08)}.item:first-child{border-top:0}.pill{display:inline-block;border:1px solid #385548;border-radius:999px;padding:4px 8px;font-size:16px}.danger{color:#ff9186}.ok{color:#67dca8}@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}@media(min-width:1100px){.shell{max-width:1200px}.grid{grid-template-columns:repeat(4,1fr)}}@media(prefers-reduced-motion:no-preference){.card{animation:rise .45s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}.kyc-mode > :not(#kycPage){display:none!important}.kyc-photo{display:block;width:100%;max-width:100%;height:auto;max-height:650px;object-fit:contain;border:1px solid #384741;border-radius:12px;margin-top:8px;touch-action:pan-y;-webkit-user-select:none;user-select:none}.kyc-photo:not([width]){display:none}.kyc-field{overflow-wrap:anywhere;padding:6px 0;border-bottom:1px solid #384741}.kyc-item{display:block;text-align:left;width:100%;margin-top:8px}.danger-btn{background:#341d1d;border-color:#814441;color:#ffb3ad}.payout-line{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:16px;line-height:1.5}.payout-tick{width:24px;height:24px;min-height:24px;flex-shrink:0;accent-color:#67dca8}.kyc-field strong{display:block;font-size:12px;color:#a6b6ae;margin-bottom:3px}</style></head><body><main class="shell">',
+'<style>*{box-sizing:border-box}body{margin:0;background:#0E1111;color:#ecf3ee;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.shell{max-width:760px;margin:auto;padding:18px 14px 60px}.top,.row{display:flex;gap:8px;align-items:center}.top{justify-content:space-between}.brand{font-size:21px;font-weight:850}.muted{font-size:16px;color:#a6b6ae;line-height:1.5}.card{background:#161A1A;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:15px;margin-top:12px}.title{font-weight:800;font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{font-size:22px;font-weight:850}.btn{min-height:48px;border:1px solid #384741;border-radius:13px;background:#1d2924;color:#eaf7ee;padding:0 13px;font-weight:700}.primary{background:#2E7D5B;color:white;border-color:#2E7D5B}input,select,textarea{width:100%;background:#101816;color:#ecf3ee;border:1px solid #384741;border-radius:13px;padding:10px 12px;min-height:48px;font-size:16px}.form{display:grid;gap:8px}.hidden{display:none!important}.item{padding:11px 0;border-top:1px solid rgba(255,255,255,0.08)}.item:first-child{border-top:0}.pill{display:inline-block;border:1px solid #385548;border-radius:999px;padding:4px 8px;font-size:16px}.danger{color:#ff9186}.ok{color:#67dca8}@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}@media(min-width:1100px){.shell{max-width:1200px}.grid{grid-template-columns:repeat(4,1fr)}}@media(prefers-reduced-motion:no-preference){.card{animation:rise .45s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}.kyc-mode > :not(#kycPage){display:none!important}.kyc-photo{display:block;width:100%;max-width:100%;height:auto;max-height:650px;object-fit:contain;border:1px solid #384741;border-radius:12px;margin-top:8px;touch-action:pan-y;-webkit-user-select:none;user-select:none}.kyc-photo:not([width]){display:none}.kyc-field{overflow-wrap:anywhere;padding:6px 0;border-bottom:1px solid #384741}.kyc-item{display:block;text-align:left;width:100%;margin-top:8px}.danger-btn{background:#341d1d;border-color:#814441;color:#ffb3ad}.payout-line{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:16px;line-height:1.5}.payout-tick{width:24px;height:24px;min-height:24px;flex-shrink:0;accent-color:#67dca8}.portfolio-thumb{width:100%;max-height:300px;object-fit:contain;background:#101816;border-radius:12px}.portfolio-form{display:grid;gap:9px;margin-top:10px}.portfolio-form textarea{min-height:96px}.portfolio-actions{display:flex;flex-wrap:wrap;gap:9px}.portfolio-actions button{flex:1;min-width:130px}..kyc-field strong{display:block;font-size:12px;color:#a6b6ae;margin-bottom:3px}</style></head><body><main class="shell">',
 '<div class="top"><div><div class="brand">EW VERDORA</div><div class="muted">Owner Command · Quote Review & Security</div></div><button id="logout" class="btn hidden">Sign out</button></div>',
 '<div id="login" class="card"><div class="title">Owner Secure Access</div><div class="muted">Open your one-time Owner Recovery Link. Email magic-link login is disabled to avoid redirect and rate-limit failures.</div><div class="form" style="margin-top:12px"><input id="email" class="hidden" type="email" placeholder="owner@email.com"><button id="loginBtn" class="btn primary hidden">Send sign-in link</button><div id="msg" class="muted"></div></div></div>',
 '<div id="app" class="hidden"><div class="row" style="margin-top:12px"><button id="kycOpen" type="button" class="btn primary hidden">身份审核（读取中） / Identity check</button></div><section id="kycPage" class="hidden" aria-label="身份审核"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><button id="kycBack" type="button" class="btn">← 返回 Owner 首页</button><div class="title">身份审核 / Identity check</div></div><div class="muted">仅显示称呼、地区、提交时间及 IC 后四位。敏感资料仅在查看时读取，60 秒自动遮盖。 / Sensitive details expire after 60 seconds.</div><div class="row" style="margin-top:12px"><button id="kycReload" class="btn" type="button">刷新列表 / Refresh</button><span id="kycCount" class="pill"></span></div><div id="kycMessage" class="muted" role="status" aria-live="polite"></div><div id="kycQueue"></div></div><section id="kycDetail" class="card hidden" aria-label="限时查看身份资料"><div class="row" style="justify-content:space-between"><div class="title">身份资料（限时查看）</div><button id="kycClose" class="btn" type="button">立即遮盖 / Hide</button></div><div id="kycClock" class="muted"></div><div id="kycFields" class="form" style="margin-top:10px"></div><div class="muted" style="margin-top:10px">IC 正面 / IC front (temporary view)</div><canvas id="kycCanvas" class="kyc-photo" role="img" aria-label="IC front photo"></canvas><div id="kycPhotoMessage" class="muted"></div><div id="kycActions" class="form" style="margin-top:12px"><div class="row" style="flex-wrap:wrap"><button id="kycApprove" type="button" class="btn primary">一键核准 / Approve</button><button id="kycReject" type="button" class="btn">退回 / Reject</button></div><label class="muted" for="kycRejectCode">退回原因（必填） / Rejection reason<select id="kycRejectCode"><option value="">请选择原因 / Choose a reason</option><option value="身份证照片有点模糊，请重新拍一张清楚、四个角都看得到的照片。 / IC photo is unclear. Please retake a clear photo with all four corners visible.">照片有点模糊，请重新拍清楚 / Photo is blurry</option><option value="你填写的资料和身份证对不上，请检查姓名和身份证号码后再送出。 / The details do not match the IC. Please check the name and IC number, then send again.">资料和身份证对不上 / Details do not match</option><option value="身份证照片没有拍完整，请重新拍整张正面，四个角都要看得到。 / The IC photo is incomplete. Please retake the full front with all four corners visible.">照片没有拍完整 / Photo is incomplete</option><option value="other">其他 / Other</option></select></label><label class="muted" for="kycRejectNote">说明 / Explanation<textarea id="kycRejectNote" rows="2" maxlength="500" placeholder="选择其他时必须填写 / Required when Other is selected"></textarea></label></div><button id="kycDelete" type="button" class="btn danger-btn">删除身份资料 / Delete identity details</button><div id="kycDecisionMessage" class="muted" role="status" aria-live="polite"></div></section><div id="kycMasked" class="card muted hidden" role="status" aria-live="polite"></div></section><div class="card"><div class="row" style="justify-content:space-between"><div class="title">公司情况 / Company Health</div><span id="mode" class="pill"></span></div><div class="grid" style="margin-top:13px"><div><div class="muted">30 天净利润率 / 30D Net Margin</div><div id="margin" class="metric"></div></div><div><div class="muted">今天订单 / Orders Today</div><div id="orders" class="metric"></div></div><div><div class="muted">今天营业额 / Revenue Today</div><div id="revenue" class="metric"></div></div><div><div class="muted">每位活跃代理平均单数 / Orders per Active Agent</div><div id="avg" class="metric"></div></div></div></div>',
@@ -9,6 +9,7 @@ const HTML=[
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">需要你处理的问题 / Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">等你确认的报价 / Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
 '<div class="card hidden" id="commissionPayCard"><div class="title">待付佣金 / Commissions ready to pay</div><div class="muted">先在银行完成转账，再勾选这笔佣金和填写银行参考号。这里只记录已付，不会自动汇款。 / Transfer through your bank first. This records the payment only.</div><button id="commissionPayRefresh" type="button" class="btn" style="margin-top:12px">刷新待付佣金 / Refresh payouts</button><div id="commissionPayList" role="region" aria-label="待付佣金列表"></div><div id="commissionPayMsg" role="status" aria-live="polite" class="muted"></div></div>',
+'<section id="portfolioCard" class="card hidden"><div class="title">真实作品图库 / Real work gallery</div><div class="muted">照片先让 AI 帮你写说明，自己检查后按核准，Agent 才看得到。 / Agents only see approved work.</div><div class="form" style="margin-top:12px"><input id="portfolioFiles" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="选择作品照片"><button id="portfolioUploadBtn" type="button" class="btn primary">上传照片并准备说明 / Upload and prepare captions</button><button id="portfolioRefreshBtn" type="button" class="btn">刷新作品 / Refresh gallery</button><div id="portfolioMsg" role="status" aria-live="polite" class="muted"></div></div><div id="portfolioQueue"></div></section>',
 '<div class="card hidden" id="launchOrdersCard"><div class="title">Order & Payment / 订单与收款</div><div class="muted">Only create an order after the Agent has accepted a formal quote. Confirm payment only after checking actual bank evidence. 仅确认真实收到的款项。</div><div id="launchQuoteOrders"></div><div class="title" style="margin-top:15px">Orders / 订单</div><div id="launchPayments"></div></div>',
 '<div class="card hidden" id="launchProgressCard"><div class="title">Agent Progress / 代理上手进度</div><div class="muted">Required courses, certification and order access / 必修课、认证及接单权限</div><div id="launchAgentProgress"></div></div>',
 '<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload Claude-reviewed handbook_content.json. Review by batch and product line, edit drafts, then approve the batch. / 上传已审核 JSON，依批次与业务线检查、编辑草稿，然后整批核准。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
@@ -199,6 +200,86 @@ async function refreshCommissionPayouts(){
 $("commissionPayRefresh").addEventListener("click",()=>refreshCommissionPayouts().catch(e=>{
   $("commissionPayMsg").textContent=friendlyError(e?.message);
 }));
+
+// [D2] Real photos are rendered as DOM nodes. Captions never become HTML.
+async function refreshPortfolio(){
+  const root=$("portfolioQueue"),msg=$("portfolioMsg");
+  root.replaceChildren();msg.textContent="读取作品… / Loading…";
+  const {photos=[]}=await call({action:"portfolio_list"});
+  msg.textContent="";
+  const el=(tag,text,cls)=>{
+    const node=document.createElement(tag);
+    if(text!==undefined)node.textContent=String(text);
+    if(cls)node.className=cls;
+    return node;
+  };
+  if(!photos.length){root.append(el("p","还没有作品。先选择照片上传。 / No work yet. Upload photos first.","muted"));return}
+  const lineNames={condolence:"帛事花圈",opening:"开张花篮",bouquet:"花束",wedding_event:"婚礼活动",wholesale:"批发",unknown:"未分类"};
+  for(const row of photos){
+    const card=el("section",undefined,"item");
+    if(row.image_url&&safeImageUrl(row.image_url)){
+      const image=el("img");image.src=safeImageUrl(row.image_url);
+      image.className="portfolio-thumb";image.alt="EW VERDORA 作品照片";
+      image.loading="lazy";image.referrerPolicy="no-referrer";card.append(image);
+    }
+    card.append(el("div",String(row.status==="approved"?"已核准 / Approved":row.status==="hidden"?"已隐藏 / Hidden":"等你核准 / Waiting for approval")+" · "+String(row.created_at?kuchingDateTime(row.created_at):""),"muted"));
+    const form=el("div",undefined,"portfolio-form");
+    const type=el("select");type.setAttribute("aria-label","作品类型 / Product line");
+    for(const [key,label] of Object.entries(lineNames)){
+      const opt=el("option",label);opt.value=key;type.append(opt);
+    }
+    type.value=row.product_line||"unknown";
+    const zh=el("textarea");zh.maxLength=130;zh.value=row.caption_zh||"";zh.placeholder="中文说明 / Chinese caption";zh.setAttribute("aria-label","中文说明");
+    const en=el("textarea");en.maxLength=240;en.value=row.caption_en||"";en.placeholder="English caption";en.setAttribute("aria-label","English caption");
+    form.append(type,zh,en);
+    const actions=el("div",undefined,"portfolio-actions");
+    const save=el("button","保存说明 / Save edits","btn");
+    const approve=el("button","核准给 Agent 看 / Approve for Agents","btn primary");
+    const reject=el("button","不展示 / Hide photo","btn");
+    const note=el("div",undefined,"muted");note.setAttribute("role","status");
+    for(const [btn,decision] of [[save,"edit"],[approve,"approve"],[reject,"reject"]]){
+      btn.type="button";btn.addEventListener("click",async()=>{
+        if(decision==="reject"&&!window.confirm("确定不让 Agent 看这张作品？ / Hide this photo?"))return;
+        btn.disabled=true;note.textContent="正在保存… / Saving…";
+        try{
+          await call({action:"portfolio_review",id:row.id,decision,
+            caption_zh:zh.value,caption_en:en.value,product_line:type.value});
+          note.textContent="已保存 / Saved";await refreshPortfolio();
+        }catch(e){note.textContent=friendlyError(e?.message)}
+        finally{btn.disabled=false}
+      });
+      actions.append(btn);
+    }
+    form.append(actions,note);card.append(form);root.append(card);
+  }
+}
+$("portfolioRefreshBtn").addEventListener("click",()=>refreshPortfolio().catch(e=>{
+  $("portfolioMsg").textContent=friendlyError(e?.message);
+}));
+$("portfolioUploadBtn").addEventListener("click",async()=>{
+  const files=[...($("portfolioFiles").files||[])],msg=$("portfolioMsg"),btn=$("portfolioUploadBtn");
+  if(!files.length){msg.textContent="先选择照片。 / Choose photos first.";return}
+  if(files.length>12){msg.textContent="每次最多 12 张。 / Maximum 12 photos per batch.";return}
+  btn.disabled=true;
+  let done=0;
+  try{
+    for(const file of files){
+      if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size<1||file.size>5242880)
+        throw new Error("invalid_portfolio_file");
+      msg.textContent="正在处理 "+(done+1)+"/"+files.length+"… / Preparing photos…";
+      const created=await call({action:"portfolio_upload_url",mime_type:file.type,file_size:file.size});
+      const uploaded=await sb.storage.from("portfolio").uploadToSignedUrl(
+        created.path,created.upload_token,file,{contentType:file.type});
+      if(uploaded.error)throw new Error("portfolio_upload_failed");
+      await call({action:"portfolio_review",id:created.id,decision:"analyse"});
+      done++;
+    }
+    msg.textContent="已上传 "+done+" 张，记得核准后 Agent 才看得到。 / "+done+" ready for approval.";
+    $("portfolioFiles").value="";
+    await refreshPortfolio();
+  }catch(e){msg.textContent="已处理 "+done+" 张。 "+friendlyError(e?.message)}
+  finally{btn.disabled=false}
+});
 
 async function refreshLaunchPanels(){
   const [p,o]=await Promise.all([
@@ -557,6 +638,8 @@ if(j.role==="owner")await refreshSignupSetting();
 if(j.role!=="owner"&&!$("kycPage").classList.contains("hidden"))closeKycPage();
 if(j.role==="owner"){try{await refreshHandbook()}catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}}
 $("recoveryBtn").closest(".card").classList.toggle("hidden",j.role!=="owner");
+ $("portfolioCard").classList.toggle("hidden",j.role!=="owner");
+ if(j.role==="owner")try{await refreshPortfolio()}catch(e){$("portfolioMsg").textContent=friendlyError(e?.message)}
  $("commissionPayCard").classList.toggle("hidden",j.role!=="owner");
 $("launchOrdersCard").classList.toggle("hidden",j.role!=="owner");
  $("launchProgressCard").classList.toggle("hidden",j.role!=="owner");
