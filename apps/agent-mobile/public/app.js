@@ -75,7 +75,9 @@ function view(name){
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
-  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);\n  window.VerdoraMotion?.brandBg?.destroy?.();\n  if(name==="login")mountBrandBg($("login"),{placement:"tr",seed:20261114});
+  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
+  window.VerdoraMotion?.brandBg?.destroy?.();
+  if(name==="login")mountBrandBg($("login"),{placement:"tr",seed:20261114});
 }
 
 async function fn(path,body){
