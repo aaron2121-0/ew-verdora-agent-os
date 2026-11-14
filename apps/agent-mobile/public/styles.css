@@ -513,21 +513,3 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .identity-photo-pick{position:relative;width:100%;min-height:54px;margin-top:16px;font-size:17px;display:flex;gap:9px;align-items:center;justify-content:center}.identity-file-input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.identity-preview{margin-top:16px}.identity-preview img{display:block;width:100%;max-height:52dvh;object-fit:contain;border-radius:16px;background:#0d1714}.identity-preview-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.identity-preview-actions .btn{min-height:50px;font-size:16px}
 .identity-review-box{padding:18px;border-radius:16px;background:rgba(23,63,53,.07);font-size:16px}.identity-review-box span{display:block}.identity-review-box strong{display:block;font-size:26px;letter-spacing:.08em;margin:7px 0}.identity-review-box p{margin:8px 0 0;line-height:1.5}.identity-settings-panel{position:relative;padding-top:22px}.identity-settings-close{position:absolute;right:10px;top:8px}.identity-settings-panel h2{font-size:24px;margin:10px 54px 12px 0}.identity-settings-panel p{font-size:16px;line-height:1.55}.identity-settings-note{padding:14px;border-radius:14px;background:rgba(165,43,43,.07)}.identity-delete-start,.identity-delete-warning .btn{width:100%;min-height:50px;font-size:16px}.identity-delete-warning{padding:14px;border:1px solid rgba(165,43,43,.28);border-radius:16px}.identity-delete-warning strong{font-size:18px}.identity-delete-warning .btn{margin-top:10px}
 @media (min-width:560px){.identity-flow,.identity-settings{align-items:center;padding:20px}.identity-flow-panel,.identity-settings-panel{border-radius:24px;max-height:90dvh}}@media (prefers-reduced-motion:reduce){.identity-progress-bar{transition:none}}
-
-/* motion-pack-v1 brand background */
-.auth-wrap,.today-shell{position:relative;isolation:isolate;overflow:hidden}
-.auth-wrap{--bg-opacity:.045}
-.today-shell{--bg-opacity:.032}
-.auth-wrap>.v0,.today-shell>.v0{z-index:0}
-.auth-wrap>:not(.v0),.today-shell>:not(.v0){position:relative;z-index:1}
-.auth-card{position:relative;z-index:1}
-.auth-brand-mark{
-  background:transparent url("/vendor/motion-pack-v1/icons/logo.svg") center/contain no-repeat;
-  border-radius:50%;box-shadow:none
-}
-.auth-brand-mark::after{display:none}
-:root[data-theme="dark"] .auth-wrap{--bg-opacity:.055}
-:root[data-theme="dark"] .today-shell{--bg-opacity:.04}
-@media (prefers-reduced-motion:reduce){
-  .auth-wrap,.today-shell{scroll-behavior:auto}
-}
