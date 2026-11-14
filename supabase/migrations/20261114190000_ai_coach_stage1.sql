@@ -471,6 +471,25 @@ grant execute on function private.coach_build_plan_internal(uuid,date),
   private.coach_run_morning_internal(date),
   private.coach_run_evening_internal(date) to service_role;
 
+
+-- Narrow service-role RPC gateways; private schema is intentionally not exposed via PostgREST.
+-- The Stage 2 Edge Function will call these with a verified agent ID.
+create or replace function public.coach_build_plan_internal(
+  p_agent_id uuid,
+  p_date date default (timezone('Asia/Kuching',now()))::date
+) returns jsonb language sql security definer set search_path=''
+as $fn$select private.coach_build_plan_internal(p_agent_id,p_date);$fn$;
+
+create or replace function public.coach_complete_task_internal(
+  p_agent_id uuid,p_task_id uuid,p_outcome text,p_note text default null
+) returns jsonb language sql security definer set search_path=''
+as $fn$select private.coach_complete_task_internal(p_agent_id,p_task_id,p_outcome,p_note);$fn$;
+
+revoke all on function public.coach_build_plan_internal(uuid,date),
+  public.coach_complete_task_internal(uuid,uuid,text,text) from public,anon,authenticated;
+grant execute on function public.coach_build_plan_internal(uuid,date),
+  public.coach_complete_task_internal(uuid,uuid,text,text) to service_role;
+
 -- pg_cron schedules are UTC on this project: 22:00 UTC -> Kuching 06:00 next day;
 -- 13:30 UTC -> Kuching 21:30 same day. No network or paid service needed.
 select cron.schedule(
