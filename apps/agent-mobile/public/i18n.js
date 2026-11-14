@@ -1138,6 +1138,16 @@ Object.assign(I18N.zh,{
   aiRepeatEmpty:"现在还没有适合重新联系的旧客。"
 });
 
+
+Object.assign(I18N.en,{
+  aiMicroTipTitle:"One quick tip before you do this",
+  aiMicroTipLoading:"Getting one useful tip for this step…"
+});
+Object.assign(I18N.zh,{
+  aiMicroTipTitle:"做之前，提醒你一句",
+  aiMicroTipLoading:"正在看这一步最需要注意什么…"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){
