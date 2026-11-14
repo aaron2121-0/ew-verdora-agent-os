@@ -563,7 +563,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
 
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
@@ -587,20 +586,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       box.append(out.card);
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
       if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
-      const schedule=element("button",{className:"btn btn-secondary btn-small",text:tr("aiScheduleFollowup"),attrs:{type:"button"}});
-      schedule.onclick=async()=>{
-        schedule.disabled=true;
-        try{
-          const s=await api.ai({action:"followup_schedule",lead_id:lead.id,outcome,customer_said:customerSaid}),x=s.content||{};
-          const panel=element("div",{className:"ai-followup-suggestion"});
-          panel.append(createAICard({title:tr("aiBestFollowup"),text:(x.reason||"")+"\n"+formatKuchingDateTime(x.suggested_at,getLang()),provider:s.provider||"template",cached:false,tr}).card);
-          const confirm=element("button",{className:"btn btn-primary btn-small",text:tr("aiConfirmFollowup"),attrs:{type:"button"}});
-          confirm.onclick=async()=>{confirm.disabled=true;try{await api.ai({action:"followup_confirm",lead_id:lead.id,suggested_at:x.suggested_at});toast(tr("aiFollowupSaved"),{tone:"success"})}catch(e){confirm.disabled=false;toast(api.friendlyError(e?.message),{tone:"danger"})}};
-          panel.append(confirm);box.querySelector(".ai-followup-suggestion")?.remove();box.append(panel);
-        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-        finally{schedule.disabled=false}
-      };
-      box.append(schedule);
+      import("./ai-assist-followup.js").then(m=>m.mountFollowupSchedule({box,lead,outcome,customerSaid,api,tr,getLang}));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
