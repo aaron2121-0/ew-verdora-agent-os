@@ -9,8 +9,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --import tsx --test packages/core/test/*.test.ts",
     "test:db": "bash scripts/test-db.sh",
+    "test:kyc": "node --test scripts/agent-kyc-security.test.mjs",
     "simulate": "tsx packages/core/src/sim/run.ts",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test && npm run test:kyc"
   },
   "dependencies": {
     "zod": "^3.25.0"
