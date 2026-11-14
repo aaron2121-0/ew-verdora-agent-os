@@ -1,0 +1,55 @@
+name: Manually reviewed single DB migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_file:
+        description: 'supabase/migrations/ 中的一个文件名（不含目录）'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+# Serialize with deployments; never cancel an in-flight SQL request.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      digest: ${{ steps.sql.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Dry-run — print only the selected SQL, without database access
+        id: sql
+        env:
+          MIGRATION_FILE: ${{ inputs.migration_file }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/deploy/migration.py preview
+
+  apply:
+    needs: preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # REQUIRED: owner configures required reviewers; YAML cannot enforce that setting.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Execute exactly the reviewed file after environment approval
+        env:
+          MIGRATION_FILE: ${{ inputs.migration_file }}
+          EXPECTED_DIGEST: ${{ needs.preview.outputs.digest }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python3 scripts/deploy/migration.py apply

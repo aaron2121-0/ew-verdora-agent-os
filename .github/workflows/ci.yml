@@ -23,3 +23,12 @@ jobs:
         run: npm install --ignore-scripts
       - name: Typecheck and tests
         run: npm run check
+
+  deployment-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline deployment safety regression tests
+        run: python3 -m unittest discover -s scripts/deploy -p 'test_*.py' -v
