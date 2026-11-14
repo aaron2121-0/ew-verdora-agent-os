@@ -12,6 +12,7 @@ const HTML=[
 '<div class="card hidden" id="launchProgressCard"><div class="title">Agent Progress / 代理上手进度</div><div class="muted">Required courses, certification and order access / 必修课、认证及接单权限</div><div id="launchAgentProgress"></div></div>',
 '<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload Claude-reviewed handbook_content.json. Review by batch and product line, edit drafts, then approve the batch. / 上传已审核 JSON，依批次与业务线检查、编辑草稿，然后整批核准。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
 '<div class="card" id="baselineCard"><div class="title">Global Reference Cost Baseline / 全局成本基准</div><div class="muted" style="color:#D4B47A">会影响之后所有同类报价。此操作与单笔报价审核完全分开，必须二次确认。</div><div class="form" style="margin-top:10px"><select id="bSize"><option>small</option><option selected>medium</option><option>large</option><option>xl</option><option>structure</option></select><select id="bDensity"><option>light</option><option selected>medium</option><option>full</option><option>very_full</option></select><select id="bPremium"><option>low</option><option selected>medium</option><option>high</option><option>very_high</option></select><select id="bComplexity"><option>low</option><option selected>medium</option><option>high</option><option>special</option></select><input id="bCost" type="number" min="0" step="0.01" placeholder="安全生产成本 RM"><button id="baselineBtn" class="btn">修改全局基准 / Change global baseline</button><div id="baselineMsg" class="muted"></div></div></div>',
+'<div class="card hidden" id="signupToggleCard"><div class="title">开放新 Agent 自己用 Google 注册 / Google self-registration</div><div id="signupSettingNote" class="muted">正在读取目前设定… / Checking current setting…</div><div class="row" style="margin-top:11px"><button id="signupToggleBtn" type="button" class="btn primary">读取中… / Loading…</button><span id="signupSettingState" class="pill"></span></div><div id="signupSettingMsg" class="muted" role="status" aria-live="polite"></div></div>',
 '<div class="card"><div class="title">Agent Access Link</div><div class="muted">Create a one-time login link valid for 24 hours. Use this when email delivery is delayed or rate-limited.</div><div class="form" style="margin-top:11px"><input id="inviteEmail" type="email" placeholder="agent@email.com"><button id="inviteBtn" class="btn primary">Create one-time Agent link</button><div id="inviteOut" class="muted"></div><button id="copyInvite" class="btn hidden">Copy link</button></div></div>',
 '<div class="card"><div class="title">Owner Recovery Link</div><div class="muted">Create a one-time Owner recovery link valid for 24 hours. Save it securely in case email sign-in is unavailable.</div><div class="form" style="margin-top:11px"><button id="recoveryBtn" class="btn primary">Create Owner recovery link</button><div id="recoveryOut" class="muted"></div><button id="copyRecovery" class="btn hidden">Copy recovery link</button></div></div>',
 '<div class="card"><div class="title">Add OPEX</div><div class="form" style="margin-top:11px"><input id="date" type="date"><input id="category" placeholder="Category"><input id="amount" type="number" step="0.01" placeholder="Amount RM"><input id="note" placeholder="Note"><button id="opexBtn" class="btn primary">Save OPEX & Recalculate</button><div id="opexMsg" class="muted"></div></div></div></div>',
@@ -256,6 +257,8 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
 }));
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
 $("handbookCard").classList.toggle("hidden",j.role!=="owner");
+$("signupToggleCard").classList.toggle("hidden",j.role!=="owner");
+if(j.role==="owner")await refreshSignupSetting();
 if(j.role==="owner"){try{await refreshHandbook()}catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}}
 $("recoveryBtn").closest(".card").classList.toggle("hidden",j.role!=="owner");
  $("launchOrdersCard").classList.toggle("hidden",j.role!=="owner");
@@ -307,6 +310,47 @@ $("loginBtn").onclick=async()=>{
   }
 };
 $("logout").onclick=async()=>{await sb.auth.signOut();session=null;show("login")};
+let signupOpen=null;
+function renderSignupSetting(){
+  const on=signupOpen===true;
+  $("signupSettingState").textContent=signupOpen===null?"—":(on?"开 / On":"关 / Off");
+  $("signupSettingNote").textContent=signupOpen===null
+    ?"正在读取目前设定… / Checking current setting…"
+    :(on?"新 Agent 现在可以自己用 Google 注册。 / New Agents can register with Google."
+        :"只能用邀请链接加入 / Invitation link only");
+  $("signupToggleBtn").textContent=signupOpen===null
+    ?"读取中… / Loading…"
+    :(on?"关闭自己注册 · 改用邀请 / Close self-registration":"开放 Google 自己注册 / Open Google registration");
+  $("signupToggleBtn").disabled=signupOpen===null;
+}
+async function refreshSignupSetting(){
+  $("signupSettingMsg").textContent="";
+  try{
+    const j=await call({action:"signup_setting_get"});
+    signupOpen=Boolean(j.open);renderSignupSetting();
+  }catch(e){
+    signupOpen=null;renderSignupSetting();
+    $("signupSettingMsg").textContent=friendlyError(e?.message);
+  }
+}
+$("signupToggleBtn").onclick=async()=>{
+  if(signupOpen===null)return;
+  const next=!signupOpen;
+  const promptText=next
+    ?"开放后，新 Agent 可以自己用 Google 注册。确定开放？\nOpen Google self-registration?"
+    :"关闭后，只能用邀请链接加入。确定关闭？\nInvitation link only after closing. Continue?";
+  if(!confirm(promptText))return;
+  $("signupToggleBtn").disabled=true;
+  $("signupSettingMsg").textContent="正在保存… / Saving…";
+  try{
+    const j=await call({action:"signup_setting_set",open:next});
+    signupOpen=Boolean(j.open);renderSignupSetting();
+    $("signupSettingMsg").textContent="已保存 ✓ / Saved ✓";
+  }catch(e){
+    $("signupSettingMsg").textContent=friendlyError(e?.message);
+    renderSignupSetting();
+  }
+};
 let latestInvite="";
 $("inviteBtn").onclick=async()=>{
   const email=$("inviteEmail").value.trim();

@@ -49,10 +49,22 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","signup_setting_get","signup_setting_set"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
+
+  if(action==="signup_setting_get"){
+    const {data,error}=await admin.rpc("owner_signup_setting_get_internal",{p_user_id:uid});
+    if(error)return reply({error:publicError(error,"forbidden")},403);
+    return reply({ok:true,open:Boolean(data?.open)});
+  }
+  if(action==="signup_setting_set"){
+    if(typeof b.open!=="boolean")return reply({error:"invalid_value"},400);
+    const {data,error}=await admin.rpc("owner_signup_setting_set_internal",{p_user_id:uid,p_open:b.open});
+    if(error)return reply({error:publicError(error)},403);
+    return reply({ok:true,open:Boolean(data?.open)});
+  }
 
   // All handbook mutations are Owner-only. SQL RPCs enforce Owner role again
   // and record the batch-scoped audit event atomically with each mutation.
