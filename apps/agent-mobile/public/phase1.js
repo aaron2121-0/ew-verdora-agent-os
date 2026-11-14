@@ -905,10 +905,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
     coach.append(ask);
     const translateWrap=element("div",{className:"ai-outcome-row"});
-    [["zh","aiLangChinese"],["en","aiLangEnglish"],["ms","aiLangMalay"]].forEach(([code,key])=>{
-      const b=element("button",{className:"btn btn-secondary btn-small",text:tr(key),attrs:{type:"button"}});
+    [["zh","中文"],["en","English"],["ms","Bahasa Malaysia"]].forEach(([code,label])=>{
+      const b=element("button",{className:"btn btn-secondary btn-small",text:label,attrs:{type:"button"}});
       b.addEventListener("click",async()=>{
-        const customerMessage=input.value.trim();if(!customerMessage){toast(tr("aiTranslateNeedText"),{tone:"danger"});return}
+        const customerMessage=input.value.trim();if(!customerMessage)return
         translateWrap.querySelectorAll("button").forEach(x=>x.disabled=true);aiStart();let ok=false;
         try{
           const j=await api.ai({action:"translate_reply",lead_id:lead.id,customer_message:customerMessage,target_language:code});ok=true;
@@ -926,7 +926,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       });
       translateWrap.append(b);
     });
-    coach.append(element("p",{className:"muted",text:tr("aiTranslateHint")}),translateWrap);
+    coach.append(translateWrap);
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
       ask.disabled=true;aiStart();let coachOk=false;
