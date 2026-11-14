@@ -415,7 +415,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["objection_replies","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -748,6 +748,40 @@ Deno.serve(async req=>{
       next_followup_hours:Math.min(72,Math.max(4,Number(parsed.next_followup_hours)||24))
     }:fallback;
     return reply({ok:true,provider:valid?"gemini":"fallback",outcome,lead_id:lead.id,content:out});
+  }
+
+  if(action==="objection_replies"){
+    const leadId=String(body.lead_id||"").slice(0,80);
+    const customer=String(body.customer_message||"").trim().slice(0,1600);
+    if(!/^[0-9a-f-]{36}$/i.test(leadId)) return reply({error:"lead_id_required"},400);
+    if(!customer) return reply({error:"customer_message_required"},400);
+    const {data:lead,error:leadError}=await admin.from("leads")
+      .select("id,customer_label,occasion,status,source,delivery_date")
+      .eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
+    if(leadError){ console.error("OBJECTION_LEAD",leadError.code||""); return reply({error:"request_failed"},500); }
+    if(!lead) return reply({error:"lead_not_found"},404);
+    const ai=await callAI(
+      "You are helping one EW VERDORA flower sales Agent reply to a customer objection. Return ONLY JSON {options:[{style:string,message:string}]} with exactly 3 genuinely different replies: 1) short/direct, 2) warm/consultative, 3) soft-close. Each message max 60 words, one easy question at the end, in the Agent's language/style. Never create or change a price or discount. If the customer says it is expensive, offer to check an approved adjusted design/budget direction without stating a number. If they want 100% same, explain that the overall style can be followed but exact flowers/details depend on official confirmation. If they need time, do not pressure them. No fake urgency."+RULES+profileBrief(prof),
+      JSON.stringify({customer_message:customer,lead:{occasion:lead.occasion,status:lead.status,source:lead.source,delivery_date:lead.delivery_date}}),
+      true
+    );
+    const parsed=parseJson(ai||"");
+    const opts=Array.isArray(parsed?.options)?parsed.options:[];
+    const valid=opts.length===3
+      && opts.every(x=>typeof x?.message==="string"&&x.message.trim()&&typeof x?.style==="string")
+      && !containsSensitiveOutput(JSON.stringify(opts))
+      && !containsMarketingPolicyViolation(JSON.stringify(opts));
+    const fallback=lang==="zh"?[
+      {style:"直接",message:"明白～我不会自己乱改价。如果你想控制预算，我可以帮你看一个调整版，再走 EW VERDORA 正式确认。要我帮你看吗？"},
+      {style:"顾问式",message:"可以理解 😊 重点是先看你最想保留哪一部分感觉，我可以帮你把需求整理清楚，再确认有没有更适合的正式方案。你最在意的是整体效果还是指定花材？"},
+      {style:"轻成交",message:"没问题，你可以先考虑。你如果愿意，我可以先帮你把日期和想要的方向记好，之后要继续时会比较快。要先帮你留着需求吗？"}
+    ]:[
+      {style:"Direct",message:"I understand. I won't change the price on my own. I can help check an approved adjusted design or budget direction through EW VERDORA. Want me to check that for you?"},
+      {style:"Consultative",message:"That makes sense 😊 Let’s first protect the part of the design that matters most to you, then I can help confirm a suitable official option. Is the overall look or the specific flowers more important to you?"},
+      {style:"Soft close",message:"No problem, take your time. If you want, I can keep the occasion and delivery details organised so it’s easy to continue later. Shall I keep the brief ready for you?"}
+    ];
+    const out=(valid?opts:fallback).map(x=>({style:String(x.style).slice(0,40),message:String(x.message).trim().slice(0,700)}));
+    return reply({ok:true,provider:valid?"gemini":"fallback",options:out});
   }
 
   if(action==="coach"){
