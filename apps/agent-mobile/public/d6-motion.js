@@ -57,28 +57,30 @@ export function mountD6TodayCoach({phase1={},getLang,onMessage,onOpenLead}={}){
   shell.append(list);
   return shell;
 }
-export function styleD6AIMessage(card){card?.classList.add("d6-coach-live","vc-draft-card");void loadVendorMotion("coach").catch(()=>{});return card}
+export function styleD6AIMessage(card){card?.classList.add("d6-coach-live","vc-draft-card");return card}
+// Signed URLs originate only from authenticated D2 portfolio_list.
 function photoUrl(value){
   if(typeof value!=="string"||!value.trim())return "";
   try{
-    const u=new URL(value,window.location.origin);
-    if(!["https:","http:"].includes(u.protocol))return "";
-    if(u.origin===window.location.origin)return u.href;
-    if(u.protocol==="https:" && (u.hostname.endsWith(".supabase.co")||u.hostname.endsWith(".supabase.in")))return u.href;
-  }catch{}
-  return "";
+    const url=new URL(value);
+    if(url.protocol!=="https:"||!url.hostname.endsWith(".supabase.co"))return "";
+    if(!url.pathname.startsWith("/storage/v1/object/sign/portfolio/"))return "";
+    if(!url.searchParams.has("token"))return "";
+    return url.href;
+  }catch{return ""}
 }
-const portfolioRows=response=>Array.isArray(response)?response:
-  Array.isArray(response?.items)?response.items:
-  Array.isArray(response?.portfolio)?response.portfolio:
-  Array.isArray(response?.portfolio?.items)?response.portfolio.items:
-  Array.isArray(response?.photos)?response.photos:[];
+// D2's {photos} are already filtered to status="approved" on the server.
+const portfolioRows=response=>Array.isArray(response?.photos)?response.photos:[];
 export function mountD6Gallery(items,{lang="en"}={}){
   const rows=portfolioRows(items);
-  const records=rows.filter(x=>x && !["draft","rejected","pending","unapproved"].includes(String(x.status||"").toLowerCase()) &&
-    (x.approved===true||x.is_approved===true||x.is_published===true||["approved","published"].includes(String(x.status||"").toLowerCase()) || Boolean(x.signed_url && !x.status)))
-    .map(x=>({...x,d6Photo:photoUrl(x.signed_url||x.photo_signed_url||x.approved_photo_url||x.photo_url||x.image_url||"")}))
-    .filter(x=>x.d6Photo);
+  const records=rows.filter(x=>x&&typeof x==="object")
+    .map(x=>({
+      id:String(x.id||""),
+      product_line:String(x.product_line||""),
+      caption_zh:String(x.caption_zh||""),
+      caption_en:String(x.caption_en||""),
+      d6Photo:photoUrl(x.image_url)
+    })).filter(x=>x.d6Photo);
   const section=node("section","","d6-gallery-real");
   section.append(node("h2",lang==="zh"?"作品图库":"Portfolio","section-title"));
   if(!records.length){
@@ -106,7 +108,7 @@ export function mountD6Gallery(items,{lang="en"}={}){
     const close=node("button",lang==="zh"?"关闭":"Close","d6-photo-close");
     close.type="button";close.setAttribute("aria-label",lang==="zh"?"关闭照片":"Close photo");
     close.addEventListener("click",closeLightbox);
-    const img=document.createElement("img");img.src=x.d6Photo;img.alt=label(x)||line(x)||"Portfolio photo";img.decoding="async";
+    const img=document.createElement("img");img.src=x.d6Photo;img.alt=label(x)||line(x)||"Portfolio photo";img.loading="lazy";img.decoding="async";img.referrerPolicy="no-referrer";
     panel.append(close,img,node("p",label(x),"d6-photo-caption"));
     lightbox.append(panel);lightbox.addEventListener("click",e=>{if(e.target===lightbox)closeLightbox();});
     document.body.append(lightbox);document.addEventListener("keydown",onKey);close.focus();
@@ -114,7 +116,7 @@ export function mountD6Gallery(items,{lang="en"}={}){
   records.forEach((x,i)=>{
     const card=node("button","","d6-gallery-card");
     card.type="button";card.setAttribute("aria-label",(lang==="zh"?"查看照片 ":"View photo ")+(i+1)+": "+(label(x)||line(x)));
-    const img=document.createElement("img");img.src=x.d6Photo;img.alt=label(x)||line(x)||"EW VERDORA portfolio";img.loading=i===0?"eager":"lazy";img.decoding="async";
+    const img=document.createElement("img");img.src=x.d6Photo;img.alt=label(x)||line(x)||"EW VERDORA portfolio";img.loading="lazy";img.decoding="async";img.referrerPolicy="no-referrer";
     card.append(img,node("span",line(x),"d6-gallery-line"),node("span",label(x),"d6-gallery-caption"));
     card.addEventListener("click",()=>openLightbox(x));slides.append(card);cards.push(card);
   });
@@ -133,7 +135,7 @@ export function decorateD6KycStep(host,step,lang="en"){
   loadD6Css("d6");
   loadD6Css("kyc");
   loadD6Css("feedback");
-  void Promise.all([loadVendorMotion("feedback"),loadVendorMotion("kyc")]).catch(()=>{});
+  void loadVendorMotion("feedback").catch(()=>{}); // Never load simulated KYC UI.
   // Real consent/details/photo/submit steps differ from the vendor's 3-step demo.
   const bar=node("div","","vk-stp d6-kyc-steps");
   bar.setAttribute("aria-label",loc(lang,"身份验证进度","Identity verification progress"));
@@ -150,5 +152,4 @@ export function triggerD6Celebration(type="course",originEl){
   void loadVendorMotion("celebrate").then(vm=>vm?.celebrate?.({type:type==="sale"?"exam":"course",originEl:originEl||document.body})).catch(()=>{});
   return true;
 }
-// D2 can use this only with approved photo records; no prototype data fallback.
-window.EWVerdoraMotionD6={mountApprovedGallery:mountD6Gallery};
+// D2's authenticated API is the only entrypoint for approved photos.

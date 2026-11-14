@@ -54,7 +54,7 @@ function iconAsset(line){
   return outer;
 }
 function simpleModal(className){
-  const backdrop=element("div",{className:"handbook-overlay "+className,attrs:{role:"dialog","aria-modal":"true",tabindex:"-1"}});
+  const backdrop=element("div",{className:"handbook-overlay "+className,attrs:{role:"dialog","aria-modal":"true",tabindex:"-1","aria-label":className==="onboarding-layer"?"EW VERDORA onboarding":className==="handbook-lightbox"?"EW VERDORA photo":"EW VERDORA learning quiz"}});
   document.body.append(backdrop);backdrop.focus();
   const close=()=>{backdrop.remove();document.removeEventListener("keydown",onKey)};
   const onKey=e=>{if(e.key==="Escape")close()};
@@ -394,7 +394,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     hydrateJourney();
     const wrap=element("section",{className:"journey-card",attrs:{"aria-label":t(getLang,"My onboarding progress","我的上手进度")}});
     const header=element("div",{className:"journey-header"});
-    const ring=element("div",{className:"journey-ring",attrs:{role:"progressbar","aria-valuemin":"0","aria-valuemax":"7","aria-valuenow":String(state.done)}});
+    const ring=element("div",{className:"journey-ring",attrs:{role:"progressbar","aria-label":t(getLang,"Onboarding progress","上手进度"),"aria-valuemin":"0","aria-valuemax":"7","aria-valuenow":String(state.done)}});
     ring.style.setProperty("--progress",String(state.done/7));ring.append(element("strong",{text:state.done+"/7"}));
     const heading=element("div");
     heading.append(element("h2",{text:t(getLang,"My onboarding progress","我的上手进度")}));
