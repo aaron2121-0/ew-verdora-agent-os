@@ -729,7 +729,8 @@ Deno.serve(async req=>{
     );
     const parsed=parseJson(ai||"");
     const valid=parsed && typeof parsed.message==="string" && parsed.message.trim() && typeof parsed.why==="string"
-      && !containsSensitiveOutput(parsed.message+" "+parsed.why);
+      && !containsSensitiveOutput(parsed.message+" "+parsed.why)
+      && !containsMarketingPolicyViolation(parsed.message);
     const name=String(lead.customer_label||"").slice(0,40);
     const fallback=lang==="zh"
       ?{message:(name?name+"，":"")+"您好！想跟进一下之前聊的花礼，您这边方便告诉我大概的日期和预算吗？我可以先帮您配几款参考 🌸",why:"简单友善、给对方一个容易回答的问题。",next_followup_hours:24}
