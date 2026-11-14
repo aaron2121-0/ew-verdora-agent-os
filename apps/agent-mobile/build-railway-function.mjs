@@ -53,6 +53,7 @@ const motionPackAssets=motionPackRuntime.map(name=>{
  files[target]=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
  return target;
 });
+files["styles.css"]+="\n"+files["vendor/motion-pack-v1/brand-bg.css"];
 
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
