@@ -73,5 +73,5 @@ test("identity copy does not expose internal status/API vocabulary",()=>{
 test("bundle includes identity code and reviewed onboarding copy",()=>{
   assert.match(build,/"kyc\.js"/);
   assert.match(build,/content\/onboarding\/kyc_copy\.json/);
-  assert.match(build,/version:"0\.9\.0-kyc-ui"/);
+  assert.match(build,/version:"0\.9\.0"/);
 });
