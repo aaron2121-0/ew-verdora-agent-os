@@ -276,7 +276,7 @@ async function openKycView(agentId){
     const submitted=record.status==="submitted";
     $("kycActions").classList.toggle("hidden",!submitted);
     $("kycDelete").classList.toggle("hidden",!record.delete_requested_at);
-    // Do not put a signed URL into img/src, href, logs, localStorage or IndexedDB.
+    // Never publish signed URLs in DOM attributes, logs or durable browser data.
     await drawKycPhoto(record.photo_signed_url,seq,controller.signal);
   }catch{
     if(seq===kycSeq)maskKyc("无法读取该身份资料。请确认权限及 GPT 1 接口格式。 / Unable to view identity record.");
