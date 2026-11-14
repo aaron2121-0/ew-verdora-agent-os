@@ -595,7 +595,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
         try{
           await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:followupAt.toISOString()});
           schedule.textContent=getLang()==="zh"?"已保存":"Saved";
-          toast(getLang()==="zh"?"已保存":"Saved",{tone:"success"});
           await onRefresh();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
       });
