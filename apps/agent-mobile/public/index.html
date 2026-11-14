@@ -37,6 +37,11 @@
       <div class="auth-card">
         <h1 class="auth-title" data-i18n="loginTitle"></h1>
         <p class="auth-copy" data-i18n="loginDescription"></p>
+        <div class="google-signin">
+          <div id="googleTurnstile" class="google-turnstile" aria-label="Security verification"></div>
+          <button id="googleLoginBtn" class="btn btn-primary btn-large google-login-button" type="button" disabled data-google-i18n="googleContinue">Continue with Google</button>
+          <div id="googleLoginMsg" class="auth-msg" role="status" aria-live="polite"></div>
+        </div>
         <input id="email" class="hidden" type="email" autocomplete="email">
         <button id="loginBtn" class="btn btn-primary hidden" type="button" data-i18n="sendSignIn"></button>
         <div id="loginMsg" class="auth-msg" role="status" aria-live="polite"></div>
@@ -51,6 +56,19 @@
         <input id="name" autocomplete="name">
         <button id="regBtn" class="btn btn-primary btn-large" type="button" data-i18n="startTraining"></button>
         <div id="regMsg" class="auth-msg" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="signupBlocked" class="auth-wrap hidden">
+      <div class="auth-card">
+        <h1 class="auth-title" data-google-i18n="inviteOnlyTitle">Registration is by invitation only</h1>
+        <p class="auth-copy" data-google-i18n="inviteOnlyBody">New Agent registration is currently closed. Please ask the Owner for an invitation link.</p>
+      </div>
+    </section>
+    <section id="ownerBlocked" class="auth-wrap hidden">
+      <div class="auth-card">
+        <h1 class="auth-title" data-google-i18n="ownerBlockedTitle">This account belongs to an Owner</h1>
+        <p class="auth-copy" data-google-i18n="ownerBlockedBody">Please use the Owner dashboard. This account cannot register as an Agent.</p>
       </div>
     </section>
 
