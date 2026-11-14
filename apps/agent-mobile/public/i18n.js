@@ -1058,6 +1058,32 @@ Object.assign(I18N.zh,{
   customer:"客人"
 });
 
+
+Object.assign(I18N.en,{
+  aiConversationTitle:"Turn a chat into a customer",
+  aiConversationHint:"Paste the WhatsApp conversation. I’ll pull out the useful details, then you check them before saving.",
+  aiConversationPaste:"Paste the customer conversation here…",
+  aiConversationAnalyse:"Organise this chat",
+  aiConversationReview:"Check before saving",
+  aiConversationReviewHint:"I only suggest the details. Edit anything that is not right.",
+  aiConversationArea:"Delivery area",
+  aiConversationAreaNote:"Area mentioned",
+  aiConversationCreate:"Save as customer",
+  aiConversationCreated:"Customer saved."
+});
+Object.assign(I18N.zh,{
+  aiConversationTitle:"贴对话，帮我整理成客人",
+  aiConversationHint:"把 WhatsApp 对话贴进来。我先抓重点，你确认没问题才保存。",
+  aiConversationPaste:"把客人的对话贴在这里…",
+  aiConversationAnalyse:"帮我整理",
+  aiConversationReview:"保存前确认一下",
+  aiConversationReviewHint:"这些只是建议，有不对可以直接改。",
+  aiConversationArea:"送货地区",
+  aiConversationAreaNote:"对话提到的地区",
+  aiConversationCreate:"保存这个客人",
+  aiConversationCreated:"客人已经保存。"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){
