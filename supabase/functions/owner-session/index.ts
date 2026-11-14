@@ -49,7 +49,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
@@ -318,6 +318,42 @@ Deno.serve(async req=>{
     return reply({ok:true,order:{id:order.id,order_code:order.order_code,status:order.status,
       payment_status:order.payment_status,commissionable_revenue:order.commissionable_revenue,
       delivery_fee:order.delivery_fee}});
+  }
+
+  if(action==="launch_complete_order"){
+    if(b.confirm!==true)return reply({error:"confirmation_required"},400);
+    const id=String(b.order_id||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const costs=["production_cost","delivery_cost","payment_cost","refund_cost","risk_cost"];
+    const amounts={};
+    for(const key of costs){
+      const value=b[key]===undefined?0:b[key];
+      if(typeof value!=="number"||!Number.isFinite(value)||value<0||value>100000)
+        return reply({error:"invalid_"+key},422);
+      amounts[key]=value;
+    }
+    if(!uuid.test(id)||!["internal","external"].includes(b.fulfilment_type)
+      ||typeof b.qc_pass!=="boolean"||typeof b.rework!=="boolean")
+      return reply({error:"invalid_completion_input"},422);
+    const {data:order,error:oe}=await admin.from("orders").select("id,status,payment_status")
+      .eq("id",id).maybeSingle();
+    if(oe||!order)return reply({error:"order_not_found"},404);
+    if(order.payment_status!=="paid"||order.status==="completed")
+      return reply({error:"order_not_ready_for_completion"},409);
+    // The existing database RPC is authoritative for actual costs and commission accrual.
+    const {data:result,error}=await admin.rpc("record_completed_order_actuals_internal",{
+      p_order_id:id,p_production_cost:amounts.production_cost,
+      p_payment_cost:amounts.payment_cost,p_delivery_cost:amounts.delivery_cost,
+      p_refund_cost:amounts.refund_cost,p_risk_cost:amounts.risk_cost,
+      p_fulfilment_type:b.fulfilment_type,p_qc_pass:b.qc_pass,p_rework:b.rework
+    });
+    if(error)return reply({error:publicError(error,"order_completion_failed")},400);
+    const {error:audit}=await admin.rpc("owner_audit_action_internal",{
+      p_user_id:uid,p_action:"owner_order_completed",p_entity_type:"order",p_entity_id:id,
+      p_after:{...amounts,fulfilment_type:b.fulfilment_type,qc_pass:b.qc_pass,rework:b.rework,status:"completed"}
+    });
+    if(audit)return reply({error:"order_completed_audit_failed",order_id:id},500);
+    return reply({ok:true,order_id:id,result});
   }
   if(action==="launch_confirm_payment"){
     if(b.confirm!==true||b.bank_evidence_checked!==true)
