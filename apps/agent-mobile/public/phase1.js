@@ -429,8 +429,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    // An empty order state must teach the next permitted action, not just
-    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
     if(Number(D?.today_progress?.orders||0)===0){
       const copy=emptyCopy("orders");
       if(copy){
@@ -563,7 +561,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
 
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
@@ -898,15 +895,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
     if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
     else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
-    const microTip=element("section",{className:"ai-coach-panel ai-micro-tip"});
-    microTip.append(element("small",{className:"muted",text:tr("aiWhy")}));
-    const tipText=element("p",{className:"ai-priority-why",text:tr("aiThinking2")});microTip.append(tipText);
-    api.ai({action:"micro_tip",context:"reply",lead_id:lead.id}).then(j=>{
-      clear(microTip);
-      microTip.append(element("small",{className:"muted",text:j.provider==="gemini"?tr("aiWhy"):tr("aiTemplate")}),
-        element("p",{className:"ai-priority-why",text:String(j.tip||"")}));
-    }).catch(()=>{tipText.textContent=tr("aiDailyUnavailable")});
-    body.append(microTip);
+    import("./ai-assist-micro.js").then(m=>m.mountReplyTip({body,lead,api,getLang}));
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
