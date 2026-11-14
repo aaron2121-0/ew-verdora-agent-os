@@ -7,7 +7,6 @@ import {initMotion} from "./motion.js";
 import {setMotionLanguage,vendorMotion,clearMotion} from "./motion-vendor.js";
 import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile,aiStart,aiEnd} from "./ai-ui.js";
 import {createAIChat} from "./ai-chat.js";
-import {createKycExperience} from "./kyc.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
@@ -92,8 +91,9 @@ async function fn(path,body){
   return data;
 }
 
-function ensureKyc(){
+async function ensureKyc(){
   if(kyc)return kyc;
+  const {createKycExperience}=await import("./kyc.js");
   kyc=createKycExperience({
     getData:()=>D,
     getLang:()=>lang,
@@ -124,7 +124,7 @@ async function refresh(){
   refreshBusy=(async()=>{
     const result=await fn("agent-session",{action:"dashboard"});
     D=result;
-    const identity=ensureKyc();
+    const identity=await ensureKyc();
     if(result.needs_registration){
       view("register");
       if(result.kyc_required){await identity.sync();await identity.open({startStep:1})}
