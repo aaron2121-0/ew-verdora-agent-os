@@ -3,11 +3,10 @@ const ROOT=new URL("./public/",import.meta.url);
 const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".woff2":"font/woff2"};
 const CSP=[
   "default-src 'self'",
-  "script-src 'self' https://challenges.cloudflare.com",
+  "script-src 'self'",
   "style-src 'self'",
   "img-src 'self' data: blob: https://*.supabase.co",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
-  "frame-src https://challenges.cloudflare.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "font-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
@@ -18,7 +17,7 @@ const CSP=[
 function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type-Options":"nosniff","Referrer-Policy":"strict-origin-when-cross-origin","Permissions-Policy":"camera=(), microphone=(), geolocation=()","Cross-Origin-Opener-Policy":"same-origin",...extra}}
 Bun.serve({port:PORT,async fetch(req){
   const u=new URL(req.url);
-  if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||"",turnstileSiteKey:Bun.env.TURNSTILE_SITE_KEY||""},{headers:headers({"cache-control":"no-store"})});
+  if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
   if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.6.0-motion"},{headers:headers({"cache-control":"no-store"})});
   let path=u.pathname==="/"?"index.html":u.pathname.replace(/^\//,"");
   if(path.includes(".."))return new Response("Not found",{status:404,headers:headers()});
