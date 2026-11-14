@@ -1084,6 +1084,28 @@ Object.assign(I18N.zh,{
   aiConversationCreated:"客人已经保存。"
 });
 
+
+Object.assign(I18N.en,{
+  aiObjectionTitle:"Customer said this — what do I reply?",
+  aiObjectionHint:"Tap a common situation or paste the customer's words. I'll give you 3 safe replies to choose from.",
+  aiObjectionPaste:"Paste what the customer said…",
+  aiObjectionExpensive:"Too expensive",
+  aiObjectionThink:"I'll think",
+  aiObjectionSame:"Want the same",
+  aiObjectionAsk:"Give me 3 replies",
+  aiObjectionOption:"Reply option"
+});
+Object.assign(I18N.zh,{
+  aiObjectionTitle:"客人这样说，我怎么回？",
+  aiObjectionHint:"点一个常见情况，或者贴客人的原话。我给你 3 种安全回法，你选一条就好。",
+  aiObjectionPaste:"把客人的原话贴这里…",
+  aiObjectionExpensive:"太贵",
+  aiObjectionThink:"再想想",
+  aiObjectionSame:"要一样的",
+  aiObjectionAsk:"给我 3 种回法",
+  aiObjectionOption:"可以这样回"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){
