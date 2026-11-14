@@ -12,12 +12,12 @@ test("AI next message can schedule its suggested follow-up",()=>{
 });
 
 test("Agent must confirm the schedule explicitly",()=>{
-  assert.match(phase,/Set·/);
+  assert.match(phase,/⏱/);
   assert.match(phase,/addEventListener\("click"/);
   assert.doesNotMatch(phase,/innerHTML\s*=/);
 });
 
 test("follow-up scheduling copy is bilingual",()=>{
-  assert.match(phase,/Set·/);
-  assert.match(phase,/设·/);
+  assert.match(phase,/⏱/);
+  assert.match(phase,/⏱/);
 });
