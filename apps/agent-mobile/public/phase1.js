@@ -906,7 +906,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     coach.append(ask);
     const objection=iconButton("sparkles",tr("aiObjectionButton"),"btn btn-secondary");
     objection.addEventListener("click",async()=>{
-      const customerMessage=input.value.trim();if(!customerMessage){toast(tr("aiObjectionNeedText"),{tone:"danger"});return}
+      const customerMessage=input.value.trim();if(!customerMessage)return
       setButtonLoading(objection,true,tr("loading"));aiStart();let ok=false;
       try{
         const j=await api.ai({action:"objection_replies",lead_id:lead.id,customer_message:customerMessage});ok=true;
@@ -914,7 +914,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
         const wrap=element("div",{className:"ai-objection-options"});
         (j.options||[]).forEach(opt=>{
           const actions=element("div",{className:"ai-message-actions"});actions.append(aiCopyButton(String(opt.message||"")));
-          wrap.append(createAICard({title:String(opt.style||tr("aiObjectionOption")),text:String(opt.message||""),provider:j.provider||"template",cached:false,tr,actions}).card);
+          wrap.append(createAICard({title:String(opt.style||tr("aiNextTitle")),text:String(opt.message||""),provider:j.provider||"template",cached:false,tr,actions}).card);
         });
         coach.append(wrap);
       }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
