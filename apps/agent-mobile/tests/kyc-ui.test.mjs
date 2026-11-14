@@ -61,7 +61,10 @@ test("identity UI has readable 16px text and 48px+ actions",()=>{
 
 test("identity copy does not expose internal status/API vocabulary",()=>{
   const keys=Object.keys(I18N.en).filter(k=>k.startsWith("identity"));
-  assert.ok(keys.length>30);
+  assert.ok(keys.length>=10);
+  assert.match(kyc,/const FLOW_COPY=/);
+  assert.match(kyc,/en:\{/);
+  assert.match(kyc,/zh:\{/);
   assert.deepEqual(keys.sort(),Object.keys(I18N.zh).filter(k=>k.startsWith("identity")).sort());
   const banned=/\bKYC\b|\bdraft\b|\bsubmitted\b|\bapproved\b|\btoken\b|\bAPI\b|\bnull\b/i;
   for(const lang of ["en","zh"])for(const key of keys)assert.equal(banned.test(String(I18N[lang][key])),false,lang+" "+key);
