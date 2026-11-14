@@ -377,6 +377,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     greet.append(gLeft,badges);
     page.append(greet);
     page.append(renderEarningActions());
+    page.append(renderTodayContacts());
     page.append(renderAIWeekly());
     page.append(handbook.journey());
 
@@ -681,6 +682,37 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     });
     wrap.append(row);card.append(wrap);
   }
+  function renderTodayContacts(){
+    const sec=element("section",{className:"section-block",attrs:{id:"todayFirstContacts"}});
+    const head=element("div",{className:"section-heading-row"});
+    const left=element("div",{className:"section-heading-left"});left.append(createIcon("sparkles",{size:20}),element("h2",{className:"section-title",text:tr("aiTodayContactsTitle")}));
+    head.append(left);sec.append(head,element("p",{className:"muted",text:tr("aiTodayContactsHint")}));
+    const btn=iconButton("sparkles",tr("aiTodayContactsButton"),"btn btn-primary");
+    const out=element("div",{className:"ai-priority-list"});sec.append(btn,out);
+    btn.addEventListener("click",async()=>{
+      setButtonLoading(btn,true,tr("loading"));aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"today_contacts"});ok=true;clear(out);
+        const rows=Array.isArray(j.contacts)?j.contacts:[];
+        if(!rows.length){out.append(element("p",{className:"muted",text:tr("aiTodayContactsEmpty")}));return}
+        rows.forEach(row=>{
+          const card=element("article",{className:"customer-card"});
+          card.append(element("strong",{text:tr("aiTodayRank",{rank:row.rank})+" · "+String(row.name||tr("customerDetails"))}));
+          if(row.why)card.append(element("p",{className:"ai-priority-why",text:String(row.why)}));
+          const actions=element("div",{className:"ai-message-actions"});
+          actions.append(aiCopyButton(String(row.message||"")));
+          const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(row.message||"")),"_blank","noopener,noreferrer"));
+          actions.append(wa);
+          card.append(createAICard({title:tr("aiTodayMessage"),text:String(row.message||""),provider:j.provider||"template",cached:false,tr,actions}).card);
+          out.append(card);
+        });
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{setButtonLoading(btn,false,tr("aiTodayContactsButton"));aiEnd(ok)}
+    });
+    return sec;
+  }
+
   function renderDueFollowups(){
     const p=getData()?.phase1||{},rows=p.due_followups||[];
     const section=element("section",{className:"section-block",attrs:{id:"dueFollowups"}});
