@@ -132,14 +132,14 @@ async function refresh(){
   refreshBusy=(async()=>{
     const result=await fn("agent-session",{action:"dashboard"});
     D=result;
-    const identity=await ensureKyc();
+    const identity=(result.kyc_required||result.kyc_status)?await ensureKyc():null;
     if(result.needs_registration){
       view("register");
-      if(result.kyc_required){await identity.sync();await identity.open({startStep:1})}
+      if(result.kyc_required&&identity){await identity.sync();await identity.open({startStep:1})}
       return result;
     }
     view("app");
-    await identity.sync();
+    if(identity)await identity.sync();
     if(!UI){
       UI=createPhase1UI({
         getData:()=>D,
@@ -160,7 +160,7 @@ async function refresh(){
           openPractice
         },
         onRefresh:refresh,
-        renderTodayTop:()=>identity.renderTodayCard()
+        renderTodayTop:()=>identity?.renderTodayCard?.()||null
       });
       await UI.init();
     }else UI.renderAll();
