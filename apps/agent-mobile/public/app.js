@@ -59,6 +59,14 @@ function applyI18n(){
   if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
 
+let brandBgImport=null;
+function mountBrandBg(target,options){
+  if(!target)return;
+  const ready=window.VerdoraMotion?.mountBrandBg?Promise.resolve():brandBgImport??=import("/vendor/motion-pack-v1/brand-bg.js");
+  ready.then(()=>{if(target.isConnected)window.VerdoraMotion?.mountBrandBg?.(target,options)}).catch(()=>{});
+}
+window.__verdoraMountBrandBg=mountBrandBg;
+
 function view(name){
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
@@ -67,7 +75,7 @@ function view(name){
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
-  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
+  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);\n  window.VerdoraMotion?.brandBg?.destroy?.();\n  if(name==="login")mountBrandBg($("login"),{placement:"tr",seed:20261114});
 }
 
 async function fn(path,body){
