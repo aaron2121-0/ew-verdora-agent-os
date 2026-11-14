@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run server.ts",
-    "check": "node --test tests/phase0-security.test.mjs tests/ai-motion.test.mjs tests/unlock-progress.test.mjs tests/approved-content.test.mjs && node build-railway-function.mjs",
+    "check": "node --test tests/kyc-ui.test.mjs tests/phase0-security.test.mjs tests/ai-motion.test.mjs tests/unlock-progress.test.mjs tests/approved-content.test.mjs && node build-railway-function.mjs",
     "build:function": "node build-railway-function.mjs"
   },
   "dependencies": {
@@ -13,4 +13,4 @@
     "@fontsource-variable/inter": "5.3.0",
     "subset-font": "2.9.0"
   }
-}
+}\n
