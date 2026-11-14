@@ -798,11 +798,57 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     section.append(strip);return section;
   }
 
+
+  function renderConversationImporter(){
+    const sec=element("section",{className:"section-block ai-conversation-import"});
+    sec.append(element("h2",{className:"section-title",text:tr("aiConversationTitle")}),
+      element("p",{className:"muted",text:tr("aiConversationHint")}));
+    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiConversationPaste")}});
+    input.placeholder=tr("aiConversationPaste");
+    const analyse=element("button",{className:"btn btn-primary",text:tr("aiConversationAnalyse"),attrs:{type:"button"}});
+    const result=element("div",{className:"ai-conversation-result"});
+    analyse.addEventListener("click",async()=>{
+      const conversation=input.value.trim();if(!conversation)return;
+      setButtonLoading(analyse,true,tr("loading"));aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"conversation_extract",conversation});ok=true;
+        const x=j.extracted||{};result.replaceChildren();
+        const card=createAICard({title:tr("aiConversationReview"),text:tr("aiConversationReviewHint"),provider:j.provider||"template",cached:false,tr}).card;
+        const form=element("div",{className:"detail-grid"});
+        const name=element("input",{attrs:{type:"text",maxlength:"120",placeholder:tr("customerNameTitle")}});name.value=String(x.customer_label||"");
+        const occasion=element("select");
+        [["birthday","categoryBirthday"],["anniversary","categoryAnniversary"],["condolence","categoryCondolence"],["opening","categoryOpening"],["proposal","categoryProposal"],["graduation","categoryGraduation"],["corporate","categoryCorporate"],["wedding","categoryWedding"],["general","categoryGeneral"]].forEach(([v,k])=>{const o=element("option",{text:tr(k),attrs:{value:v}});if(v===x.occasion)o.selected=true;occasion.append(o)});
+        const budget=element("input",{attrs:{type:"number",min:"0",max:"1000000",placeholder:tr("budgetTitle")}});if(x.budget!=null)budget.value=String(x.budget);
+        const date=element("input",{attrs:{type:"date"}});if(x.delivery_date)date.value=String(x.delivery_date);
+        const area=element("input",{attrs:{type:"text",maxlength:"120",placeholder:tr("aiConversationArea")}});area.value=String(x.delivery_area||"");
+        for(const [label,node] of [[tr("customerNameTitle"),name],[tr("occasionTitle"),occasion],[tr("budgetTitle"),budget],[tr("deliveryDateTitle"),date],[tr("aiConversationArea"),area]]){
+          const row=element("label");row.append(element("span",{text:label}),node);form.append(row);
+        }
+        const create=element("button",{className:"btn btn-primary btn-large",text:tr("aiConversationCreate"),attrs:{type:"button"}});
+        create.addEventListener("click",async()=>{
+          if(isLocked()){showLock();return}
+          setButtonLoading(create,true,tr("loading"));
+          try{
+            await api.agent({action:"create_lead",source:"whatsapp",customer_label:name.value.trim(),occasion:occasion.value,budget:budget.value?Number(budget.value):null,delivery_date:date.value||null});
+            toast(tr("aiConversationCreated"),{tone:"success"});input.value="";result.replaceChildren();await onRefresh();navigate("customers");
+          }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+          finally{setButtonLoading(create,false,tr("aiConversationCreate"))}
+        });
+        card.append(form);
+        if(area.value)card.append(element("p",{className:"muted",text:tr("aiConversationAreaNote")+": "+area.value}));
+        card.append(create);result.append(card);
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{setButtonLoading(analyse,false,tr("aiConversationAnalyse"));aiEnd(ok)}
+    });
+    sec.append(input,analyse,result);return sec;
+  }
+
   function renderCustomers(){
     const host=document.getElementById("customersPage");if(!host)return;
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
+    page.append(renderConversationImporter());
     const allRows=getData()?.phase1?.recent_leads||[];
     if(!allRows.length){
       const copy=emptyCopy("customers");
