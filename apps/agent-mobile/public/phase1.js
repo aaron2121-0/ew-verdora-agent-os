@@ -563,7 +563,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
 
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
@@ -904,23 +903,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     input.placeholder=tr("aiCoachInput");coach.append(input);
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
     coach.append(ask);
-    const objection=iconButton("sparkles",tr("aiObjectionButton"),"btn btn-secondary");
-    objection.addEventListener("click",async()=>{
-      const customerMessage=input.value.trim();if(!customerMessage)return
-      setButtonLoading(objection,true,tr("loading"));aiStart();let ok=false;
-      try{
-        const j=await api.ai({action:"objection_replies",lead_id:lead.id,customer_message:customerMessage});ok=true;
-        coach.querySelector(".ai-objection-options")?.remove();
-        const wrap=element("div",{className:"ai-objection-options"});
-        (j.options||[]).forEach(opt=>{
-          const actions=element("div",{className:"ai-message-actions"});actions.append(aiCopyButton(String(opt.message||"")));
-          wrap.append(createAICard({title:String(opt.style||tr("aiNextTitle")),text:String(opt.message||""),provider:j.provider||"template",cached:false,tr,actions}).card);
-        });
-        coach.append(wrap);
-      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(objection,false,tr("aiObjectionButton"));aiEnd(ok)}
-    });
-    coach.append(objection);
+    import("./ai-assist-objection.js").then(m=>m.mountObjectionAssist({coach,input,lead,api,tr,getLang}));
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
       ask.disabled=true;aiStart();let coachOk=false;
