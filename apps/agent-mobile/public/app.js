@@ -164,17 +164,6 @@ function setupHandlers(){
     setStoredLanguage(lang);
     applyI18n();
   });
-  $("googleBtn").addEventListener("click",async()=>{
-    if(!sb){$("loginMsg").textContent=tr("genericError");return}
-    setButtonLoading($("googleBtn"),true,tr("loading"));
-    try{
-      const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+"/"}});
-      if(error)throw error;
-    }catch(e){
-      $("loginMsg").textContent=tr("googleFailed");
-      setButtonLoading($("googleBtn"),false,tr("googleSignIn"));
-    }
-  });
   $("loginBtn").addEventListener("click",async()=>{
     const email=$("email").value.trim();
     if(!email){$("loginMsg").textContent=tr("enterEmail");return}
@@ -274,11 +263,6 @@ async function bootstrap(){
     sb=window.supabase.createClient(CFG.url,CFG.key);
 
     const hash=new URLSearchParams((location.hash||"").replace(/^#/,""));
-    const query=new URLSearchParams(location.search||"");
-    if(hash.get("error")||query.get("error")){
-      history.replaceState({},document.title,location.pathname||"/");
-      $("loginMsg").textContent=tr("googleFailed");
-    }
     const inviteCode=hash.get("invite");
     const inviteEmail=hash.get("email");
     if(inviteCode&&inviteEmail){

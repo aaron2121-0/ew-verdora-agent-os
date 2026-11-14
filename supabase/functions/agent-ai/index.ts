@@ -408,7 +408,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -699,48 +699,6 @@ Deno.serve(async req=>{
     }
     parsed.actions=parsed.actions.slice(0,4).map(x=>String(x));
     return reply({ok:true,provider:"gemini",content:parsed});
-  }
-
-  // AI next message: the agent taps how the customer responded; Gemini writes the
-  // exact WhatsApp message to send next, using only this agent's own lead data.
-  if(action==="next_message"){
-    const OUTCOMES=new Set(["followup","no_reply","replied","interested","wants_quote"]);
-    const outcome=String(body.outcome||"followup");
-    const leadId=String(body.lead_id||"").slice(0,80);
-    if(!OUTCOMES.has(outcome)) return reply({error:"invalid_outcome"},400);
-    if(!/^[0-9a-f-]{36}$/i.test(leadId)) return reply({error:"lead_id_required"},400);
-    const {data:lead,error:leadError}=await admin.from("leads")
-      .select("id,customer_label,occasion,sales_category,budget,status,source,delivery_date,next_followup_at,created_at")
-      .eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
-    if(leadError){ console.error("NEXT_MSG_LEAD",leadError.code||""); return reply({error:"request_failed"},500); }
-    if(!lead) return reply({error:"lead_not_found"},404);
-    const note=String(body.customer_said||"").slice(0,800);
-    const situation={
-      followup:"Scheduled follow-up is due today; the customer has not been contacted since.",
-      no_reply:"The customer has not replied to the last message.",
-      replied:"The customer replied but has not shown clear buying intent yet.",
-      interested:"The customer is interested and asking about designs.",
-      wants_quote:"The customer wants a price quote now."
-    }[outcome];
-    const ai=await callAI(
-      "You are the EW VERDORA AI sales partner for one flower sales agent in Kuching, Sarawak. Write the single best WhatsApp message the agent should send this customer RIGHT NOW, plus one short reason. Return ONLY JSON {message:string, why:string, next_followup_hours:number}. message: max 60 words, warm, human, local Kuching tone, in the agent's language and writing style, no hashtags, max 1 emoji, ends with one easy question. If the customer wants a quote, ask for the 2-3 details needed (occasion, budget range, delivery date/area, reference photo) and say the agent will send the official EW VERDORA quote; never state a price. If no reply, be light and give an easy way to reply. why: one sentence for the agent explaining the tactic. next_followup_hours: 4-72. Respond in: "+lang+"."+RULES+profileBrief(prof),
-      JSON.stringify({situation,customer_said:note||null,lead:{name:lead.customer_label||null,occasion:lead.occasion||lead.sales_category||null,budget:lead.budget??null,status:lead.status,source:lead.source,delivery_date:lead.delivery_date||null,days_since_created:Math.floor((Date.now()-new Date(lead.created_at).getTime())/86400000)}}),
-      true
-    );
-    const parsed=parseJson(ai||"");
-    const valid=parsed && typeof parsed.message==="string" && parsed.message.trim() && typeof parsed.why==="string"
-      && !containsSensitiveOutput(parsed.message+" "+parsed.why)
-      && !containsMarketingPolicyViolation(parsed.message);
-    const name=String(lead.customer_label||"").slice(0,40);
-    const fallback=lang==="zh"
-      ?{message:(name?name+"，":"")+"您好！想跟进一下之前聊的花礼，您这边方便告诉我大概的日期和预算吗？我可以先帮您配几款参考 🌸",why:"简单友善、给对方一个容易回答的问题。",next_followup_hours:24}
-      :{message:"Hi"+(name?" "+name:"")+"! Just following up on the flowers we chatted about. Could you share the date and rough budget? I can prepare a few design options for you 🌸",why:"Friendly, low-pressure, one easy question.",next_followup_hours:24};
-    const out=valid?{
-      message:String(parsed.message).trim().slice(0,700),
-      why:String(parsed.why).trim().slice(0,240),
-      next_followup_hours:Math.min(72,Math.max(4,Number(parsed.next_followup_hours)||24))
-    }:fallback;
-    return reply({ok:true,provider:valid?"gemini":"fallback",outcome,lead_id:lead.id,content:out});
   }
 
   if(action==="coach"){
