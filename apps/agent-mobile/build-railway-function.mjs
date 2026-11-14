@@ -130,6 +130,7 @@ const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const initialJsNames=jsNames.filter(n=>n!=="kyc.js");
 const jsBytes=initialJsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 const kycJsBytes=zlib.gzipSync(Buffer.from(files["kyc.js"]||""),{level:9}).length;
+console.log("JS_GZIP_BREAKDOWN "+initialJsNames.map(n=>[n,zlib.gzipSync(Buffer.from(files[n]),{level:9}).length]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+":"+x[1]).join(","));
 if(jsBytes>150*1024)throw new Error(`Initial JS gzip budget exceeded: ${jsBytes} bytes`);
 if(kycJsBytes>16*1024)throw new Error(`KYC lazy JS gzip budget exceeded: ${kycJsBytes} bytes`);
 console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
