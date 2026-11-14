@@ -278,6 +278,17 @@ function fallbackLostReview(lang,reason){
 
 
 
+
+function fallbackMicroTip(lang,prof,context){
+  const zh=lang==="zh";
+  const weak=Array.isArray(prof?.weaknesses)&&prof.weaknesses.length?String(prof.weaknesses[0]).toLowerCase():"";
+  if(/closing|成交/.test(weak))return zh?"发出去前，记得留一个容易回答的下一步问题。":"Before sending, leave one easy next-step question.";
+  if(/qualif|需求|requirement/.test(weak))return zh?"先确认日期、场合和预算，不确定的不要自己猜。":"Confirm the date, occasion and budget; do not guess missing details.";
+  if(/price|pricing|价格/.test(weak))return zh?"价格只跟正式报价走，不要为了成交自己改价。":"Keep pricing to the official quote; do not change it yourself to close.";
+  if(context==="customer_reply")return zh?"这一句先解决客人现在的问题，不用一次讲太多。":"Answer the customer's current question first; you do not need to say everything at once.";
+  return zh?"下一步讲清楚就好，短一点会更容易让客人回。":"Make the next step clear; shorter is easier for the customer to answer.";
+}
+
 function fallbackObjectionReplies(lang,type){
   const zh=lang==="zh";
   const map={
@@ -474,7 +485,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority","objection_replies"].includes(action)?action:null;
+  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority","objection_replies","micro_tip"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -591,6 +602,21 @@ Deno.serve(async req=>{
 
 
 
+
+
+  if(action==="micro_tip"){
+    const context=String(body.context||"customer_reply").toLowerCase().replace(/[^a-z_]/g,"").slice(0,40)||"customer_reply";
+    const fallback=fallbackMicroTip(lang,prof,context);
+    const raw=await callAI(
+      "You are a tiny in-context coach for one EW VERDORA Agent. Return ONLY JSON {tip:string}. Give exactly one short sentence, max 22 words, tied to the Agent's recorded weakness and the current action. It must feel like a useful reminder during work, not a lesson, score, exam or lecture. Never mention internal metrics, suppliers, costs, margins, discounts, private payment, fake scarcity, exact-copy promises or flower availability. Language: "+lang+"."+RULES+profileBrief(prof),
+      JSON.stringify({context}),
+      true
+    );
+    const p=parseJson(raw||"");
+    const valid=p&&typeof p.tip==="string"&&p.tip.trim()&&p.tip.length<=240&&
+      !containsSensitiveOutput(p.tip)&&!containsMarketingPolicyViolation(p.tip)&&!detectPolicyRisk(p.tip);
+    return reply({ok:true,provider:valid?"gemini":"fallback",tip:valid?String(p.tip).trim():fallback});
+  }
 
   if(action==="objection_replies"){
     const type=String(body.objection||"").toLowerCase();

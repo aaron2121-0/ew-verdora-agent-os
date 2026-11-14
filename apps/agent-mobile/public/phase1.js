@@ -585,16 +585,15 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       waiting.remove();
       const actions=element("div",{className:"ai-message-actions"});
       const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
+      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer")});
       actions.append(aiCopyButton(msg),wa);
       const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
-      const followupAt=new Date(Date.now()+hours*3600000);
-      const schedule=element("button",{className:"btn btn-secondary btn-small",text:"⏱ "+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
+      const followupAt=new Date(Date.now()+hours*3600000),at=followupAt.toISOString();
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:"⏱ "+formatKuchingDateTime(at,getLang()),attrs:{type:"button"}});
       schedule.addEventListener("click",async()=>{
         schedule.disabled=true;
         try{
-          await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:followupAt.toISOString()});
-          schedule.textContent="✓";
+          await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:at});
           await onRefresh();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
       });
@@ -602,6 +601,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
       box.append(out.card);
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
+      import("./ai-assist-objection.js").then(m=>m.t(box,api,getLang,createAICard));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }

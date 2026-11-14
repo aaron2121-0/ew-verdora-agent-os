@@ -26,3 +26,12 @@ export function mountObjectionHelper({coach,input,element,createAICard,api,getLa
  });
  coach.append(quick);
 }
+
+export async function t(box,api,getLang,createAICard){
+ try{
+  const j=await api.ai({action:"micro_tip",context:"customer_reply"});if(!j?.tip)return;
+  const title=getLang()==="zh"?"发出去前提醒一句":"One reminder before you send";
+  const card=createAICard({title,text:String(j.tip),provider:j.provider||"template",cached:false,tr:k=>k}).card;
+  card.classList.add("ai-micro-tip","ai-assist-surface");box.append(card);
+ }catch{}
+}
