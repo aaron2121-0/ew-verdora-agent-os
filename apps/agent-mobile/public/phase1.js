@@ -981,18 +981,16 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
-    const d=getData()||{};
     const galleryHost=element("div",{className:"d6-gallery-host"});
     page.append(galleryHost);
-    const galleryData=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
-    // D2 portfolio_list is authoritative. Never replace a failed request with vendor examples.
-    if(Array.isArray(galleryData))galleryHost.replaceChildren(mountD6Gallery(galleryData,{lang:getLang()}));
-    else {
-      galleryHost.replaceChildren(mountD6Gallery([],{lang:getLang()}));
+    galleryHost.replaceChildren(mountD6Gallery({photos:[]},{lang:getLang()}));
+    // On-demand only: the initial Today screen must not fetch an unused gallery.
+    if(active==="selling"){
       api.agent({action:"portfolio_list"}).then(response=>{
         if(!galleryHost.isConnected)return;
+        // D2 responds with {photos:[{id,product_line,caption_zh,caption_en,image_url}]}.
         galleryHost.replaceChildren(mountD6Gallery(response,{lang:getLang()}));
-      }).catch(()=>{}); // Remain in explicit empty state when D2 is unavailable.
+      }).catch(()=>{}); // Remain in explicit empty state if D2 isn't deployed.
     }
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
