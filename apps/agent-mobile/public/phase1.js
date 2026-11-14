@@ -210,6 +210,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
     active=next;
+    if(next!=="today")window.VerdoraMotion?.brandBg?.destroy?.();
     pageSwap(next);
     updateNavIndicator();
     if(next==="today")renderToday();
@@ -352,6 +353,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
     const page=element("div",{className:"page-shell today-shell"});
+    if(active==="today")window.VerdoraMotion?.mountBrandBg?.(page,{placement:"tr",seed:20261115});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
     if(identityTop)page.append(identityTop);
 
