@@ -173,13 +173,13 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
       card.append(list);
     }else{
       const pasteBox=element("section",{className:"ai-coach-panel"});
-      pasteBox.append(element("h3",{text:tr("aiConversationTitle")}),element("p",{className:"muted",text:tr("aiConversationHint")}));
+      pasteBox.append(element("h3",{text:tr("aiConversationTitle")}));
       const pasted=element("textarea",{className:"ai-chat-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiConversationPlaceholder")}});
-      pasted.placeholder=tr("aiConversationPlaceholder");
+      pasted.placeholder=tr("aiCoachInput");
       const organise=buttonWithIcon("sparkles",tr("aiConversationButton"),"btn btn-secondary btn-large");
       organise.addEventListener("click",async()=>{
         const conversation=pasted.value.trim();
-        if(!conversation){toast(tr("aiConversationNeedText"),{tone:"danger"});return}
+        if(!conversation)return;
         setButtonLoading(organise,true,tr("loading"));
         try{
           const j=await api.ai({action:"conversation_extract",conversation});
@@ -189,7 +189,7 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
           if(OCCASIONS.some(o=>o[0]===x.occasion))patch.occasion=x.occasion;
           if(Number(x.budget)>0)patch.budget=Number(x.budget);
           setState(patch);
-          toast(j.provider==="gemini"?tr("aiConversationDone"):tr("aiConversationTemplate"),{tone:"success"});
+          toast(j.provider==="gemini"?tr("aiConversationDone"):tr("aiTemplate"),{tone:"success"});
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
         finally{setButtonLoading(organise,false,tr("aiConversationButton"))}
       });
