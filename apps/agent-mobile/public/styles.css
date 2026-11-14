@@ -525,3 +525,8 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 :root[data-theme="dark"] .auth-wrap{--bg-opacity:.055}
 :root[data-theme="dark"] .today-shell{--bg-opacity:.04}
 @media (prefers-reduced-motion:reduce){.auth-wrap,.today-shell{scroll-behavior:auto}}
+
+/* D1: payment states use readable touch-friendly rows. */
+.commission-status-list{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15);font-size:16px;line-height:1.6}
+.commission-status-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09);font-size:16px}
+.commission-status-row strong{white-space:nowrap}
