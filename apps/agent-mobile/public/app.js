@@ -7,12 +7,11 @@ import {initMotion} from "./motion.js";
 import {setMotionLanguage,vendorMotion,clearMotion} from "./motion-vendor.js";
 import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile,aiStart,aiEnd} from "./ai-ui.js";
 import {createAIChat} from "./ai-chat.js";
-import {createGoogleLogin,oauthReturnError} from "./google-auth.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
 let scenario="",activeModule="";
-let refreshBusy=null,aiChat=null,aiProfile=null,googleLogin=null;
+let refreshBusy=null,aiChat=null,aiProfile=null;
 const $=id=>document.getElementById(id);
 const tr=(key,vars={})=>translate(lang,key,vars);
 
@@ -55,7 +54,6 @@ function applyI18n(){
   setMotionLanguage(lang);
   UI?.onLanguageChange();
   refreshAIOrb(tr);
-  googleLogin?.localize();
   const themeBtn=$("themeToggle");
   if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
@@ -63,12 +61,9 @@ function applyI18n(){
 function view(name){
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
-  $("signupBlocked").classList.toggle("hidden",name!=="signupBlocked");
-  $("ownerBlocked").classList.toggle("hidden",name!=="ownerBlocked");
-  $("captchaBlocked").classList.toggle("hidden",name!=="captchaBlocked");
   $("app").classList.toggle("hidden",name!=="app");
   $("nav").classList.toggle("hidden",name!=="app");
-  $("logout").classList.toggle("hidden",!["app","signupBlocked","ownerBlocked","captchaBlocked"].includes(name));
+  $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
 }
@@ -92,20 +87,6 @@ async function fn(path,body){
   let data={};try{data=await response.json()}catch{}
   if(!response.ok)throw new Error(String(data?.error||"request_failed"));
   return data;
-}
-
-// Server-authoritative role and signup gate; never infer eligibility from
-// email, user_metadata or the Google callback alone.
-async function routeAuthenticated(){
-  const proof=sessionStorage.getItem("ew_google_signup_proof")||"";
-  const result=await fn("agent-auth",{action:"google_signup_route",proof});
-  if(result.route!=="captcha_required")sessionStorage.removeItem("ew_google_signup_proof");
-  if(result.route==="owner"){view("ownerBlocked");return}
-  if(result.route==="invite_only"){view("signupBlocked");return}
-  if(result.route==="captcha_required"){view("captchaBlocked");return}
-  if(result.route==="register"){view("register");return}
-  if(result.route==="home"){await refresh();return}
-  throw new Error("signup_route_failed");
 }
 
 async function refresh(){
@@ -182,6 +163,17 @@ function setupHandlers(){
     lang=lang==="en"?"zh":"en";
     setStoredLanguage(lang);
     applyI18n();
+  });
+  $("googleBtn").addEventListener("click",async()=>{
+    if(!sb){$("loginMsg").textContent=tr("genericError");return}
+    setButtonLoading($("googleBtn"),true,tr("loading"));
+    try{
+      const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+"/"}});
+      if(error)throw error;
+    }catch(e){
+      $("loginMsg").textContent=tr("googleFailed");
+      setButtonLoading($("googleBtn"),false,tr("googleSignIn"));
+    }
   });
   $("loginBtn").addEventListener("click",async()=>{
     const email=$("email").value.trim();
@@ -279,14 +271,14 @@ async function bootstrap(){
   try{
     await waitForSupabase();
     CFG=await fetch("/config",{cache:"no-store"}).then(r=>r.json());
-    sb=window.supabase.createClient(CFG.url,CFG.key,{
-      auth:{flowType:"pkce",detectSessionInUrl:false,persistSession:true,autoRefreshToken:true}
-    });
-    googleLogin=createGoogleLogin({getClient:()=>sb,getConfig:()=>CFG,getLang:()=>lang});
-    // The widget must not delay an invitation login or an existing session.
-    void googleLogin.init();
+    sb=window.supabase.createClient(CFG.url,CFG.key);
 
     const hash=new URLSearchParams((location.hash||"").replace(/^#/,""));
+    const query=new URLSearchParams(location.search||"");
+    if(hash.get("error")||query.get("error")){
+      history.replaceState({},document.title,location.pathname||"/");
+      $("loginMsg").textContent=tr("googleFailed");
+    }
     const inviteCode=hash.get("invite");
     const inviteEmail=hash.get("email");
     if(inviteCode&&inviteEmail){
@@ -308,45 +300,16 @@ async function bootstrap(){
       }
     }
 
-    // PKCE callback is exchanged exactly once, then removed from the address bar.
-    // Supabase's OAuth redirect does not use the #invite fragment.
-    if(!inviteCode){
-      const callbackError=oauthReturnError(location.search);
-      const code=new URLSearchParams(location.search).get("code");
-      if(callbackError||code){
-        history.replaceState({},document.title,location.pathname||"/");
-        if(callbackError){sessionStorage.removeItem("ew_google_signup_proof");googleLogin.show(callbackError)}
-        else{
-          try{
-            const {error}=await sb.auth.exchangeCodeForSession(code);
-            if(error)throw error;
-          }catch{sessionStorage.removeItem("ew_google_signup_proof");googleLogin.show("googleSessionFailed");}
-        }
-      }
-    }
-
-    let routingVersion=0;
-    async function showSession(next,version){
-      if(version!==routingVersion)return;
+    sb.auth.onAuthStateChange(async(_event,next)=>{
       session=next;
-      if(!session){view("login");return}
-      try{
-        await prepareOrderDraftForUser(session.user?.id||"");
-        if(version===routingVersion)await routeAuthenticated();
-      }catch(e){
-        if(version!==routingVersion)return;
-        view("login");$("loginMsg").textContent=friendlyError(e.message);
-      }
-    }
-    // Avoid async Supabase client operations inside onAuthStateChange's callback.
-    sb.auth.onAuthStateChange((event,next)=>{
-      if(event==="INITIAL_SESSION")return;
-      const version=++routingVersion;
-      setTimeout(()=>{void showSession(next,version)},0);
+      if(session){try{await prepareOrderDraftForUser(session.user?.id||"");await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
+      else view("login");
     });
+
     const current=await sb.auth.getSession();
-    const version=++routingVersion;
-    await showSession(current.data.session,version);
+    session=current.data.session;
+    if(session){try{await prepareOrderDraftForUser(session.user?.id||"");await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
+    else view("login");
   }catch{
     view("login");$("loginMsg").textContent=tr("genericError");
   }
