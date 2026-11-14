@@ -68,6 +68,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let todayFirst=null,todayFirstLoading=false;
   let repeatCustomers=null,repeatCustomersLoading=false;
+  const microTipCache=new Map(),microTipLoading=new Set();
   let lastAllDone=false;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
@@ -458,6 +459,29 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   }
 
 
+
+
+  function renderMicroTip(context,lead=null){
+    const wrap=element("div",{className:"ai-micro-tip ai-assist-surface"});
+    const key=context+":"+(lead?.id||"general");
+    const draw=()=>{
+      wrap.replaceChildren();
+      const cached=microTipCache.get(key);
+      if(cached){
+        const card=createAICard({title:tr("aiMicroTipTitle"),text:String(cached.tip||""),provider:cached.provider||"template",cached:true,tr}).card;
+        wrap.append(card);return;
+      }
+      wrap.append(element("p",{className:"ai-chat-thinking",text:tr("aiMicroTipLoading")}));
+    };
+    draw();
+    if(!microTipCache.has(key)&&!microTipLoading.has(key)){
+      microTipLoading.add(key);aiStart();let ok=false;
+      api.ai({action:"micro_tip",context,lead_id:lead?.id||null}).then(j=>{microTipCache.set(key,j);ok=true;draw()})
+        .catch(()=>{wrap.replaceChildren()})
+        .finally(()=>{microTipLoading.delete(key);aiEnd(ok)});
+    }
+    return wrap;
+  }
 
   function renderRepeatCustomers(){
     const sec=element("section",{className:"section-block ai-repeat-customers ai-assist-surface",attrs:{id:"aiRepeatCustomers"}});
@@ -1051,6 +1075,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       const x=element("div");x.append(element("span",{text:k}),element("strong",{text:v}));meta.append(x);
     });
     body.append(meta,element("h3",{className:"detail-section-title",text:tr("statusProgress")}),renderPipeline(lead));
+    if(!["won","archived"].includes(String(lead.status||"")))body.append(renderMicroTip("reply",lead));
 
     if(lead.lead_score!=null||lead.next_best_action||lead.best_followup_time){
       const smart=element("div",{className:"detail-grid",attrs:{"data-phase4-hook":"lead-intelligence"}});
