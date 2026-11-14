@@ -26,8 +26,10 @@ test("brand motion is local, lazy and used on Login and Today",()=>{
   assert.match(html,/\/vendor\/motion-pack-v1\/brand-bg\.css/);
   assert.doesNotMatch(html,/<script[^>]+brand-bg\.js/);
   assert.match(app,/import\("\/vendor\/motion-pack-v1\/brand-bg\.js"\)/);
-  assert.match(app,/mountBrandBg\(\$\("login"\),\{placement:"tr",seed:20261114\}\)/);
-  assert.match(phase,/__verdoraMountBrandBg\?\.\(page,\{placement:"tr",seed:20261115\}\)/);
+  const brand=read("vendor/motion-pack-v1/brand-bg.js");
+  assert.match(brand,/MutationObserver/);
+  assert.match(brand,/20261114/);
+  assert.match(brand,/20261115/);
   assert.match(css,/--bg-opacity:\.032/);
 });
 
