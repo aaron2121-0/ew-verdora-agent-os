@@ -194,7 +194,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       target.classList.add("active");
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if(old&&old!==target&&!reduced)void loadVendorMotion("transitions").catch(()=>{});
+    if(old&&old!==target&&!reduced){
+      loadD6Css("transitions");
+      void loadVendorMotion("transitions").catch(()=>{});
+    }
     const vm=vendorMotion();
     if(old&&old!==target&&vm?.runSharedSwap&&!reduced){
       vm.runSharedSwap(old,swap,()=>target);
@@ -341,6 +344,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderTodayPriorityAssist(){
+    loadD6Css("d6");
     loadD6Css("coach");
     const slot=element("section",{className:"section-block ai-coach-panel vc-shell d6-coach-live",attrs:{"data-ai-assist":"today-priority"}});
     slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
