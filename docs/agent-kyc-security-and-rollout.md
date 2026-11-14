@@ -52,3 +52,14 @@ Integration tests MUST run against disposable staging AFTER approval of the PR a
 7. Agent requests deletion. Owner confirms. Verify all private bucket photos and encrypted/hashes erased; audit rows retained; previously active Agent becomes trainee; no upload race leaves orphaned files.
 
 Claude: specifically review Vault privileges, custom upload broker, consent notice/retention, old-active-Agent migration policy, Frontend compatibility and race handling. Deploy only in a separate, explicitly approved change.
+
+
+## Nov 14 rollout correction — shared opt-in KYC switch
+
+- `private.app_settings.setting_key='AGENT_KYC_REQUIRED'` starts **false** and is readable only by a privileged RPC. Both registration and SQL certification use `agent_kyc_required_internal()` as the same source of truth.
+- **OFF:** the exact old `display_name` + `language` Agent registration uses `register_agent_internal`; no IC, photo, phone or PDPA consent required. Certification still checks seven required modules, passed exam, open recovery and severe violations as before.
+- **ON:** new registration requires full KYC and missing IC returns 422. A passed exam can unlock selling only after KYC has been approved as well as all existing training / violations / recovery checks.
+- If the shared flag RPC errors, the Edge Function returns 503 rather than silently bypassing policy. Apply the reviewed migration before the Edge Function at a later authorized release.
+- All five Owner KYC SQL RPCs require `role='owner'` (not admin); the `owner-session` KYC actions have a second owner-only guard.
+- The original Owner `launch_*` actions and handbook batch UUID fix must remain intact when syncing PR #15 with main.
+- **No deployment, migration execution, or PR merge** is authorized by this change.
