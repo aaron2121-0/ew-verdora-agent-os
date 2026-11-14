@@ -59,10 +59,113 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","kyc_list","kyc_view","kyc_review","kyc_delete"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","kyc_list","kyc_view","kyc_review","kyc_delete","owner_daily_brief"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
+
+  // [D4] Cached daily Owner summary: personal customer details never sent to Gemini.
+  if(action==="owner_daily_brief"){
+    const {data:claim,error:claimError}=await admin.rpc("owner_daily_brief_claim_internal",{p_user_id:uid});
+    if(claimError)return reply({error:"daily_brief_unavailable"},503);
+    if(claim?.claimed!==true){
+      if(claim?.status==="ready"&&claim?.payload)return reply({...claim.payload,cached:true});
+      return reply({ok:true,pending:true,message_zh:"今天的情况正在整理，请按刷新。",message_en:"Today's summary is being prepared. Tap refresh."});
+    }
+    const money=v=>"RM "+(Math.round(Number(v||0)*100)/100).toFixed(2);
+    const n=v=>Number.isFinite(Number(v))?Number(v):0;
+    try{
+      const [dashboard,ar,modules,progress,commissions,exceptions,quotes]=await Promise.all([
+        admin.rpc("owner_dashboard_internal",{p_user_id:uid}),
+        admin.from("agents").select("id,status").eq("is_demo",false).limit(500),
+        admin.from("training_modules").select("id").eq("required",true).eq("active",true).limit(100),
+        admin.from("training_progress").select("agent_id,module_id,status").eq("status","passed").limit(5000),
+        admin.from("commissions").select("amount").eq("status","payable").limit(1000),
+        admin.rpc("owner_list_exceptions_internal",{p_user_id:uid,p_limit:100}),
+        admin.from("quote_requests").select("id",{count:"exact",head:true}).eq("status","manual_review")
+      ]);
+      if(dashboard.error||ar.error||modules.error||progress.error||commissions.error||
+         exceptions.error||quotes.error)throw Error("brief_data_unavailable");
+      const d=dashboard.data||{};
+      const activeIds=new Set((ar.data||[]).map(x=>x.id));
+      const requiredIds=new Set((modules.data||[]).map(x=>x.id));
+      const passed=(progress.data||[]).filter(p=>activeIds.has(p.agent_id)&&requiredIds.has(p.module_id));
+      const passedIds=new Set(passed.map(x=>x.agent_id+"-"+x.module_id));
+      const startedIds=new Set(passed.map(x=>x.agent_id));
+      const agents=ar.data||[];
+      const pending=commissions.data||[];
+      const snapshot={
+        orders:n(d.orders_today),
+        revenue:Math.max(0,n(d.revenue_today)),
+        payable_count:pending.length,
+        payable_amount:pending.reduce((sum,c)=>sum+Math.max(0,n(c.amount)),0),
+        agent_count:agents.length,
+        agents_not_started:agents.filter(a=>!startedIds.has(a.id)).length,
+        modules_passed:passedIds.size,
+        modules_required:requiredIds.size*agents.length,
+        issues:(exceptions.data||[]).length,
+        quotes:n(quotes.count)
+      };
+      const adviceFallback=snapshot.issues>0||snapshot.quotes>0
+       ?{zh:"建议先处理待确认的报价和需要你决定的问题。",en:"Start with quotes and issues that need your decision."}
+       :snapshot.agents_not_started>0
+       ?{zh:"建议先提醒还没上课的代理完成第一课。",en:"Start by encouraging agents who have not begun their first lesson."}
+       :snapshot.payable_count>0
+       ?{zh:"建议先核对待付佣金与实际银行转账记录。",en:"Start by checking payable commissions against actual bank transfers."}
+       :{zh:"建议先检查今天的询问与代理跟进进度。",en:"Start by checking today's enquiries and Agent follow-ups."};
+      let advice=adviceFallback,provider="template";
+      const key=Deno.env.get("GEMINI_API_KEY")||"";
+      const model=(Deno.env.get("GEMINI_MODEL")||"gemini-flash-latest").replace(/[^a-zA-Z0-9.\-]/g,"");
+      if(key){
+        const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
+        try{
+          const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+            method:"POST",signal:ctl.signal,
+            headers:{"Content-Type":"application/json","x-goog-api-key":key},
+            body:JSON.stringify({
+              systemInstruction:{parts:[{text:"You assist an EW VERDORA flower-sales Owner. Input is only aggregate numbers, not personal customer data. Return JSON with exactly two short fields zh (natural Malaysian Chinese), en (natural English). Suggest one practical action based on the metrics. Do not mention ANY numbers, prices, names, contact details, promises, employee identity, commission rates, suppliers, or personal data. No invented facts. Be friendly and direct."}]},
+              contents:[{role:"user",parts:[{text:JSON.stringify(snapshot)}]}],
+              generationConfig:{responseMimeType:"application/json",temperature:0.2,maxOutputTokens:150}
+            })
+          });
+          if(response.ok){
+            const raw=(await response.json())?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("")||"";
+            const suggestion=JSON.parse(raw);
+            const zh=String(suggestion.zh||"").trim(),en=String(suggestion.en||"").trim();
+            if(zh.length>=10&&zh.length<=120&&en.length>=12&&en.length<=180
+               &&!/[0-9０-９]|RM|@|\\+60|佣金比例|内部成本|supplier|margin|price/i.test(zh+" "+en)){
+              advice={zh,en};provider="gemini";
+            }
+          }
+        }catch{ /* No AI response: keep safe fallback. */ }
+        finally{clearTimeout(timer)}
+      }
+      // Numbers are rendered deterministically from real database values, never AI prose.
+      const summary_zh=[
+        "今天有 "+snapshot.orders+" 单，营业额 "+money(snapshot.revenue)+"。",
+        "目前 "+snapshot.payable_count+" 笔佣金可付，总计 "+money(snapshot.payable_amount)+"。",
+        "代理上课已通过 "+snapshot.modules_passed+"/"+snapshot.modules_required+" 个必修课次；"+snapshot.agents_not_started+" 人还没开始。",
+        "有 "+snapshot.issues+" 个需要处理的问题，"+snapshot.quotes+" 笔报价等你审核。",
+        advice.zh
+      ];
+      const summary_en=[
+        "Today: "+snapshot.orders+" orders, "+money(snapshot.revenue)+" in revenue.",
+        snapshot.payable_count+" payable commission entries total "+money(snapshot.payable_amount)+".",
+        snapshot.modules_passed+"/"+snapshot.modules_required+" required course completions; "+snapshot.agents_not_started+" agents have not started.",
+        snapshot.issues+" outstanding issues and "+snapshot.quotes+" quotes await review.",
+        advice.en
+      ];
+      const payload={ok:true,date:claim.date,summary_zh,summary_en,
+        snapshot,provider};
+      const {data:saved,error:saveErr}=await admin.rpc("owner_daily_brief_finish_internal",{
+        p_user_id:uid,p_claim_token:claim.claim_token,p_payload:payload
+      });
+      if(saveErr||saved!==true)return reply({error:"daily_brief_cache_failed"},503);
+      return reply({...payload,cached:false});
+    }catch{
+      return reply({error:"daily_brief_data_unavailable"},503);
+    }
+  }
 
   if(action==="signup_setting_get"){
     const {data,error}=await admin.rpc("owner_signup_setting_get_internal",{p_user_id:uid});
