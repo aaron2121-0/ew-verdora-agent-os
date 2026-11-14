@@ -11,7 +11,7 @@ import {createAIChat} from "./ai-chat.js";
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
 let scenario="",activeModule="";
-let refreshBusy=null,aiChat=null,aiProfile=null;
+let refreshBusy=null,aiChat=null,aiProfile=null,kyc=null;
 const $=id=>document.getElementById(id);
 const tr=(key,vars={})=>translate(lang,key,vars);
 
@@ -54,9 +54,18 @@ function applyI18n(){
   setMotionLanguage(lang);
   UI?.onLanguageChange();
   refreshAIOrb(tr);
+  kyc?.onLanguageChange?.();
   const themeBtn=$("themeToggle");
   if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
+
+let brandBgImport=null;
+function mountBrandBg(target,options){
+  if(!target)return;
+  const ready=window.VerdoraMotion?.mountBrandBg?Promise.resolve():brandBgImport??=import("/vendor/motion-pack-v1/brand-bg.js");
+  ready.then(()=>{if(target.isConnected)window.VerdoraMotion?.mountBrandBg?.(target,options)}).catch(()=>{});
+}
+window.__verdoraMountBrandBg=mountBrandBg;
 
 function view(name){
   $("login").classList.toggle("hidden",name!=="login");
@@ -66,6 +75,7 @@ function view(name){
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
+  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);\n  window.VerdoraMotion?.brandBg?.destroy?.();\n  if(name==="login")mountBrandBg($("login"),{placement:"tr",seed:20261114});
 }
 
 async function fn(path,body){
@@ -89,13 +99,47 @@ async function fn(path,body){
   return data;
 }
 
+async function ensureKyc(){
+  if(kyc)return kyc;
+  const {createKycExperience}=await import("./kyc.js");
+  kyc=createKycExperience({
+    getData:()=>D,
+    getLang:()=>lang,
+    tr,
+    api:body=>fn("agent-session",body),
+    rawUpload:async(uploadUrl,blob,contentType)=>{
+      try{
+        return await fetch(uploadUrl,{
+          method:"POST",
+          headers:{
+            "Content-Type":contentType,
+            "Authorization":"Bearer "+session.access_token,
+            "apikey":CFG.key
+          },
+          body:blob,
+          cache:"no-store"
+        });
+      }catch{throw new Error("network_error")}
+    },
+    onRefresh:refresh
+  });
+  kyc.bind();
+  return kyc;
+}
+
 async function refresh(){
   if(refreshBusy)return refreshBusy;
   refreshBusy=(async()=>{
     const result=await fn("agent-session",{action:"dashboard"});
-    if(result.needs_registration){view("register");return result}
     D=result;
+    const identity=(result.kyc_required||result.kyc_status)?await ensureKyc():null;
+    if(result.needs_registration){
+      view("register");
+      if(result.kyc_required&&identity){await identity.sync();await identity.open({startStep:1})}
+      return result;
+    }
     view("app");
+    if(identity)await identity.sync();
     if(!UI){
       UI=createPhase1UI({
         getData:()=>D,
@@ -115,7 +159,8 @@ async function refresh(){
           friendlyError,
           openPractice
         },
-        onRefresh:refresh
+        onRefresh:refresh,
+        renderTodayTop:()=>identity?.renderTodayCard?.()||null
       });
       await UI.init();
     }else UI.renderAll();
@@ -238,6 +283,7 @@ function setupHandlers(){
     if(uid)await clearOrderDraft(uid);
     UI?.training?.destroy?.();
     aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
+    kyc?.destroy();kyc=null;
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
   });
   const role=setupBottomSheet($("roleSheet"));
