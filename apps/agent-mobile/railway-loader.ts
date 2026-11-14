@@ -6,7 +6,7 @@
 const BUNDLE_COMMIT="4327b6d9ca6ad000894018b849647688352e885a";
 const BUNDLE_SHA256="3c3492d0577ab6e7e347f51a8cda11fb8c34194e29e3981b181463eea3941748";
 const BUNDLE_URL=`https://raw.githubusercontent.com/aaron2121-0/ew-verdora-agent-os/${BUNDLE_COMMIT}/apps/agent-mobile/dist/railway-function.ts`;
-const VERSION="0.9.1";
+const VERSION="1.0.1";
 
 async function loadBundle(){
   let lastErr="";
