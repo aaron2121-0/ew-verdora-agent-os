@@ -31,7 +31,11 @@
       </div>
     </header>
 
-    <section id="login" class="auth-wrap">
+    <section id="booting" class="auth-wrap" aria-live="polite">
+      <div class="auth-brand-mark" aria-hidden="true"></div>
+      <div class="auth-card"><p class="auth-copy" data-i18n="signingIn">Signing you in…</p></div>
+    </section>
+    <section id="login" class="auth-wrap hidden">
       <div class="auth-brand-mark" aria-hidden="true"></div>
       <div class="auth-card">
         <h1 class="auth-title" data-i18n="loginTitle"></h1>
@@ -40,6 +44,10 @@
         <input id="email" class="hidden" type="email" autocomplete="email">
         <button id="loginBtn" class="btn btn-primary hidden" type="button" data-i18n="sendSignIn"></button>
         <div id="loginMsg" class="auth-msg" role="status" aria-live="polite"></div>
+        <div id="inAppWarn" class="auth-msg hidden" role="alert">
+          <p data-i18n="inAppBrowserWarn"></p>
+          <button id="copyLinkBtn" class="btn btn-secondary" type="button" data-i18n="copyAppLink"></button>
+        </div>
       </div>
     </section>
 
