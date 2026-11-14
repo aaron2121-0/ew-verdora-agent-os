@@ -112,25 +112,51 @@ begin
   v_digest:=extensions.hmac(v_ic,v_hash_key,'sha256');
 
   -- The unique digest is keyed (HMAC), preventing offline NRIC enumeration.
-  if exists(select 1 from private.agent_kyc where ic_number_hash=v_digest) then
+  select a.id into v_agent from public.agents a where a.user_id=p_user_id;
+  if exists(select 1 from private.agent_kyc
+    where ic_number_hash=v_digest and agent_id is distinct from v_agent) then
     raise exception 'kyc_duplicate_ic';
   end if;
-  select a.id into v_agent from public.agents a where a.user_id=p_user_id;
-  if v_agent is not null and exists(select 1 from private.agent_kyc where agent_id=v_agent)
+
+  if v_agent is not null and exists(
+    select 1 from private.agent_kyc where agent_id=v_agent
+  ) then
+    -- Agents may correct draft or rejected details without deleting an account.
+    -- A superseded photo remains private until new submission removes it.
+    if not exists(select 1 from private.agent_kyc
+       where agent_id=v_agent and status in ('draft','rejected')
+         and delete_requested_at is null)
     then raise exception 'kyc_already_registered'; end if;
-  -- Existing onboarding RPC is kept intact; it creates initial training and
-  -- trainee status. The whole operation rolls back if the identity insert fails.
-  v_agent:=public.register_agent_internal(
-    p_user_id,trim(p_preferred_name),p_language
-  );
-  insert into private.agent_kyc(
-    agent_id,legal_name,preferred_name,ic_number_enc,ic_number_hash,ic_last4,
-    date_of_birth,phone_whatsapp,area,consent_version,consent_at
-  ) values (
-    v_agent,trim(p_legal_name),trim(p_preferred_name),
-    extensions.pgp_sym_encrypt(v_ic,v_key,'cipher-algo=aes256'),
-    v_digest,right(v_ic,4),v_dob,v_phone,p_area,p_consent_version,now()
-  );
+    update private.agent_kyc set legal_name=trim(p_legal_name),
+      preferred_name=trim(p_preferred_name),
+      ic_number_enc=extensions.pgp_sym_encrypt(v_ic,v_key,'cipher-algo=aes256'),
+      ic_number_hash=v_digest,ic_last4=right(v_ic,4),
+      date_of_birth=v_dob,phone_whatsapp=v_phone,area=p_area,
+      status='draft',reject_reason=null,submitted_at=null,
+      reviewed_by=null,reviewed_at=null,consent_version=p_consent_version,
+      consent_at=now(),updated_at=now()
+    where agent_id=v_agent;
+    update public.agents set display_name=trim(p_preferred_name),updated_at=now()
+      where id=v_agent;
+    update public.profiles set display_name=trim(p_preferred_name),updated_at=now()
+      where id=p_user_id;
+    insert into private.audit_events(actor_user_id,actor_type,action,entity_type,entity_id)
+      values(p_user_id,'agent','kyc_details_corrected','agent',v_agent::text);
+  else
+    -- Existing onboarding RPC creates initial training and trainee status.
+    -- The transaction rolls back if the private identity insert fails.
+    v_agent:=public.register_agent_internal(
+      p_user_id,trim(p_preferred_name),p_language
+    );
+    insert into private.agent_kyc(
+      agent_id,legal_name,preferred_name,ic_number_enc,ic_number_hash,ic_last4,
+      date_of_birth,phone_whatsapp,area,consent_version,consent_at
+    ) values (
+      v_agent,trim(p_legal_name),trim(p_preferred_name),
+      extensions.pgp_sym_encrypt(v_ic,v_key,'cipher-algo=aes256'),
+      v_digest,right(v_ic,4),v_dob,v_phone,p_area,p_consent_version,now()
+    );
+  end if;
   return v_agent;
 exception when unique_violation then
   raise exception 'kyc_duplicate_ic';
@@ -298,6 +324,10 @@ begin
  if p_decision not in ('approve','reject') then raise exception 'kyc_invalid_decision'; end if;
  if p_decision='reject' and length(trim(coalesce(p_reason,'')))<3
  then raise exception 'kyc_reject_reason_required'; end if;
+ if p_decision='reject' and (coalesce(p_reason,'') ~ '[0-9]{6}-?[0-9]{2}-?[0-9]{4}'
+   or lower(coalesce(p_reason,'')) like '%agent-kyc%'
+   or lower(coalesce(p_reason,'')) like '%http%')
+ then raise exception 'kyc_reject_reason_invalid'; end if;
  update private.agent_kyc set
   status=case when p_decision='approve' then 'approved'::private.agent_kyc_status
     else 'rejected'::private.agent_kyc_status end,
