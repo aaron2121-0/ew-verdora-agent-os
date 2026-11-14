@@ -64,6 +64,18 @@ Deno.serve(async req=>{
 
 
 
+  if(action==="signup_setting_get"){
+    const {data,error}=await admin.rpc("owner_signup_setting_get_internal",{p_user_id:uid});
+    if(error)return reply({error:publicError(error,"forbidden")},403);
+    return reply({ok:true,open:Boolean(data?.open)});
+  }
+  if(action==="signup_setting_set"){
+    if(typeof b.open!=="boolean")return reply({error:"invalid_value"},400);
+    const {data,error}=await admin.rpc("owner_signup_setting_set_internal",{p_user_id:uid,p_open:b.open});
+    if(error)return reply({error:publicError(error)},403);
+    return reply({ok:true,open:Boolean(data?.open)});
+  }
+
   // All handbook mutations are Owner-only. SQL RPCs enforce Owner role again
   // and record the batch-scoped audit event atomically with each mutation.
   if(action==="handbook_import"){
