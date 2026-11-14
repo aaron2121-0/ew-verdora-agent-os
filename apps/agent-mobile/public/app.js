@@ -100,9 +100,8 @@ function ensureKyc(){
     tr,
     api:body=>fn("agent-session",body),
     rawUpload:async(uploadUrl,blob,contentType)=>{
-      let response;
       try{
-        response=await fetch(uploadUrl,{
+        return await fetch(uploadUrl,{
           method:"POST",
           headers:{
             "Content-Type":contentType,
@@ -113,7 +112,6 @@ function ensureKyc(){
           cache:"no-store"
         });
       }catch{throw new Error("network_error")}
-      return response;
     },
     onRefresh:refresh
   });
@@ -158,7 +156,6 @@ async function refresh(){
       });
       await UI.init();
     }else UI.renderAll();
-    UI.renderAll();
     if(!aiChat){
       const aiCall=body=>fn("agent-ai",body);
       aiChat=createAIChat({api:aiCall,tr,getData:()=>D,getLang:()=>lang});
@@ -276,7 +273,7 @@ function setupHandlers(){
   $("logout").addEventListener("click",async()=>{
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);
-    UI?.training?.destroy?.();\n    UI?.kyc?.destroy?.();
+    UI?.training?.destroy?.();
     aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
     kyc?.destroy();kyc=null;
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
