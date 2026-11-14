@@ -594,7 +594,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
         schedule.disabled=true;
         try{
           await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:at});
-          schedule.textContent="✓";
           await onRefresh();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
       });
