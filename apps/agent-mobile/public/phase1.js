@@ -587,10 +587,21 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
       wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
       actions.append(aiCopyButton(msg),wa);
+      const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
+      const followupAt=new Date(Date.now()+hours*3600000);
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:(getLang()==="zh"?"设·":"Set·")+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
+      schedule.addEventListener("click",async()=>{
+        schedule.disabled=true;
+        try{
+          await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:followupAt.toISOString()});
+          schedule.textContent=getLang()==="zh"?"已保存":"Saved";
+          await onRefresh();
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
+      });
+      actions.append(schedule);
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
       box.append(out.card);
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
-      if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
