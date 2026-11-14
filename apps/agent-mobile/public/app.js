@@ -276,7 +276,7 @@ function setupHandlers(){
   $("logout").addEventListener("click",async()=>{
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);
-    UI?.training?.destroy?.();
+    UI?.training?.destroy?.();\n    UI?.kyc?.destroy?.();
     aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
     kyc?.destroy();kyc=null;
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
