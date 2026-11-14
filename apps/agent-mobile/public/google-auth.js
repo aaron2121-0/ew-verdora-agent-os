@@ -13,7 +13,9 @@ export const googleStrings = {
     inviteOnlyTitle:"Registration is by invitation only",
     inviteOnlyBody:"New Agent registration is currently closed. Please ask the Owner for an invitation link.",
     ownerBlockedTitle:"This account belongs to an Owner",
-    ownerBlockedBody:"Please use the Owner dashboard. This account cannot register as an Agent."
+    ownerBlockedBody:"Please use the Owner dashboard. This account cannot register as an Agent.",
+    captchaBlockedTitle:"Security check required",
+    captchaBlockedBody:"Please sign out and use Continue with Google again to complete the security check."
   },
   zh: {
     googleContinue:"用 Google 继续",
@@ -28,7 +30,9 @@ export const googleStrings = {
     inviteOnlyTitle:"目前只接受邀请注册",
     inviteOnlyBody:"新 Agent 注册目前尚未开放。请向 Owner 索取邀请链接。",
     ownerBlockedTitle:"此帐号是 Owner",
-    ownerBlockedBody:"请使用 Owner 后台。Owner 帐号不能注册成 Agent。"
+    ownerBlockedBody:"请使用 Owner 后台。Owner 帐号不能注册成 Agent。",
+    captchaBlockedTitle:"需要重新进行安全验证",
+    captchaBlockedBody:"请先登出，再按「用 Google 继续」完成安全验证。"
   }
 };
 export function googleText(lang,key){
@@ -98,7 +102,9 @@ export function createGoogleLogin({getClient,getConfig,getLang}){
         });
         if(!response.ok)throw new Error("captcha_failed");
         const verified=await response.json();
-        if(verified.ok!==true)throw new Error("captcha_failed");
+        if(verified.ok!==true || !/^[a-f0-9]{64}$/.test(verified.proof||""))
+          throw new Error("captcha_failed");
+        sessionStorage.setItem("ew_google_signup_proof",verified.proof);
         show("googleRedirecting");
         const {error}=await getClient().auth.signInWithOAuth({
           provider:"google",
@@ -106,6 +112,7 @@ export function createGoogleLogin({getClient,getConfig,getLang}){
         });
         if(error)throw new Error("google_failed");
       }catch(e){
+        sessionStorage.removeItem("ew_google_signup_proof");
         show(e?.message==="captcha_failed"?"googleCaptchaFailed":"googleFailed");
       }finally{
         working=false;button.textContent=t("googleContinue");reset();
