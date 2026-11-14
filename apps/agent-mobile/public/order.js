@@ -246,7 +246,7 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
     card.append(times);
 
     const quoteTip=element("div",{className:"ai-coach-panel"});
-    quoteTip.append(element("small",{className:"muted",text:tr("aiMicroTipLabel")}),element("p",{className:"ai-priority-why",text:tr("aiQuoteMicroTip")}));
+    quoteTip.append(element("small",{className:"muted",text:tr("aiWhy")}),element("p",{className:"ai-priority-why",text:tr("aiQuoteMicroTip")}));
     card.append(quoteTip);
 
     card.append(fieldTitle(tr("referenceTitle"),tr("referenceOptional")));
