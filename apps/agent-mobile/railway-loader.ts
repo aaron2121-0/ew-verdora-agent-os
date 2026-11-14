@@ -1,12 +1,12 @@
 // EW VERDORA Agent Mobile — Railway Function loader.
-// Railway Functions cap source at 96KB; the Motion bundle is ~336KB.
+// Railway Functions cap source at 96KB; the bundle is ~450KB.
 // This loader fetches the bundle from an immutable GitHub commit, verifies its
 // SHA-256, and parses ONLY the ASSETS/TYPES JSON data (no remote code is executed).
 // To release a new bundle: update BUNDLE_COMMIT + BUNDLE_SHA256 + VERSION, then redeploy.
-const BUNDLE_COMMIT="b2582103a28735aa3376601cf93c80b2eaa98eee";
-const BUNDLE_SHA256="7aa4cf3e2a0935bd76bf0dd333e53df52421e0b17cb768e80284c1fa168cffba";
+const BUNDLE_COMMIT="578f7fee46637d9097889dac33243da50365d406";
+const BUNDLE_SHA256="7b2d123301477ab3ddf62c81a95c7f294809e43f9e96706c4da2fb8ce5a591a3";
 const BUNDLE_URL=`https://raw.githubusercontent.com/aaron2121-0/ew-verdora-agent-os/${BUNDLE_COMMIT}/apps/agent-mobile/dist/railway-function.ts`;
-const VERSION="0.6.1-motion";
+const VERSION="0.7.0-handbook";
 
 async function loadBundle(){
   let lastErr="";
