@@ -61,7 +61,7 @@ begin
  into v_pool
  from (
   select q.id,q.code,q.skill_code from private.training_questions q
-  where q.active=true and q.is_test=false and q.bank_type='daily'
+  where q.active=true and q.bank_type='daily'
     and (case when p_module_code='CORE-BRAND' then
       q.code like 'HB-CORE-BRAND-%'
       else q.skill_code=p_module_code end)
@@ -82,7 +82,7 @@ begin
   raise exception 'agent_not_found';
  end if;
  select * into v_question from private.training_questions
-  where id=p_question_id and active=true and is_test=false and bank_type='daily';
+  where id=p_question_id and active=true and bank_type='daily';
  if v_question.id is null then raise exception 'question_not_found'; end if;
  return jsonb_build_object(
   'id',v_question.id,'question_en',v_question.question_en,
