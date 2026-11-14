@@ -1,0 +1,467 @@
+{
+  "mockedBackend": true,
+  "reports": [
+    {
+      "release": "1.1.0",
+      "sha": "e13005c5801044ad4d1b8703a07e6985566d2f35",
+      "scenario": "fresh",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": false,
+        "svgOrb": false,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ]
+    },
+    {
+      "release": "1.1.1",
+      "sha": "ab076edbdcb17675ea1dc629b2d1ad0cbe8d30ad",
+      "scenario": "fresh",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": false,
+        "svgOrb": true,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ]
+    },
+    {
+      "release": "1.1.2",
+      "sha": "606e069d49d41834710612716b9e412fb3cb932c",
+      "scenario": "fresh",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": false,
+        "svgOrb": true,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ]
+    },
+    {
+      "release": "fixed",
+      "sha": null,
+      "scenario": "fresh",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": true,
+        "svgOrb": false,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ],
+      "checks": {
+        "boundedPaint": true,
+        "networkFirst": true,
+        "offlineAssetFallback": true,
+        "apiNotCached": true
+      }
+    },
+    {
+      "release": "1.1.0",
+      "sha": "e13005c5801044ad4d1b8703a07e6985566d2f35",
+      "scenario": "-upgrade",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": false,
+        "svgOrb": false,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ]
+    },
+    {
+      "release": "1.1.1",
+      "sha": "ab076edbdcb17675ea1dc629b2d1ad0cbe8d30ad",
+      "scenario": "-upgrade",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": false,
+        "svgOrb": true,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ]
+    },
+    {
+      "release": "1.1.2",
+      "sha": "606e069d49d41834710612716b9e412fb3cb932c",
+      "scenario": "-upgrade",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": false,
+        "svgOrb": true,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ]
+    },
+    {
+      "release": "fixed",
+      "sha": null,
+      "scenario": "-upgrade",
+      "viewport": "390x844",
+      "engine": "26.0",
+      "errors": [],
+      "console": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "type": "warning",
+          "message": "The resource https://127.0.0.1:40793/ew-verdora-content/motion/onboarding/01-company.svg was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it wasn't preloaded for nothing."
+        }
+      ],
+      "assertionFailure": null,
+      "state": {
+        "url": "/",
+        "serviceWorkerControlled": true,
+        "floralImage": true,
+        "svgOrb": false,
+        "orb": {
+          "x": 316,
+          "y": 702,
+          "width": 58,
+          "height": 58,
+          "top": 702,
+          "right": 374,
+          "bottom": 760,
+          "left": 316
+        }
+      },
+      "stateChecks": [
+        {
+          "state": "thinking",
+          "assertionFailure": null
+        },
+        {
+          "state": "speaking",
+          "assertionFailure": null
+        },
+        {
+          "state": "idle",
+          "assertionFailure": null
+        }
+      ],
+      "checks": {
+        "boundedPaint": true,
+        "networkFirst": true,
+        "offlineAssetFallback": true,
+        "apiNotCached": true
+      }
+    }
+  ],
+  "requestCount": 532,
+  "failedRequests": [
+    {
+      "release": "1.1.0",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "1.1.1",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "1.1.2",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "fixed",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "fixed",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "1.1.0",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "1.1.1",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "1.1.2",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "fixed",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "fixed",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    },
+    {
+      "release": "fixed",
+      "path": "/content/handbook/daily_actions.json",
+      "status": 404
+    }
+  ]
+}

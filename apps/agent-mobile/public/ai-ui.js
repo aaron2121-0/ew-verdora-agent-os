@@ -62,15 +62,16 @@ export function initAIOrb({onClick,tr,getData,getLang}){
  if(orb)return orb;
  orb=document.createElement("button");orb.type="button";orb.className="ai-orb";orb.dataset.aiState=state;orb.setAttribute("aria-label",tr("aiOpenChat"));
  const slot=document.createElement("span");slot.className="ai-orb-vendor-slot";slot.setAttribute("aria-hidden","true");
- const vm=vendorMotion();
- if(vm?.mountAiOrb){
-   orbMotion=trackMotion("ai-orb",vm.mountAiOrb(slot,{
-     lang:getLang?.()||"en",size:52,state:state==="thinking"?"thinking":"idle",
-
+ // The decorative renderer must never block the dashboard. Keep the same
+ // floral logo, but avoid unbounded SVG/filter compositing over Safari's page.
+ const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);
+ const owner=orb;
+ import("./ai-orb-safe.js").then(({mountSafeAIOrb})=>{
+   if(orb!==owner||!owner.isConnected||orbMotion)return;
+   orbMotion=trackMotion("ai-orb",mountSafeAIOrb(slot,{
+     lang:getLang?.()||"zh",size:52,state:state==="thinking"?"thinking":"idle"
    }));
- }else{
-   const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);
- }
+ }).catch(()=>{});
  const label=document.createElement("span");label.className="sr-only";label.textContent=tr("aiOpenChat");
  orb.append(slot,label);orb.addEventListener("click",onClick);document.body.append(orb);
  motionBudget();
