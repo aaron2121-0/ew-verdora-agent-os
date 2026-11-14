@@ -7,11 +7,12 @@ import {initMotion} from "./motion.js";
 import {setMotionLanguage,vendorMotion,clearMotion} from "./motion-vendor.js";
 import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile,aiStart,aiEnd} from "./ai-ui.js";
 import {createAIChat} from "./ai-chat.js";
+import {createKycExperience} from "./kyc.js";
 
 let CFG=null,sb=null,session=null,D=null,UI=null;
 let lang=getStoredLanguage();
 let scenario="",activeModule="";
-let refreshBusy=null,aiChat=null,aiProfile=null;
+let refreshBusy=null,aiChat=null,aiProfile=null,kyc=null;
 const $=id=>document.getElementById(id);
 const tr=(key,vars={})=>translate(lang,key,vars);
 
@@ -54,6 +55,7 @@ function applyI18n(){
   setMotionLanguage(lang);
   UI?.onLanguageChange();
   refreshAIOrb(tr);
+  kyc?.onLanguageChange?.();
   const themeBtn=$("themeToggle");
   if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
@@ -66,6 +68,7 @@ function view(name){
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
+  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
 }
 
 async function fn(path,body){
@@ -89,13 +92,48 @@ async function fn(path,body){
   return data;
 }
 
+function ensureKyc(){
+  if(kyc)return kyc;
+  kyc=createKycExperience({
+    getData:()=>D,
+    getLang:()=>lang,
+    tr,
+    api:body=>fn("agent-session",body),
+    rawUpload:async(uploadUrl,blob,contentType)=>{
+      let response;
+      try{
+        response=await fetch(uploadUrl,{
+          method:"POST",
+          headers:{
+            "Content-Type":contentType,
+            "Authorization":"Bearer "+session.access_token,
+            "apikey":CFG.key
+          },
+          body:blob,
+          cache:"no-store"
+        });
+      }catch{throw new Error("network_error")}
+      return response;
+    },
+    onRefresh:refresh
+  });
+  kyc.bind();
+  return kyc;
+}
+
 async function refresh(){
   if(refreshBusy)return refreshBusy;
   refreshBusy=(async()=>{
     const result=await fn("agent-session",{action:"dashboard"});
-    if(result.needs_registration){view("register");return result}
     D=result;
+    const identity=ensureKyc();
+    if(result.needs_registration){
+      view("register");
+      if(result.kyc_required){await identity.sync();await identity.open({startStep:1})}
+      return result;
+    }
     view("app");
+    await identity.sync();
     if(!UI){
       UI=createPhase1UI({
         getData:()=>D,
@@ -115,10 +153,12 @@ async function refresh(){
           friendlyError,
           openPractice
         },
-        onRefresh:refresh
+        onRefresh:refresh,
+        renderTodayTop:()=>identity.renderTodayCard()
       });
       await UI.init();
     }else UI.renderAll();
+    UI.renderAll();
     if(!aiChat){
       const aiCall=body=>fn("agent-ai",body);
       aiChat=createAIChat({api:aiCall,tr,getData:()=>D,getLang:()=>lang});
@@ -238,6 +278,7 @@ function setupHandlers(){
     if(uid)await clearOrderDraft(uid);
     UI?.training?.destroy?.();
     aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
+    kyc?.destroy();kyc=null;
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
   });
   const role=setupBottomSheet($("roleSheet"));
