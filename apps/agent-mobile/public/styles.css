@@ -486,3 +486,12 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .ai-orb:has(.vd-orb-wrap){padding:0;overflow:visible}
 @media(max-width:430px){.earning-actions .vd-ht-card{padding:15px 12px}.earning-actions .vd-ht-list{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.ai-orb-vendor-slot *{animation:none!important}}
+
+/* Full-AI additions */
+.ai-outcome-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ai-next-out{margin-top:10px;display:grid;gap:6px}
+.ai-platform{margin-top:10px}
+.ai-week-list{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.ai-week-day{padding:10px 12px;border-radius:14px;border:1px solid var(--line,rgba(127,127,127,.2))}
+.ai-week-day.is-today{border-color:var(--brand,#2E7D5B);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand,#2E7D5B) 25%,transparent)}
+.ai-week-day ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5}
