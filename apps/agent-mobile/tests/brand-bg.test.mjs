@@ -9,6 +9,7 @@ const read=p=>fs.readFileSync(path.join(root,p),"utf8");
 const build=read("build-railway-function.mjs");
 const html=read("public/index.html");
 const app=read("public/app.js");
+const loader=read("public/brand-loader.js");
 const phase=read("public/phase1.js");
 const css=read("public/styles.css");
 const vendorRoot=path.join(root,"vendor","motion-pack-v1");
@@ -23,20 +24,24 @@ test("reviewed motion-pack-v1 files contain no eval or network code",()=>{
 });
 
 test("brand motion is local, lazy and used on Login and Today",()=>{
-  assert.match(html,/\/vendor\/motion-pack-v1\/brand-bg\.css/);
+  assert.doesNotMatch(html,/stylesheet[^>]+\/vendor\/motion-pack-v1\/brand-bg\.css/);
+  assert.match(html,/preload[^>]+onboarding\/01-company\.svg[^>]+fetchpriority="high"/);
   assert.doesNotMatch(html,/<script[^>]+brand-bg\.js/);
-  assert.match(app,/import\("\/vendor\/motion-pack-v1\/brand-bg\.js"\)/);
-  const brand=read("vendor/motion-pack-v1/brand-bg.js");
-  assert.match(brand,/MutationObserver/);
-  assert.match(brand,/20261114/);
-  assert.match(brand,/20261115/);
+  assert.match(app,/import\("\.\/brand-loader\.js"\)/);
+  assert.match(loader,/import\("\/vendor\/motion-pack-v1\/brand-bg\.js"\)/);
+  assert.match(app,/mountBrandBg\(\$\("login"\),\{placement:"tr",seed:20261114\}\)/);
+  assert.match(phase,/import\("\.\/brand-loader\.js"\)/);
+  assert.match(phase,/mountBrandBg\(page,\{placement:"tr",seed:20261115\}\)/);
   assert.match(css,/--bg-opacity:\.032/);
 });
 
 test("build keeps original initial-JS cap and separately budgets lazy brand motion",()=>{
   assert.match(build,/if\(jsBytes>150\*1024\)/);
   assert.match(build,/brandJsBytes>4\*1024/);
+  assert.match(build,/brandLoaderBytes>2\*1024/);
+  assert.match(build,/n!==lazyBrandLoader/);
   assert.match(build,/Railway bundle exceeds 900KB/);
+  assert.match(build,/files\["styles\.css"\]\+="\\n"\+files\["vendor\/motion-pack-v1\/brand-bg\.css"\]/);
   assert.match(build,/version:"0\.9\.0"/);
   assert.match(read("vendor/motion-pack-v1/brand-bg.css"),/prefers-reduced-motion:reduce/);
 });
