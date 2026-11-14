@@ -31,7 +31,7 @@ const friendlyError=code=>{
   return "Unable to complete this action. Please try again. / 暂时无法完成，请再试一次。";
 };
 async function call(body,options={}){let r=await fetch(CFG.url+"/functions/v1/owner-session",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":CFG.key},body:JSON.stringify(body||{}),signal:options.signal,cache:"no-store",referrerPolicy:"no-referrer"});let j=await r.json();if(!r.ok)throw Error(j.error||"Request failed");return j}
-function show(x){if(x!=="app"){maskKyc("身份资料已遮盖 / Sensitive details hidden.");$("app").classList.remove("kyc-mode")} $("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
+function show(x){if(x!=="app")closeKycPage(); $("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
 async function refreshHandbook(){
   const j=await call({action:"handbook_pending"});
   const entries=j.entries||[],batchById=new Map((j.batches||[]).map(b=>[b.id,b]));
@@ -126,7 +126,7 @@ async function refreshHandbook(){
 
 const KYC_VIEW_MS=60000;
 const kycUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-let kycSeq=0,kycTimer=null,kycAbort=null,kycActive=null,kycListBusy=false;
+let kycSeq=0,kycTimer=null,kycAbort=null,kycActive=null,kycListBusy=false,kycListSeq=0,kycListAbort=null;
 function maskKyc(message="身份资料已遮盖。请重新点开查看。 / Details hidden. Open again to view."){
   ++kycSeq;
   if(kycTimer!==null){clearTimeout(kycTimer);kycTimer=null}
@@ -144,6 +144,8 @@ function maskKyc(message="身份资料已遮盖。请重新点开查看。 / Det
   if($("kycMasked")){$("kycMasked").textContent=message;$("kycMasked").classList.remove("hidden")}
 }
 function closeKycPage(){
+  if(kycListAbort){kycListAbort.abort();kycListAbort=null}
+  ++kycListSeq;kycListBusy=false;$("kycReload").disabled=false;
   maskKyc();
   $("app").classList.remove("kyc-mode");
   $("kycPage").classList.add("hidden");
@@ -161,6 +163,8 @@ function kycStatusOrder(s){return s==="submitted"?0:s==="rejected"?1:s==="approv
 async function refreshKycList(){
   if(kycListBusy||$("kycPage").classList.contains("hidden"))return;
   kycListBusy=true;
+  const listSeq=++kycListSeq,controller=new AbortController();
+  kycListAbort=controller;
   $("kycReload").disabled=true;
   $("kycMessage").textContent="读取审核列表中… / Loading review queue…";
   $("kycQueue").replaceChildren();
@@ -168,11 +172,12 @@ async function refreshKycList(){
     // GPT 1 currently returns {entries:[{agent_id,preferred_name,area,submitted_at,ic_last4,status}]} (other backend fields ignored).
     // Fetch the submitted queue independently: a recent approved record must not push older pending cases out of the capped list.
     const [pendingJ,allJ]=await Promise.all([
-      call({action:"kyc_list",status:"submitted",limit:100}),
-      call({action:"kyc_list",status:"all",limit:100})
+      call({action:"kyc_list",status:"submitted",limit:100},{signal:controller.signal}),
+      call({action:"kyc_list",status:"all",limit:100},{signal:controller.signal})
     ]);
     const pending=pendingJ.items??pendingJ.entries??pendingJ.records;
     const all=allJ.items??allJ.entries??allJ.records;
+    if(listSeq!==kycListSeq||controller.signal.aborted||$("kycPage").classList.contains("hidden"))return;
     if(!Array.isArray(pending)||!Array.isArray(all))throw Error("kyc_contract_error");
     const dedup=new Map();
     for(const row of [...all,...pending])if(row&&kycUuid.test(String(row.agent_id||"")))dedup.set(String(row.agent_id),row);
@@ -195,9 +200,10 @@ async function refreshKycList(){
     }
     $("kycQueue").append(fragment);
   }catch{
+    if(listSeq!==kycListSeq||controller.signal.aborted)return;
     $("kycCount").textContent="";
     $("kycMessage").textContent="身份审核接口未就绪或读取失败。请确认 GPT 1 的 kyc_list 已上线并授权 Owner。 / KYC service unavailable.";
-  }finally{kycListBusy=false;$("kycReload").disabled=false}
+  }finally{if(listSeq===kycListSeq){kycListBusy=false;kycListAbort=null;$("kycReload").disabled=false}}
 }
 function kycSignedPhotoUrl(value){
   if(typeof value!=="string"||!value)return null;
