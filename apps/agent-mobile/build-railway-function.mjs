@@ -88,7 +88,7 @@ const gzip=text=>zlib.gzipSync(Buffer.from(text,"utf8"),{level:9}).toString("bas
 const CSP=[
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "font-src 'self'",

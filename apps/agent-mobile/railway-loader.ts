@@ -25,7 +25,10 @@ async function loadBundle(){
   throw new Error("bundle_load_failed:"+lastErr);
 }
 
-const {assets:ASSETS,types:TYPES,csp:CSP}=await loadBundle();
+const {assets:ASSETS,types:TYPES,csp:BUNDLE_CSP}=await loadBundle();
+// Motion pack (brand background, AI orb, cards) renders style="" attributes.
+// Allow inline STYLES only; script-src stays strict (no inline scripts).
+const CSP=BUNDLE_CSP.replace("style-src 'self'","style-src 'self' 'unsafe-inline'");
 const decoded=new Map<string,Uint8Array>();
 function bodyFor(path:string,compressed=false){
   const key=path+(compressed?"|gzip":"|plain");
