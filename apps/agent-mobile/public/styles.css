@@ -525,3 +525,14 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 :root[data-theme="dark"] .auth-wrap{--bg-opacity:.055}
 :root[data-theme="dark"] .today-shell{--bg-opacity:.04}
 @media (prefers-reduced-motion:reduce){.auth-wrap,.today-shell{scroll-behavior:auto}}
+
+/* [D2] Owner-approved work gallery: minimum 16px labels, touch targets 48px. */
+.portfolio-gallery{margin:18px 0;padding:16px;border:1px solid var(--border,#32423c);border-radius:18px}
+.portfolio-gallery h2{font-size:19px;margin:0 0 6px}
+.portfolio-gallery p{font-size:16px;line-height:1.55}
+.portfolio-gallery select{width:100%;min-height:48px;font-size:16px;margin:12px 0}
+.portfolio-gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.portfolio-gallery-item{border-radius:14px;padding:10px;background:var(--card-bg,#1b2823)}
+.portfolio-gallery-item img{width:100%;height:auto;max-height:350px;object-fit:contain;display:block;border-radius:10px}
+.portfolio-gallery-actions{display:flex;gap:8px;flex-wrap:wrap}
+.portfolio-gallery-actions .btn{flex:1;min-width:130px;min-height:48px;font-size:16px}
