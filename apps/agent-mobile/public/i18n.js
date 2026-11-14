@@ -1042,6 +1042,112 @@ I18N.en.handbookSubtitle="Approved product lines, photos and scripts";
 I18N.zh.handbookTitle="产品手册";
 I18N.zh.handbookSubtitle="五大业务线 · 核准作品 · 客户话术";
 
+
+Object.assign(I18N.en,{
+  aiTodayFirstTitle:"Who to contact first today",
+  aiTodayFirstHint:"I picked the customers most worth contacting now and wrote the first message for you.",
+  aiTodayFirstLoading:"Choosing today's first customers…",
+  aiTodayFirstEmpty:"No customer needs attention right now. You can focus on finding new enquiries.",
+  customer:"Customer"
+});
+Object.assign(I18N.zh,{
+  aiTodayFirstTitle:"今天先联系谁",
+  aiTodayFirstHint:"我已经帮你排好现在最值得先联系的客人，也写好第一句。",
+  aiTodayFirstLoading:"正在帮你排今天先联系谁…",
+  aiTodayFirstEmpty:"现在没有客人需要马上跟进，可以先去找新的询问。",
+  customer:"客人"
+});
+
+
+Object.assign(I18N.en,{
+  aiConversationTitle:"Turn a chat into a customer",
+  aiConversationHint:"Paste the WhatsApp conversation. I’ll pull out the useful details, then you check them before saving.",
+  aiConversationPaste:"Paste the customer conversation here…",
+  aiConversationAnalyse:"Organise this chat",
+  aiConversationReview:"Check before saving",
+  aiConversationReviewHint:"I only suggest the details. Edit anything that is not right.",
+  aiConversationArea:"Delivery area",
+  aiConversationAreaNote:"Area mentioned",
+  aiConversationCreate:"Save as customer",
+  aiConversationCreated:"Customer saved."
+});
+Object.assign(I18N.zh,{
+  aiConversationTitle:"贴对话，帮我整理成客人",
+  aiConversationHint:"把 WhatsApp 对话贴进来。我先抓重点，你确认没问题才保存。",
+  aiConversationPaste:"把客人的对话贴在这里…",
+  aiConversationAnalyse:"帮我整理",
+  aiConversationReview:"保存前确认一下",
+  aiConversationReviewHint:"这些只是建议，有不对可以直接改。",
+  aiConversationArea:"送货地区",
+  aiConversationAreaNote:"对话提到的地区",
+  aiConversationCreate:"保存这个客人",
+  aiConversationCreated:"客人已经保存。"
+});
+
+
+Object.assign(I18N.en,{
+  aiObjectionTitle:"Customer said this — what do I reply?",
+  aiObjectionHint:"Tap a common situation or paste the customer's words. I'll give you 3 safe replies to choose from.",
+  aiObjectionPaste:"Paste what the customer said…",
+  aiObjectionExpensive:"Too expensive",
+  aiObjectionThink:"I'll think",
+  aiObjectionSame:"Want the same",
+  aiObjectionAsk:"Give me 3 replies",
+  aiObjectionOption:"Reply option"
+});
+Object.assign(I18N.zh,{
+  aiObjectionTitle:"客人这样说，我怎么回？",
+  aiObjectionHint:"点一个常见情况，或者贴客人的原话。我给你 3 种安全回法，你选一条就好。",
+  aiObjectionPaste:"把客人的原话贴这里…",
+  aiObjectionExpensive:"太贵",
+  aiObjectionThink:"再想想",
+  aiObjectionSame:"要一样的",
+  aiObjectionAsk:"给我 3 种回法",
+  aiObjectionOption:"可以这样回"
+});
+
+
+Object.assign(I18N.en,{
+  aiFollowupScheduleTitle:"When should I contact this customer again?",
+  aiFollowupScheduleHint:"I’ll suggest a sensible time. You choose whether to save it.",
+  aiFollowupSuggestBtn:"Suggest a follow-up time",
+  aiFollowupSuggested:"Suggested next contact",
+  aiFollowupConfirmBtn:"Save this reminder",
+  aiFollowupScheduled:"Follow-up reminder saved."
+});
+Object.assign(I18N.zh,{
+  aiFollowupScheduleTitle:"这个客人下次几时找？",
+  aiFollowupScheduleHint:"我先建议一个时间，你确认了才会保存。",
+  aiFollowupSuggestBtn:"帮我排下次联系",
+  aiFollowupSuggested:"建议下次联系",
+  aiFollowupConfirmBtn:"保存这个提醒",
+  aiFollowupScheduled:"下次联系时间已经保存。"
+});
+
+
+Object.assign(I18N.en,{
+  aiRepeatTitle:"Previous customers you can check in with",
+  aiRepeatHint:"These are real customers who bought before. I wrote a light check-in — use it only if it feels appropriate.",
+  aiRepeatLoading:"Looking through your previous customers…",
+  aiRepeatEmpty:"No previous customer is ready for a check-in yet."
+});
+Object.assign(I18N.zh,{
+  aiRepeatTitle:"旧客可以再问一问",
+  aiRepeatHint:"这些都是真的买过的客人。我写了一句轻轻问候，适合才发，不要硬推。",
+  aiRepeatLoading:"正在看你以前成交过的客人…",
+  aiRepeatEmpty:"现在还没有适合重新联系的旧客。"
+});
+
+
+Object.assign(I18N.en,{
+  aiMicroTipTitle:"One quick tip before you do this",
+  aiMicroTipLoading:"Getting one useful tip for this step…"
+});
+Object.assign(I18N.zh,{
+  aiMicroTipTitle:"做之前，提醒你一句",
+  aiMicroTipLoading:"正在看这一步最需要注意什么…"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){
