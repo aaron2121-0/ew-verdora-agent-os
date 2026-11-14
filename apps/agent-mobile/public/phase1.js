@@ -997,18 +997,25 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
             });
             const share=iconButton("share2",getLang()==="zh"?"分享给客人":"Share photo","btn btn-primary");
             share.addEventListener("click",async()=>{
-              if(navigator.share){
-                try{await navigator.share({title:"EW VERDORA",text:caption||"",url:imgUrl});return}
-                catch(e){if(e?.name==="AbortError")return}
-              }
-              // If Web Share is unavailable, save this approved image to the phone.
               try{
+                // Share the actual image bytes, not an expiring signed URL.
                 const resp=await fetch(imgUrl,{cache:"no-store"});
                 if(!resp.ok)throw Error("image_unavailable");
-                const blob=await resp.blob(),url=URL.createObjectURL(blob);
-                const a=document.createElement("a");a.href=url;a.download="ew-verdora-work."+String(blob.type==="image/png"?"png":blob.type==="image/webp"?"webp":"jpg");
-                document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
-              }catch{window.open(imgUrl,"_blank","noopener,noreferrer")}
+                const blob=await resp.blob();
+                const ext=blob.type==="image/png"?"png":blob.type==="image/webp"?"webp":"jpg";
+                const file=new File([blob],"ew-verdora-work."+ext,{type:blob.type||"image/jpeg"});
+                if(navigator.share&&navigator.canShare?.({files:[file]})){
+                  try{await navigator.share({files:[file],title:"EW VERDORA",text:caption||""});return}
+                  catch(e){if(e?.name==="AbortError")return}
+                }
+                const url=URL.createObjectURL(blob);
+                const a=document.createElement("a");a.href=url;a.download=file.name;
+                document.body.append(a);a.click();a.remove();
+                setTimeout(()=>URL.revokeObjectURL(url),30000);
+              }catch{
+                // Browser/CORS fallback: open the private signed image for manual saving.
+                window.open(imgUrl,"_blank","noopener,noreferrer");
+              }
             });
             const actions=element("div",{className:"portfolio-gallery-actions"});
             actions.append(copy,share);tile.append(actions);collection.append(tile);
