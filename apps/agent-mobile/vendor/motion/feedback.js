@@ -38,7 +38,7 @@ function mountProgressRing(box,o){
   w.innerHTML='<span class="vd-ring-track" aria-hidden="true"></span><span class="vd-ring-clip vd-ring-clip--r" aria-hidden="true"><span class="vd-ring-fill vd-ring-fill--r"></span></span><span class="vd-ring-clip vd-ring-clip--l" aria-hidden="true"><span class="vd-ring-fill vd-ring-fill--l"></span></span><span class="vd-ring-center"><strong class="vd-ring-val">0%</strong><span class="vd-ring-label"></span></span>';
   box.innerHTML='';box.appendChild(w);
   var vEl=w.querySelector('.vd-ring-val'),lEl=w.querySelector('.vd-ring-label'),cur=0,raf=null;
-  lEl.textContent=lbl||(VM.t?VM.t(lang,'ringLabelVerify'):'');
+  lEl.textContent=lbl||(VM.t?VM.t(lang,'ringLabelVerify'):'');w.setAttribute('aria-label',lEl.textContent||'Progress');
   function ap(p){var c=Math.max(0,Math.min(1,p));w.style.setProperty('--r-deg',(-135+Math.min(c*2,1)*180).toFixed(2)+'deg');w.style.setProperty('--l-deg',(-135+Math.max((c-.5)*2,0)*180).toFixed(2)+'deg');vEl.textContent=Math.round(c*100)+'%';w.setAttribute('aria-valuenow',String(Math.round(c*mx)));}
   function go(tv,dur,cb){
     cancelAnimationFrame(raf);w.classList.remove('is-complete');var tp=Math.max(0,Math.min(1,tv/mx)),sp=cur/mx;
@@ -47,7 +47,7 @@ function mountProgressRing(box,o){
     (function step(nw){var t=Math.min(1,(nw-st)/dur);ap(sp+(tp-sp)*(1-Math.pow(1-t,3)));if(t<1)raf=requestAnimationFrame(step);else{cur=tv;if(tp>=1){w.classList.add('is-complete');if(cb)cb();}}})(st);
   }
   ap(0);if(typeof opt.value==='number')go(opt.value,opt.duration||900,opt.onComplete);
-  return{el:w,setValue:function(v,d,cb){go(v,typeof d==='number'?d:780,cb);},setLang:function(nl,ol){lang=VM.normLang?VM.normLang(nl):nl;lEl.textContent=ol||(VM.t?VM.t(lang,'ringLabelVerify'):lEl.textContent);},reset:function(){cur=0;w.classList.remove('is-complete');ap(0);}};
+  return{el:w,setValue:function(v,d,cb){go(v,typeof d==='number'?d:780,cb);},setLang:function(nl,ol){lang=VM.normLang?VM.normLang(nl):nl;lEl.textContent=ol||(VM.t?VM.t(lang,'ringLabelVerify'):lEl.textContent);w.setAttribute('aria-label',lEl.textContent||'Progress');},reset:function(){cur=0;w.classList.remove('is-complete');ap(0);}};
 }
 var DEF_ST=[{area:'Petra Jaya'},{area:'Batu Kawa'},{area:'Tabuan Jaya'}],TONES=['review','confirm','pending'],KEYS=['stBadgeOpening','stBadgeBouquet','stBadgeWedding'];
 function mountStatusFeed(box,data,opts){
