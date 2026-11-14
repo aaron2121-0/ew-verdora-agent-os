@@ -5,7 +5,7 @@
 ## Owner UI
 - Separate Owner-only review screen. List displays preferred_name, area, submitted_at (Asia/Kuching), and masked ic_last4 ONLY. Submitted records sorted first; drafts omitted. No detail or image prefetch.
 - On row click, invoke kyc_view once; display sensitive fields with textContent (not HTML). Begin the 60-second timer BEFORE fetching. On expiry, hiding, background tab, focus loss, pagehide, back or logout, abort requests, discard record reference, remove text and clear canvas. Ignore responses that arrive after masking.
-- One-click approve; reject must select a reason OR enter a custom explanation ("Other" requires custom text). Delete is shown only when delete_requested_at is present (Agent-requested deletion), and requires two separate confirmations including typing DELETE. Backend must enforce status transitions and retention requirements.
+- One-click approve is enabled only after the IC front photo has been successfully decoded and rendered; reject must select a reason OR enter a custom explanation ("Other" requires custom text). Delete is shown only when delete_requested_at is present (Agent-requested deletion), and requires two separate confirmations including typing DELETE. Backend must enforce status transitions and retention requirements.
 - IC image must be a short-lived signed URL from private Storage bucket agent-kyc, downloaded for in-memory decode with fetch(cache: no-store); MIME whitelist JPEG/PNG/WebP, max 5 MiB. Draw onto canvas; do not use img src, anchors, clipboard, downloadable attachments, object URLs, localStorage or IndexedDB. No KYC data in logs.
 
 ## Required owner-session API contract (to be aligned with GPT 1)
@@ -40,6 +40,6 @@ GPT 1 currently returns entries from kyc_list; photo_signed_url lives INSIDE the
 - Owner/Agent/anon KYC 200/403/401 matrix for all four actions; verify KYC list fields only and submitted-first sort.
 - No details fetched until click; test normal/late (>60s) image response, expiry at 60 seconds, switch rows, browser blur/tab hide, back, logout, and token/session loss. No photo or sensitive text reappears after hide.
 - Test malformed/mismatched agent_id, invalid public/foreign signed URL, wrong MIME, >5 MiB, expired signature, 403 and unavailable endpoint: all fail closed, no sensitive error details.
-- Verify approve once, required reject reason, server-side status race prevention, two-step delete, private Storage object removal and retention/audit.
+- Verify approve is blocked until the IC photo is rendered, approve once after verifying photo, required reject reason, server-side status race prevention, two-step delete, private Storage object removal and retention/audit.
 - Verify response/cache headers and browser Network/Cache behavior in staging. Capture 360px and 430px bilingual light/dark screenshots with **synthetic non-PII records only**; no real ID images, IC numbers, bearer tokens or signed links in test artifacts.
 - **No production migration, Railway Function upload, Edge Function deployment or merging is authorized by this PR.**
