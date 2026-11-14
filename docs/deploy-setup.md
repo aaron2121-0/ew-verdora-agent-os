@@ -54,7 +54,7 @@ Production 和 migration 共用 `production-deploy` 锁，`cancel-in-progress: f
 2. 若仓库历史里没有完整对应当前线上版本的 commit，先由 Owner 人工整理一个可信基准；流程会拒绝猜测。基准必须是 main 的祖先。
 3. 合并后，在 GitHub **Actions → Phase 1 Build Railway Bundle** 查看构建是否成功。**画面位置：最近一次 main run 的绿色结果。** 必要时手动 Run workflow，分支 main。
 4. 打开 **Actions → Production auto-deploy → Run workflow**，选 main，`baseline_sha` 填可信基准 SHA。**画面位置：右上角 Run workflow 展开区。**
-5. 先看 loader job；它只固定 bundle 的完整 commit SHA、文件 SHA256、package.json 的 version，使用 `github-actions[bot]` 普通提交。**画面位置：run → loader-commit → Job summary。** 本 PR 给原本缺少 version 的 Agent package 补上与现有 loader 相同的 `1.0.0-ai-assist`；以后发布版本由维护者在 package.json 明确递增。
+5. 先看 loader job；它只固定 bundle 的完整 commit SHA、文件 SHA256、package.json 的 version，使用 `github-actions[bot]` 普通提交。**画面位置：run → loader-commit → Job summary。** 本 PR 给原本缺少 version 的 Agent package 补上与现有 loader 相同的 `0.9.1`；以后发布版本由维护者在 package.json 明确递增。
 6. 查看 **Review deployments → production**，确认 SHA、改动和回滚基准后核准。**画面位置：run 页的等待核准横幅。** 首次发布还会对线上 version、bundle 标记、Agent 首页 HTTP 200 和未登录 401 做基准检查，失败就不部署。首次人工基准可能早于 Google 按钮的 HTML fallback，因此首次基准及它的回滚只检查首页 HTTP 200；新发布必须包含规定文字。
 7. 成功后 GitHub Deployment 的 SHA 就是之后的自动回滚基准，后续手动触发不用再填 baseline。**画面位置：仓库 Deployments → production，以及 run 的 Job summary。**
 
