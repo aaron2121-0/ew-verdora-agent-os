@@ -1,14 +1,8 @@
 // Approved vendor runtime: no ai-demos, no demo business copy.
 import "./ew-verdora-content/motion/i18n.js";
-import "./ew-verdora-content/motion/coach.js";
-import "./ew-verdora-content/motion/gallery.js";
-import "./ew-verdora-content/motion/kyc.js";
-import "./ew-verdora-content/motion/feedback.js";
-import "./ew-verdora-content/motion/celebrate.js";
 import "./ew-verdora-content/motion/home-today.js";
 import "./ew-verdora-content/motion/cards.js";
 import "./ew-verdora-content/motion/ai-orb.js";
-import "./ew-verdora-content/motion/transitions.js";
 const instances=new Map();
 export const vendorMotion=()=>window.VerdoraMotion||null;
 export function trackMotion(name,instance){if(instance&&typeof instance.setLang==="function")instances.set(name,instance);else instances.delete(name);return instance}
@@ -28,4 +22,22 @@ export function applyReviewedMotionCopy(ui){
   words.homeAllDoneBanner=lang==="zh"?"今天 3 件事已全部完成":"All 3 actions completed";
   words.homeReset=lang==="zh"?"重置今日完成状态":"Reset today's checks";
  }
+}
+// Load heavyweight visual modules only on their real screens, never on first paint.
+const lazyMotion={
+  coach:()=>import("./ew-verdora-content/motion/coach.js"),
+  gallery:()=>import("./ew-verdora-content/motion/gallery.js"),
+  kyc:()=>import("./ew-verdora-content/motion/kyc.js"),
+  celebrate:()=>import("./ew-verdora-content/motion/celebrate.js"),
+  transitions:()=>import("./ew-verdora-content/motion/transitions.js"),
+  feedback:()=>import("./ew-verdora-content/motion/feedback.js")
+};
+const lazyPromises=new Map();
+export function loadVendorMotion(name){
+  if(!Object.hasOwn(lazyMotion,name))return Promise.reject(new Error("invalid_motion_module"));
+  if(!lazyPromises.has(name)){
+    const pending=lazyMotion[name]().then(()=>vendorMotion()).catch(error=>{lazyPromises.delete(name);throw error});
+    lazyPromises.set(name,pending);
+  }
+  return lazyPromises.get(name);
 }

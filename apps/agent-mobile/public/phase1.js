@@ -8,7 +8,7 @@ import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
 import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
-import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
+import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy,loadVendorMotion} from "./motion-vendor.js";
 import {mountD6TodayCoach,mountD6Gallery,styleD6AIMessage,triggerD6Celebration} from "./d6-motion.js";
 
 const NAV=[
@@ -68,6 +68,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   let generatedKitCode=null;
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let lastAllDone=false;
+  let lastEarnedToday=null;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
 
@@ -193,6 +194,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       target.classList.add("active");
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if(old&&old!==target&&!reduced)void loadVendorMotion("transitions").catch(()=>{});
     const vm=vendorMotion();
     if(old&&old!==target&&vm?.runSharedSwap&&!reduced){
       vm.runSharedSwap(old,swap,()=>target);
@@ -357,6 +359,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const host=document.getElementById("todayPage");if(!host)return;
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
+    const earned=m.today_earned;
+    if(earned!=null&&Number.isFinite(Number(earned))){
+      const current=Number(earned);
+      if(lastEarnedToday!==null&&current>lastEarnedToday)triggerD6Celebration("sale");
+      lastEarnedToday=current;
+    }
     const page=element("div",{className:"page-shell today-shell"});
     import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;

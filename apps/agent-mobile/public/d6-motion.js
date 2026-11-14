@@ -1,5 +1,5 @@
 // D6 live-data adapters. Vendor prototype defaults are intentionally never mounted.
-import {vendorMotion,trackMotion} from "./motion-vendor.js";
+import {vendorMotion,trackMotion,loadVendorMotion} from "./motion-vendor.js";
 const isReduced=()=>Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
 const loc=(lang,zh,en)=>lang==="zh"?"zh"===lang?zh:en:en;
 function node(tag,content,cls){
@@ -47,7 +47,7 @@ export function mountD6TodayCoach({phase1={},getLang,onMessage,onOpenLead}={}){
   shell.append(list);
   return shell;
 }
-export function styleD6AIMessage(card){card?.classList.add("d6-coach-live","vc-draft-card");return card}
+export function styleD6AIMessage(card){card?.classList.add("d6-coach-live","vc-draft-card");void loadVendorMotion("coach").catch(()=>{});return card}
 function photoUrl(value){
   if(typeof value!=="string"||!value.trim())return "";
   try{
@@ -61,7 +61,6 @@ export function mountD6Gallery(items,{lang="en"}={}){
   const records=source.filter(x=>x&&(x.approved===true||x.is_approved===true||["approved","published"].includes(String(x.status||"").toLowerCase())))
     .map(x=>({...x,d6Photo:photoUrl(x.approved_photo_url||x.photo_url||x.image_url||x.imageUrl||"")})).filter(x=>x.d6Photo);
   if(!records.length)return null; // Never show demo images or unapproved work.
-  const vm=vendorMotion();if(typeof vm?.mountGallery!=="function")return null;
   const section=node("section","","d6-gallery-real");
   section.append(node("h2",loc(lang,"作品图库","Approved portfolio"),"section-title"));
   const host=node("div","");section.append(host);
@@ -75,7 +74,9 @@ export function mountD6Gallery(items,{lang="en"}={}){
     subtitle_zh:String(x.caption_zh||x.caption||""),
     subtitle_en:String(x.caption_en||x.caption||"")
   }));
-  const instance=vm.mountGallery(host,data,{lang,autoplayMs:0,iconsBase,svgCache:{[iconsBase+"/bouquet.svg"]:svg}});
+  void loadVendorMotion("gallery").then(vm=>{
+    if(!section.isConnected)return;
+    const instance=vm.mountGallery(host,data,{lang,autoplayMs:0,iconsBase,svgCache:{[iconsBase+"/bouquet.svg"]:svg}});
   host.querySelectorAll(".vd-gallery-slide").forEach((slide,i)=>{
     const placeholder=slide.querySelector(".vd-gallery-placeholder");
     if(!placeholder)return;
@@ -85,12 +86,14 @@ export function mountD6Gallery(items,{lang="en"}={}){
     placeholder.prepend(img);
   });
   host.querySelector("[d-zm]")?.remove(); // Vendor's zoom still displays a demo placeholder.
-  trackMotion("d6-approved-gallery",instance);
+    trackMotion("d6-approved-gallery",instance);
+  }).catch(()=>section.remove());
   return section;
 }
 export function decorateD6KycCard(card){card?.classList.add("vk-card","d6-kyc-card");return card}
 export function decorateD6KycStep(host,step,lang="en"){
   if(!host)return;
+  void Promise.all([loadVendorMotion("feedback"),loadVendorMotion("kyc")]).catch(()=>{});
   // Real consent/details/photo/submit steps differ from the vendor's 3-step demo.
   const bar=node("div","","vk-stp d6-kyc-steps");
   bar.setAttribute("aria-label",loc(lang,"身份验证进度","Identity verification progress"));
@@ -103,9 +106,7 @@ export function decorateD6KycStep(host,step,lang="en"){
 }
 export function triggerD6Celebration(type="course",originEl){
   if(isReduced())return false;
-  const vm=vendorMotion();
-  if(typeof vm?.celebrate!=="function")return false;
-  void vm.celebrate({type:type==="sale"?"exam":"course",originEl:originEl||document.body});
+  void loadVendorMotion("celebrate").then(vm=>vm?.celebrate?.({type:type==="sale"?"exam":"course",originEl:originEl||document.body})).catch(()=>{});
   return true;
 }
 // D2 can use this only with approved photo records; no prototype data fallback.
