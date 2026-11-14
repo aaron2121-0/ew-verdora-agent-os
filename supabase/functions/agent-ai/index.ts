@@ -275,6 +275,18 @@ function fallbackLostReview(lang,reason){
 
 
 
+
+function fallbackMicroTip(lang,context,prof){
+  const zh=lang==="zh",weak=String(Array.isArray(prof?.weaknesses)&&prof.weaknesses[0]||"").toLowerCase();
+  if(context==="quote") return zh
+    ?(weak.includes("price")||weak.includes("价格")?"报价前先确认客户真正的预算方向，不要自己改价。":"报价前先确认日期、场合和最重要的要求，再送正式报价。")
+    :(weak.includes("price")?"Before quoting, confirm the customer's real budget direction and never change the price yourself.":"Before quoting, confirm the date, occasion and most important requirement first.");
+  if(context==="post") return zh?"发之前看一眼：只写真实资料，不制造“快卖完”这种压力。":"Before posting: use only real facts and never create fake urgency.";
+  return zh
+    ?(weak.includes("closing")||weak.includes("成交")?"回客人时留一个容易回答的问题，让对话有下一步。":"先回答客人现在问的，再问一个简单问题，不要一次塞太多。")
+    :(weak.includes("closing")?"End your reply with one easy question so the conversation has a next step.":"Answer what the customer asked first, then ask one simple question — don't overload the message.");
+}
+
 function fallbackRepeatCustomer(lang,lead){
   const zh=lang==="zh",name=String(lead?.customer_label||"").trim(),occasion=String(lead?.occasion||lead?.sales_category||"").trim();
   return {
@@ -495,7 +507,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["repeat_customer","followup_suggest","objection_helper","conversation_extract","today_first","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["micro_tip","repeat_customer","followup_suggest","objection_helper","conversation_extract","today_first","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -761,6 +773,29 @@ Deno.serve(async req=>{
 
 
 
+
+
+  if(action==="micro_tip"){
+    const context=String(body.context||"reply").toLowerCase();
+    if(!["reply","quote","post"].includes(context)) return reply({error:"invalid_context"},400);
+    let lead=null;
+    if(body.lead_id){
+      const leadId=String(body.lead_id).slice(0,80);
+      const res=await admin.from("leads").select("id,status,occasion,sales_category,delivery_date").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
+      if(res.error){console.error("MICRO_TIP_LEAD",res.error.code||"");return reply({error:"request_failed"},500);}
+      if(!res.data) return reply({error:"lead_not_found"},404);
+      lead=res.data;
+    }
+    const fallback=fallbackMicroTip(lang,context,prof);
+    const ai=await callAI(
+      "You are EW VERDORA's invisible micro-coach. Return ONLY JSON {tip:string}. Give exactly ONE short practical sentence the Agent can use while doing the current task. Do not mention exams, scores, leads, pipeline, tokens or AI. Personalise gently to one weakness from the agent profile. For quote: remind them to confirm requirements and never change prices. For reply: help them keep the conversation moving naturally. For post: use real facts and no fake urgency. Never include a price, discount, fake scarcity/review, exact-copy promise, supplier/cost/margin or payment instruction. Language: "+lang+"."+RULES+profileBrief(prof),
+      JSON.stringify({context,customer_stage:lead?.status||null,occasion:lead?.occasion||lead?.sales_category||null,delivery_date:lead?.delivery_date||null}),
+      true
+    );
+    const p=parseJson(ai||"");
+    const valid=p&&typeof p.tip==="string"&&p.tip.trim().length>0&&p.tip.length<=240&&!containsSensitiveOutput(p.tip)&&!containsMarketingPolicyViolation(p.tip);
+    return reply({ok:true,provider:valid?"gemini":"fallback",tip:String(valid?p.tip:fallback).slice(0,240)});
+  }
 
   if(action==="repeat_customer"){
     const {data:leads,error:leadError}=await admin.from("leads")
