@@ -286,6 +286,16 @@ function fallbackTranslation(target){
   return "Thanks for your message. I’ll check the requirements and details first, then I’ll come back to you with the next step.";
 }
 
+function fallbackRepeatCustomer(lang,lead){
+  const zh=lang==="zh",name=String(lead?.customer_label||"").trim(),occasion=String(lead?.occasion||"").trim();
+  return {
+    message:zh
+      ?(name?name+"，":"")+"Hi～之前有帮你安排过"+(occasion?occasion+"花礼":"花礼")+"，想来问候一下 😊 最近如果刚好又有送花或活动需要，可以把日期和场合发我，我帮你先整理。"
+      :"Hi"+(name?" "+name:"")+"! I helped with your "+(occasion||"flower")+" order before, so I wanted to check in 😊 If you happen to need flowers again, send me the occasion and date and I can help organise the details.",
+    why:zh?"从之前的真实购买关系开始，不硬推。":"Starts from the real previous purchase without hard-selling."
+  };
+}
+
 function fallbackMicroTip(lang,prof,context){
   const zh=lang==="zh";
   const weak=Array.isArray(prof?.weaknesses)&&prof.weaknesses.length?String(prof.weaknesses[0]).toLowerCase():"";
@@ -492,7 +502,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority","objection_replies","micro_tip","translate_reply"].includes(action)?action:null;
+  const quotaAction=["repeat_customer","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority","objection_replies","micro_tip","translate_reply"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -611,6 +621,37 @@ Deno.serve(async req=>{
 
 
 
+
+  if(action==="repeat_customer"){
+    const {data:leads,error:leadError}=await admin.from("leads")
+      .select("id,customer_label,occasion,source,delivery_date,updated_at")
+      .eq("agent_id",agent.id).eq("status","won").order("updated_at",{ascending:false}).limit(20);
+    if(leadError){console.error("REPEAT_CUSTOMER_LEADS",leadError.code||"");return reply({error:"request_failed"},500);}
+    const seen=new Set(),candidates=[];
+    for(const lead of leads||[]){
+      const key=String(lead.customer_label||"").trim().toLowerCase();
+      if(!key||seen.has(key))continue;
+      seen.add(key);candidates.push(lead);
+      if(candidates.length>=3)break;
+    }
+    if(!candidates.length)return reply({ok:true,provider:"fallback",customers:[]});
+    const raw=await callAI(
+      "You are EW VERDORA's repeat-customer assistant. Return ONLY JSON {items:[{lead_id:string,message:string,why:string}]}. Write one warm re-engagement WhatsApp message for each real previous customer. Mention the prior occasion only if supplied. Max 60 words. Never invent price, discount, availability, scarcity, anniversaries or birthdays; never promise an exact copy; never mention suppliers, costs, margins or personal payment. End with one easy question. Language: "+lang+"."+RULES+profileBrief(prof),
+      JSON.stringify({previous_customers:candidates.map(x=>({lead_id:x.id,name:x.customer_label,occasion:x.occasion||null,previous_delivery_date:x.delivery_date||null,source:x.source}))}),
+      true
+    );
+    const p=parseJson(raw||""),items=Array.isArray(p?.items)?p.items:[],byId=new Map(items.map(x=>[String(x.lead_id),x]));
+    let allValid=true;
+    const customers=candidates.map(lead=>{
+      const x=byId.get(String(lead.id));
+      const valid=x&&typeof x.message==="string"&&typeof x.why==="string"&&!containsSensitiveOutput(x.message+" "+x.why)&&!containsMarketingPolicyViolation(x.message)&&!detectPolicyRisk(x.message);
+      if(!valid)allValid=false;
+      const fb=fallbackRepeatCustomer(lang,lead);
+      return {lead_id:lead.id,customer_label:String(lead.customer_label||"").slice(0,80),occasion:lead.occasion||null,
+        previous_delivery_date:lead.delivery_date||null,message:String(valid?x.message:fb.message).slice(0,700),why:String(valid?x.why:fb.why).slice(0,240)};
+    });
+    return reply({ok:true,provider:allValid?"gemini":"fallback",customers});
+  }
 
   if(action==="translate_reply"){
     const target=String(body.target||"").toLowerCase();
