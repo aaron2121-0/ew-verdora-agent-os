@@ -34,6 +34,7 @@ test("60-second expiry aborts requests and clears canvas pixels",()=>{
   assert.match(kyc,/const KYC_VIEW_MS=60000/);
   assert.match(kyc,/setTimeout\(\(\)=>maskKyc\(/);
   assert.match(kyc,/kycAbort\.abort\(\)/);
+  assert.match(kyc,/kycListAbort\.abort\(\)/);
   assert.match(kyc,/canvas\.width=0;canvas\.height=0/);
   for(const event of ["visibilitychange","blur","pagehide"])assert.ok(kyc.includes('"'+event+'"'));
   assert.match(kyc,/if\(seq!==kycSeq\|\|signal\.aborted\)return/);
@@ -57,6 +58,7 @@ test("photo URL is strictly restricted to signed, private Supabase bucket",()=>{
 });
 test("rejection requires a reason and deletion requires two confirmations",()=>{
   assert.match(kyc,/code==="other"&&!note/);
+  assert.match(kyc,/!code&&!note/);
   assert.match(kyc,/,decision,reason\}/);
   assert.match(kyc,/if\(!confirm\(/);
   assert.match(kyc,/prompt\("输入 DELETE/);
