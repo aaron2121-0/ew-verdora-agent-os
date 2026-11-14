@@ -117,7 +117,7 @@ Deno.serve(async req=>{
            &&String.fromCharCode(...bytes.slice(8,12))==="WEBP");
       if(!valid||!mime)return reply({error:"invalid_portfolio_file"},422);
       const key=Deno.env.get("GEMINI_API_KEY")||"";
-      const model=(Deno.env.get("GEMINI_MODEL")||"gemini-flash-latest").replace(/[^a-zA-Z0-9.\\-]/g,"");
+      const model=(Deno.env.get("GEMINI_MODEL")||"gemini-flash-latest").replace(/[^a-zA-Z0-9.\-]/g,"");
       let caption=null;
       if(key){
         const {error:limitError}=await admin.rpc("owner_reserve_portfolio_caption_internal",{p_user_id:uid});
@@ -142,7 +142,7 @@ Deno.serve(async req=>{
             const parsed=JSON.parse(raw);
             const lines=new Set(["condolence","opening","bouquet","wedding_event","wholesale","unknown"]);
             const en=String(parsed.caption_en||"").slice(0,240),zh=String(parsed.caption_zh||"").slice(0,130);
-            const policyRisk=/\\bRM\\s*\\d|\\b(price|discount|cost|supplier|guaranteed|identical)\\b|价钱|价格|折扣|成本|一模一样|一定有货|\\b\\+?60\\d{8,11}\\b|@/i;
+            const policyRisk=/\bRM\s*\d|\b(price|discount|cost|supplier|guaranteed|identical)\b|价钱|价格|折扣|成本|一模一样|一定有货|\b\+?60\d{8,11}\b|@/i;
             if(lines.has(parsed.product_line)&&en.length>8&&zh.length>5
                &&!policyRisk.test(en+" "+zh)){
               caption={product_line:parsed.product_line,caption_en:en,caption_zh:zh,
@@ -172,7 +172,7 @@ Deno.serve(async req=>{
         updates.product_line=b.product_line;
       }
       const en=updates.caption_en??photo.caption_en,zh=updates.caption_zh??photo.caption_zh;
-      if(!en||!zh||/\\bRM\\s*\\d|\\b(price|discount|cost)\\b|价钱|价格|折扣/i.test(en+" "+zh))
+      if(!en||!zh||/\bRM\s*\d|\b(price|discount|cost)\b|价钱|价格|折扣/i.test(en+" "+zh))
         return reply({error:"portfolio_caption_requires_review"},422);
       if(decision==="edit")updates.status="pending_review";
       else{updates.status="approved";updates.approved_by=uid;updates.approved_at=new Date().toISOString()}
