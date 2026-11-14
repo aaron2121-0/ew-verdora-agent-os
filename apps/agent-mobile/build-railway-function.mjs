@@ -45,13 +45,16 @@ gatherMotion(contentRoot);
 // Only the brand background runtime and logo are bundled here; the app already
 // has the reviewed AI orb runtime, so bundling a duplicate would waste bytes.
 const motionPackRoot=path.join(root,"vendor","motion-pack-v1");
+const motionPackAll=["brand-bg.js","brand-bg.css","ai-orb.js","ai-orb.css","icons/logo.svg"];
+for(const name of motionPackAll){
+ const source=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
+ if(/\beval\s*\(/.test(source))throw new Error("motion-pack-v1 eval is not allowed: "+name);
+ if(/\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/.test(source))throw new Error("motion-pack-v1 external network code is not allowed: "+name);
+}
 const motionPackRuntime=["brand-bg.js","brand-bg.css","icons/logo.svg"];
 const motionPackAssets=[];
 for(const name of motionPackRuntime){
- const full=path.join(motionPackRoot,...name.split("/"));
- const source=fs.readFileSync(full,"utf8");
- if(/\beval\s*\(/.test(source))throw new Error("motion-pack-v1 eval is not allowed: "+name);
- if(/\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/.test(source))throw new Error("motion-pack-v1 external network code is not allowed: "+name);
+ const source=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
  const target="vendor/motion-pack-v1/"+name;
  files[target]=source;
  motionPackAssets.push(target);
