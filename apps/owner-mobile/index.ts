@@ -165,11 +165,18 @@ async function refreshKycList(){
   $("kycMessage").textContent="读取审核列表中… / Loading review queue…";
   $("kycQueue").replaceChildren();
   try{
-    // Contract: kyc_list returns {items:[{agent_id,preferred_name,area,submitted_at,ic_last4,status}]}.
-    const j=await call({action:"kyc_list"});
-    const rows=j.items??j.entries??j.records;
-    if(!Array.isArray(rows))throw Error("kyc_contract_error");
-    const safe=rows.filter(r=>r&&kycUuid.test(String(r.agent_id||""))&&r.status!=="draft");
+    // GPT 1 currently returns {entries:[{agent_id,preferred_name,area,submitted_at,ic_last4,status}]} (other backend fields ignored).
+    // Fetch the submitted queue independently: a recent approved record must not push older pending cases out of the capped list.
+    const [pendingJ,allJ]=await Promise.all([
+      call({action:"kyc_list",status:"submitted",limit:100}),
+      call({action:"kyc_list",status:"all",limit:100})
+    ]);
+    const pending=pendingJ.items??pendingJ.entries??pendingJ.records;
+    const all=allJ.items??allJ.entries??allJ.records;
+    if(!Array.isArray(pending)||!Array.isArray(all))throw Error("kyc_contract_error");
+    const dedup=new Map();
+    for(const row of [...all,...pending])if(row&&kycUuid.test(String(row.agent_id||"")))dedup.set(String(row.agent_id),row);
+    const safe=[...dedup.values()].filter(r=>r.status!=="draft");
     safe.sort((a,b)=>kycStatusOrder(a.status)-kycStatusOrder(b.status)||(Date.parse(b.submitted_at)||0)-(Date.parse(a.submitted_at)||0));
     $("kycCount").textContent=safe.filter(r=>r.status==="submitted").length+" 待审核 / pending";
     $("kycMessage").textContent=safe.length?"":"暂无已提交的身份资料 / No submitted applications.";
@@ -239,12 +246,12 @@ async function openKycView(agentId){
   $("kycFields").append(kycTextField("资料读取中 / Loading","…"));
   kycTimer=setTimeout(()=>maskKyc("已超过 60 秒，敏感资料自动遮盖。 / 60-second viewing limit reached."),KYC_VIEW_MS);
   try{
-    // Contract: kyc_view returns {kyc:{agent_id,...},ic_front_signed_url:"https://..."}.
+    // GPT 1 returns {kyc:{agent_id,...,photo_signed_url:"https://...",delete_requested_at}}.
     const j=await call({action:"kyc_view",agent_id:agentId},{signal:controller.signal});
     if(seq!==kycSeq||controller.signal.aborted)return;
     const record=j.kyc??j.record??j.entry;
     if(!record||record.agent_id!==agentId)throw Error("kyc_contract_error");
-    kycActive={agentId,status:String(record.status||"")};
+    kycActive={agentId,status:String(record.status||""),deleteRequested:Boolean(record.delete_requested_at)};
     const values=[
       ["法定姓名 / Legal name",record.legal_name],
       ["称呼 / Preferred name",record.preferred_name],
@@ -262,9 +269,9 @@ async function openKycView(agentId){
     $("kycFields").replaceChildren(...values.map(([label,value])=>kycTextField(label,value)));
     const submitted=record.status==="submitted";
     $("kycActions").classList.toggle("hidden",!submitted);
-    $("kycDelete").classList.remove("hidden");
+    $("kycDelete").classList.toggle("hidden",!record.delete_requested_at);
     // Do not put a signed URL into img/src, href, logs, localStorage or IndexedDB.
-    await drawKycPhoto(j.ic_front_signed_url,seq,controller.signal);
+    await drawKycPhoto(record.photo_signed_url,seq,controller.signal);
   }catch{
     if(seq===kycSeq)maskKyc("无法读取该身份资料。请确认权限及 GPT 1 接口格式。 / Unable to view identity record.");
   }
@@ -284,7 +291,7 @@ async function reviewKyc(decision){
   buttons.forEach(b=>b.disabled=true);
   $("kycDecisionMessage").textContent="处理中… / Processing…";
   try{
-    await call({action:"kyc_review",agent_id:selected.agentId,decision,reject_reason:reason},{signal:kycAbort?.signal});
+    await call({action:"kyc_review",agent_id:selected.agentId,decision,reason},{signal:kycAbort?.signal});
     maskKyc(decision==="approve"?"身份已核准 / Identity approved.":"已退回并记录原因 / Rejected with reason.");
     await refreshKycList();
   }catch{
@@ -293,7 +300,7 @@ async function reviewKyc(decision){
 }
 async function deleteKyc(){
   const selected=kycActive;
-  if(!selected)return;
+  if(!selected||!selected.deleteRequested)return;
   if(!confirm("永久删除此 Agent 的身份审核资料与 IC 照片？此操作不可恢复。\nPermanently delete this Agent's KYC record and photo?"))return;
   if(prompt("输入 DELETE 确认永久删除 / Type DELETE to confirm")!=="DELETE")return;
   $("kycDelete").disabled=true;
