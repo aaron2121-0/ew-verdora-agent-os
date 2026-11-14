@@ -68,6 +68,8 @@ function view(name){
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
   $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
+  window.VerdoraMotion?.brandBg?.destroy?.();
+  if(name==="login")import("./brand-loader.js").then(m=>m.mountBrandBg($("login"),{placement:"tr",seed:20261114})).catch(()=>{});
 }
 
 async function fn(path,body){

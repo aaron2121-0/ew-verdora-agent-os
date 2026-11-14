@@ -3,10 +3,10 @@
 // This loader fetches the bundle from an immutable GitHub commit, verifies its
 // SHA-256, and parses ONLY the ASSETS/TYPES JSON data (no remote code is executed).
 // To release a new bundle: update BUNDLE_COMMIT + BUNDLE_SHA256 + VERSION, then redeploy.
-const BUNDLE_COMMIT="197e5aa0ca9ba88a72459cc1004cfc07936dcb92";
-const BUNDLE_SHA256="5ac1f6af002a15b8387600163ba29ccae891194d499c1366f7e39b713894e03d";
+const BUNDLE_COMMIT="c9bd98bc6cab1f1fa383a5f2cb1649475ca0dc8c";
+const BUNDLE_SHA256="783be58c7e7c1ec113ec018f5964ad8ee601ba08e57aae234b658db06f6292c7";
 const BUNDLE_URL=`https://raw.githubusercontent.com/aaron2121-0/ew-verdora-agent-os/${BUNDLE_COMMIT}/apps/agent-mobile/dist/railway-function.ts`;
-const VERSION="0.8.0-full-ai";
+const VERSION="0.9.0";
 
 async function loadBundle(){
   let lastErr="";
@@ -25,7 +25,10 @@ async function loadBundle(){
   throw new Error("bundle_load_failed:"+lastErr);
 }
 
-const {assets:ASSETS,types:TYPES,csp:CSP}=await loadBundle();
+const {assets:ASSETS,types:TYPES,csp:BUNDLE_CSP}=await loadBundle();
+// Motion pack (brand background, AI orb, cards) renders style="" attributes.
+// Allow inline STYLES only; script-src stays strict (no inline scripts).
+const CSP=BUNDLE_CSP.replace("style-src 'self'","style-src 'self' 'unsafe-inline'");
 const decoded=new Map<string,Uint8Array>();
 function bodyFor(path:string,compressed=false){
   const key=path+(compressed?"|gzip":"|plain");

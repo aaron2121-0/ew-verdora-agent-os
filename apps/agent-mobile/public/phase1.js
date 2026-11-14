@@ -210,6 +210,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
     active=next;
+    if(next!=="today")window.VerdoraMotion?.brandBg?.destroy?.();
     pageSwap(next);
     updateNavIndicator();
     if(next==="today")renderToday();
@@ -234,7 +235,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       unlockSummary=result?.today||null;
       if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
     }catch{
-      // Training data is optional here. Never show an exam as ready before its state is confirmed.
     }finally{unlockLoading=false}
   }
 
@@ -349,31 +349,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderTodayPriorityAssist(){
-    const host=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
-    host.append(element("h2",{className:"section-title",text:tr("aiTodayFirstTitle")}),
-      element("p",{className:"screen-subtitle",text:tr("aiTodayFirstSubtitle")}));
-    const run=element("button",{className:"btn btn-primary btn-large",text:tr("aiTodayFirstButton"),attrs:{type:"button"}});
-    const out=element("div",{className:"follow-list"});
-    run.addEventListener("click",async()=>{
-      setButtonLoading(run,true,tr("loading")); aiStart(); let ok=false;
-      try{
-        const j=await api.ai({action:"today_priority"});ok=true;out.replaceChildren();
-        const rows=Array.isArray(j.customers)?j.customers:[];
-        if(!rows.length){out.append(element("p",{className:"ai-priority-why",text:tr("aiTodayFirstEmpty")}));return}
-        rows.forEach((x,index)=>{
-          const card=createAICard({title:(index+1)+". "+(x.customer_label||tr("customerDetails")),text:x.message||"",provider:j.provider||"template",cached:false,tr}).card;
-          card.append(element("p",{className:"ai-priority-why",text:x.why||""}));
-          const actions=element("div",{className:"follow-actions"});
-          const copy=element("button",{className:"btn btn-secondary",text:tr("copyText"),attrs:{type:"button"}});
-          copy.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(String(x.message||""));toast(tr("copied"),{tone:"success"})}catch{toast(tr("errorRequestFailed"),{tone:"danger"})}});
-          const wa=element("button",{className:"btn btn-whatsapp",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(x.message||"")),"_blank","noopener,noreferrer"));
-          actions.append(copy,wa);card.append(actions);out.append(card);
-        });
-      }catch(e){out.replaceChildren(element("p",{className:"notice",text:api.friendlyError(e?.message)}))}
-      finally{setButtonLoading(run,false,tr("aiTodayFirstButton"));aiEnd(ok)}
-    });
-    host.append(run,out);return host;
+    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
+    slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
+    import("./ai-assist-today-first.js").then(m=>{
+      const node=m.renderTodayFirst({element,createAICard,api,getLang,setButtonLoading,aiStart,aiEnd,toast});
+      slot.replaceWith(node);
+    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    return slot;
   }
 
   function renderToday(){
@@ -381,6 +363,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
     const page=element("div",{className:"page-shell today-shell"});
+    import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
     if(identityTop)page.append(identityTop);
 
@@ -459,8 +442,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    // An empty order state must teach the next permitted action, not just
-    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
     if(Number(D?.today_progress?.orders||0)===0){
       const copy=emptyCopy("orders");
       if(copy){
@@ -482,7 +463,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     host.append(page);
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
-    // The 3-action vendor component owns the completion celebration.
   }
 
   function renderDailyBrief(response){
@@ -538,8 +518,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"
     }});
     const vm=vendorMotion();
-    // All customer-facing action text comes from Claude-reviewed daily_actions.json
-    // when present, otherwise from the already-approved dashboard/Selling Kits.
     const zh=dailyActions(getData()||{},"zh");
     const en=dailyActions(getData()||{},"en");
     const kinds=["lead","followup","post"];
@@ -548,7 +526,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       title_zh:String(row.title||""),title_en:String(en[i]?.title||""),
       detail_zh:String(row.detail||""),detail_en:String(en[i]?.detail||"")
     })),tip:null};
-    // Demo package copy is never displayed.
     applyReviewedMotionCopy(reviewed()?.ui);
     const date=String(getData()?.phase1?.kuching_date||kuchingDateKey()).replace(/[^0-9-]/g,"");
     const user=String(getUserId()||"unknown").replace(/[^a-zA-Z0-9-]/g,"");
@@ -578,10 +555,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
         });
         card.append(copy,go);
       });
-      // Retain the actual UI with interactive buttons, not any sample data.
       if(instance)return section;
     }
-    // The base application remains usable if a vendor script cannot load.
     const list=element("div",{className:"earning-action-list"});
     data.actions.forEach((action,i)=>{
       const row=getLang()==="zh"?zh[i]:en[i];
@@ -593,7 +568,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
 
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
@@ -801,42 +775,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderAIIntake(){
-    const wrap=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"lead-intake"}});
-    wrap.append(element("h2",{className:"section-title",text:tr("aiIntakeTitle")}),
-      element("p",{className:"screen-subtitle",text:tr("aiIntakeSubtitle")}));
-    const input=element("textarea",{className:"ai-intake-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiIntakePlaceholder")}});
-    input.placeholder=tr("aiIntakePlaceholder");
-    const read=element("button",{className:"btn btn-primary btn-large",text:tr("aiIntakeRead"),attrs:{type:"button"}});
-    const out=element("div",{});
-    read.addEventListener("click",async()=>{
-      const text=input.value.trim(); if(!text)return;
-      setButtonLoading(read,true,tr("loading")); aiStart(); let ok=false;
-      try{
-        const j=await api.ai({action:"lead_intake_parse",customer_text:text}); ok=true;
-        const c=j.card||{}; out.replaceChildren();
-        const card=createAICard({title:tr("aiIntakeResult"),text:c.summary||"",provider:j.provider||"template",cached:false,tr});
-        const details=element("div",{className:"detail-grid"});
-        [
-          [tr("customerNameTitle"),c.customer_label||tr("aiIntakeUnknown")],
-          [tr("occasionTitle"),c.occasion||tr("aiIntakeUnknown")],
-          [tr("budgetTitle"),c.budget==null?tr("aiIntakeUnknown"):money(c.budget)],
-          [tr("deliveryDateTitle"),c.delivery_date||tr("aiIntakeUnknown")],
-          [tr("aiIntakeArea"),c.area||tr("aiIntakeUnknown")]
-        ].forEach(([k,v])=>{const row=element("div");row.append(element("span",{text:k}),element("strong",{text:String(v)}));details.append(row)});
-        const create=element("button",{className:"btn btn-primary btn-large",text:tr("aiIntakeCreate"),attrs:{type:"button"}});
-        create.addEventListener("click",async()=>{
-          setButtonLoading(create,true,tr("saving"));
-          try{
-            await api.agent({action:"create_lead",source:"whatsapp",customer_label:c.customer_label||"",occasion:c.occasion||"general",budget:c.budget,delivery_date:c.delivery_date||null});
-            toast(tr("aiIntakeCreated"),{tone:"success"}); input.value=""; out.replaceChildren(); await onRefresh();
-          }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-          finally{setButtonLoading(create,false,tr("aiIntakeCreate"))}
-        });
-        card.card.append(details,create); out.append(card.card);
-      }catch(e){out.replaceChildren(element("p",{className:"notice",text:api.friendlyError(e?.message)}))}
-      finally{setButtonLoading(read,false,tr("aiIntakeRead"));aiEnd(ok)}
-    });
-    wrap.append(input,read,out); return wrap;
+    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"lead-intake"}});
+    slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
+    import("./ai-assist-intake.js").then(m=>{
+      const node=m.renderAIIntake({element,createAICard,api,getLang,money,setButtonLoading,aiStart,aiEnd,onRefresh,toast});
+      slot.replaceWith(node);
+    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    return slot;
   }
 
   function renderCustomers(){
