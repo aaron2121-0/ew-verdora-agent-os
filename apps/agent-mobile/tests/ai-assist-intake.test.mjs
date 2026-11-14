@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 const ai=fs.readFileSync(new URL("../../../supabase/functions/agent-ai/index.ts",import.meta.url),"utf8");
 const phase=fs.readFileSync(new URL("../public/phase1.js",import.meta.url),"utf8");
-const i18n=fs.readFileSync(new URL("../public/i18n.js",import.meta.url),"utf8");
+const intake=fs.readFileSync(new URL("../public/ai-assist-intake.js",import.meta.url),"utf8");
 
 test("lead intake is quota limited and redacted through shared AI path",()=>{
   assert.match(ai,/lead_intake_parse/);
