@@ -245,6 +245,10 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
     });
     card.append(times);
 
+    const quoteTip=element("div",{className:"ai-coach-panel"});
+    quoteTip.append(element("small",{className:"muted",text:tr("aiMicroTipLabel")}),element("p",{className:"ai-priority-why",text:tr("aiQuoteMicroTip")}));
+    card.append(quoteTip);
+
     card.append(fieldTitle(tr("referenceTitle"),tr("referenceOptional")));
     const ref=element("div",{className:"reference-picker"+(referenceFile?" has-file":"")});
     const icon=element("div",{className:"reference-icon"});
