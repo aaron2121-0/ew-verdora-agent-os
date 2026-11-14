@@ -18,6 +18,6 @@ test("Agent must confirm the schedule explicitly",()=>{
 });
 
 test("follow-up scheduling copy is bilingual",()=>{
-  assert.match(phase,/Suggested next follow-up/);
-  assert.match(phase,/建议下次联系/);
+  assert.match(phase,/Set · /);
+  assert.match(phase,/设时间 · /);
 });
