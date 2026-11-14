@@ -1,5 +1,5 @@
 -- Agent self-signup toggle. Default OPEN.
--- No CAPTCHA, challenge token, grant table, or extra login gate is introduced here.
+-- No extra sign-in gate is introduced here.
 insert into private.system_settings(key,value)
 values ('agent_signup.open', 'true'::jsonb)
 on conflict (key) do nothing;
@@ -110,7 +110,7 @@ begin
   from private.user_roles
   where user_id = new.user_id;
 
-  if v_role in ('owner','admin') then
+  if v_role = 'owner' then
     raise exception 'owner_cannot_register_as_agent' using errcode='42501';
   end if;
 
@@ -123,7 +123,7 @@ begin
     select 1
     from private.user_roles r
     join auth.users u on u.id = r.user_id
-    where r.role in ('owner','admin')
+    where r.role = 'owner'
       and lower(trim(u.email)) = v_email
   ) then
     raise exception 'owner_cannot_register_as_agent' using errcode='42501';
