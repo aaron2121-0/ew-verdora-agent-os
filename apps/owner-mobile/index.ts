@@ -313,7 +313,7 @@ $("logout").onclick=async()=>{await sb.auth.signOut();session=null;show("login")
 let signupOpen=null;
 function renderSignupSetting(){
   const on=signupOpen===true;
-  $("signupSettingState").textContent=signupOpen===null?"—":(on?"开放 / Open":"关闭 / Closed");
+  $("signupSettingState").textContent=signupOpen===null?"—":(on?"开 / On":"关 / Off");
   $("signupSettingNote").textContent=signupOpen===null
     ?"正在读取目前设定… / Checking current setting…"
     :(on?"新 Agent 现在可以自己用 Google 注册。 / New Agents can register with Google."
