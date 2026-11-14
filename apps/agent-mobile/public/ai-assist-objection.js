@@ -27,7 +27,7 @@ export function mountObjectionHelper({coach,input,element,createAICard,api,getLa
  coach.append(quick);
 }
 
-export async function addMicroTip({box,api,getLang,element,createAICard}){
+export async function t(box,api,getLang,createAICard){
  try{
   const j=await api.ai({action:"micro_tip",context:"customer_reply"});if(!j?.tip)return;
   const title=getLang()==="zh"?"发出去前提醒一句":"One reminder before you send";
