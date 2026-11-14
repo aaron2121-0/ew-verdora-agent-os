@@ -352,7 +352,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const host=document.getElementById("todayPage");if(!host)return;
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
-    const page=element("div",{className:"page-shell today-shell"});\n    window.__verdoraMountBrandBg?.(page,{placement:"tr",seed:20261115});
+    const page=element("div",{className:"page-shell today-shell"});
+    window.__verdoraMountBrandBg?.(page,{placement:"tr",seed:20261115});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
     if(identityTop)page.append(identityTop);
 
