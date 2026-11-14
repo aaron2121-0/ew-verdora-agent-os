@@ -4,10 +4,12 @@ const HTML=[
 '<style>*{box-sizing:border-box}body{margin:0;background:#0E1111;color:#ecf3ee;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.shell{max-width:760px;margin:auto;padding:18px 14px 60px}.top,.row{display:flex;gap:8px;align-items:center}.top{justify-content:space-between}.brand{font-size:21px;font-weight:850}.muted{font-size:12px;color:#a6b6ae;line-height:1.5}.card{background:#161A1A;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:15px;margin-top:12px}.title{font-weight:800;font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{font-size:22px;font-weight:850}.btn{min-height:42px;border:1px solid #384741;border-radius:13px;background:#1d2924;color:#eaf7ee;padding:0 13px;font-weight:700}.primary{background:#2E7D5B;color:white;border-color:#2E7D5B}input,select,textarea{width:100%;background:#101816;color:#ecf3ee;border:1px solid #384741;border-radius:13px;padding:10px 12px;min-height:45px}.form{display:grid;gap:8px}.hidden{display:none!important}.item{padding:11px 0;border-top:1px solid rgba(255,255,255,0.08)}.item:first-child{border-top:0}.pill{display:inline-block;border:1px solid #385548;border-radius:999px;padding:4px 8px;font-size:11px}.danger{color:#ff9186}.ok{color:#67dca8}@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}@media(min-width:1100px){.shell{max-width:1200px}.grid{grid-template-columns:repeat(4,1fr)}}@media(prefers-reduced-motion:no-preference){.card{animation:rise .45s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}.kyc-mode > :not(#kycPage){display:none!important}.kyc-photo{display:block;width:100%;max-width:100%;height:auto;max-height:650px;object-fit:contain;border:1px solid #384741;border-radius:12px;margin-top:8px;touch-action:pan-y;-webkit-user-select:none;user-select:none}.kyc-photo:not([width]){display:none}.kyc-field{overflow-wrap:anywhere;padding:6px 0;border-bottom:1px solid #384741}.kyc-item{display:block;text-align:left;width:100%;margin-top:8px}.danger-btn{background:#341d1d;border-color:#814441;color:#ffb3ad}.kyc-field strong{display:block;font-size:12px;color:#a6b6ae;margin-bottom:3px}</style></head><body><main class="shell">',
 '<div class="top"><div><div class="brand">EW VERDORA</div><div class="muted">Owner Command · Quote Review & Security</div></div><button id="logout" class="btn hidden">Sign out</button></div>',
 '<div id="login" class="card"><div class="title">Owner Secure Access</div><div class="muted">Open your one-time Owner Recovery Link. Email magic-link login is disabled to avoid redirect and rate-limit failures.</div><div class="form" style="margin-top:12px"><input id="email" class="hidden" type="email" placeholder="owner@email.com"><button id="loginBtn" class="btn primary hidden">Send sign-in link</button><div id="msg" class="muted"></div></div></div>',
-'<div id="app" class="hidden"><div class="row" style="margin-top:12px"><button id="kycOpen" type="button" class="btn primary hidden">身份审核 / Identity Review</button></div><section id="kycPage" class="hidden" aria-label="身份审核"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><button id="kycBack" type="button" class="btn">← 返回 Owner 首页</button><div class="title">身份审核 / Identity Review</div></div><div class="muted">仅显示称呼、地区、提交时间及 IC 后四位。敏感资料仅在查看时读取，60 秒自动遮盖。 / Sensitive details expire after 60 seconds.</div><div class="row" style="margin-top:12px"><button id="kycReload" class="btn" type="button">刷新列表 / Refresh</button><span id="kycCount" class="pill"></span></div><div id="kycMessage" class="muted" role="status" aria-live="polite"></div><div id="kycQueue"></div></div><section id="kycDetail" class="card hidden" aria-label="KYC sensitive review"><div class="row" style="justify-content:space-between"><div class="title">身份资料（限时查看）</div><button id="kycClose" class="btn" type="button">立即遮盖 / Hide</button></div><div id="kycClock" class="muted"></div><div id="kycFields" class="form" style="margin-top:10px"></div><div class="muted" style="margin-top:10px">IC 正面 / IC front (temporary view)</div><canvas id="kycCanvas" class="kyc-photo" role="img" aria-label="IC front photo"></canvas><div id="kycPhotoMessage" class="muted"></div><div id="kycActions" class="form" style="margin-top:12px"><div class="row" style="flex-wrap:wrap"><button id="kycApprove" type="button" class="btn primary">一键核准 / Approve</button><button id="kycReject" type="button" class="btn">退回 / Reject</button></div><label class="muted" for="kycRejectCode">退回原因（必填） / Rejection reason<select id="kycRejectCode"><option value="">请选择原因 / Choose a reason</option><option value="IC photo is unclear / IC 照片不清晰">IC 照片不清晰 / Blurry photo</option><option value="IC information does not match / 身份资料不一致">身份资料不一致 / Data mismatch</option><option value="IC photo is incomplete / IC 照片不完整">IC 照片不完整 / Incomplete photo</option><option value="other">其他 / Other</option></select></label><label class="muted" for="kycRejectNote">说明 / Explanation<textarea id="kycRejectNote" rows="2" maxlength="500" placeholder="选择其他时必须填写 / Required when Other is selected"></textarea></label></div><button id="kycDelete" type="button" class="btn danger-btn">永久删除 KYC / Delete KYC record</button><div id="kycDecisionMessage" class="muted" role="status" aria-live="polite"></div></section><div id="kycMasked" class="card muted hidden" role="status" aria-live="polite"></div></section><div class="card"><div class="row" style="justify-content:space-between"><div class="title">Company Health</div><span id="mode" class="pill"></span></div><div class="grid" style="margin-top:13px"><div><div class="muted">30D Net Margin</div><div id="margin" class="metric"></div></div><div><div class="muted">Orders Today</div><div id="orders" class="metric"></div></div><div><div class="muted">Revenue Today</div><div id="revenue" class="metric"></div></div><div><div class="muted">Orders / Active Agent</div><div id="avg" class="metric"></div></div></div></div>',
+'<div id="app" class="hidden"><div class="row" style="margin-top:12px"><button id="kycOpen" type="button" class="btn primary hidden">身份审核（读取中） / Identity Review</button></div><section id="kycPage" class="hidden" aria-label="身份审核"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><button id="kycBack" type="button" class="btn">← 返回 Owner 首页</button><div class="title">身份审核 / Identity Review</div></div><div class="muted">仅显示称呼、地区、提交时间及 IC 后四位。敏感资料仅在查看时读取，60 秒自动遮盖。 / Sensitive details expire after 60 seconds.</div><div class="row" style="margin-top:12px"><button id="kycReload" class="btn" type="button">刷新列表 / Refresh</button><span id="kycCount" class="pill"></span></div><div id="kycMessage" class="muted" role="status" aria-live="polite"></div><div id="kycQueue"></div></div><section id="kycDetail" class="card hidden" aria-label="KYC sensitive review"><div class="row" style="justify-content:space-between"><div class="title">身份资料（限时查看）</div><button id="kycClose" class="btn" type="button">立即遮盖 / Hide</button></div><div id="kycClock" class="muted"></div><div id="kycFields" class="form" style="margin-top:10px"></div><div class="muted" style="margin-top:10px">IC 正面 / IC front (temporary view)</div><canvas id="kycCanvas" class="kyc-photo" role="img" aria-label="IC front photo"></canvas><div id="kycPhotoMessage" class="muted"></div><div id="kycActions" class="form" style="margin-top:12px"><div class="row" style="flex-wrap:wrap"><button id="kycApprove" type="button" class="btn primary">一键核准 / Approve</button><button id="kycReject" type="button" class="btn">退回 / Reject</button></div><label class="muted" for="kycRejectCode">退回原因（必填） / Rejection reason<select id="kycRejectCode"><option value="">请选择原因 / Choose a reason</option><option value="身份证照片有点模糊，请重新拍一张清楚、四个角都看得到的照片。 / IC photo is unclear. Please retake a clear photo with all four corners visible.">照片有点模糊，请重新拍清楚 / Photo is blurry</option><option value="你填写的资料和身份证对不上，请检查姓名和身份证号码后再送出。 / The details do not match the IC. Please check the name and IC number, then send again.">资料和身份证对不上 / Details do not match</option><option value="身份证照片没有拍完整，请重新拍整张正面，四个角都要看得到。 / The IC photo is incomplete. Please retake the full front with all four corners visible.">照片没有拍完整 / Photo is incomplete</option><option value="other">其他 / Other</option></select></label><label class="muted" for="kycRejectNote">说明 / Explanation<textarea id="kycRejectNote" rows="2" maxlength="500" placeholder="选择其他时必须填写 / Required when Other is selected"></textarea></label></div><button id="kycDelete" type="button" class="btn danger-btn">永久删除 KYC / Delete KYC record</button><div id="kycDecisionMessage" class="muted" role="status" aria-live="polite"></div></section><div id="kycMasked" class="card muted hidden" role="status" aria-live="polite"></div></section><div class="card"><div class="row" style="justify-content:space-between"><div class="title">Company Health</div><span id="mode" class="pill"></span></div><div class="grid" style="margin-top:13px"><div><div class="muted">30D Net Margin</div><div id="margin" class="metric"></div></div><div><div class="muted">Orders Today</div><div id="orders" class="metric"></div></div><div><div class="muted">Revenue Today</div><div id="revenue" class="metric"></div></div><div><div class="muted">Orders / Active Agent</div><div id="avg" class="metric"></div></div></div></div>',
 '<div class="card"><div class="grid"><div><div class="muted">Active Agents</div><div id="active" class="metric"></div></div><div><div class="muted">Dormant</div><div id="dormant" class="metric"></div></div><div><div class="muted">Commission Liability</div><div id="comm" class="metric"></div></div><div><div class="muted">Bonus Liability</div><div id="bonus" class="metric"></div></div></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
+'<div class="card hidden" id="launchOrdersCard"><div class="title">Order & Payment / 订单与收款</div><div class="muted">Only create an order after the Agent has accepted a formal quote. Confirm payment only after checking actual bank evidence. 仅确认真实收到的款项。</div><div id="launchQuoteOrders"></div><div class="title" style="margin-top:15px">Orders / 订单</div><div id="launchPayments"></div></div>',
+'<div class="card hidden" id="launchProgressCard"><div class="title">Agent Progress / 代理上手进度</div><div class="muted">Required courses, certification and order access / 必修课、认证及接单权限</div><div id="launchAgentProgress"></div></div>',
 '<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload Claude-reviewed handbook_content.json. Review by batch and product line, edit drafts, then approve the batch. / 上传已审核 JSON，依批次与业务线检查、编辑草稿，然后整批核准。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
 '<div class="card" id="baselineCard"><div class="title">Global Reference Cost Baseline / 全局成本基准</div><div class="muted" style="color:#D4B47A">会影响之后所有同类报价。此操作与单笔报价审核完全分开，必须二次确认。</div><div class="form" style="margin-top:10px"><select id="bSize"><option>small</option><option selected>medium</option><option>large</option><option>xl</option><option>structure</option></select><select id="bDensity"><option>light</option><option selected>medium</option><option>full</option><option>very_full</option></select><select id="bPremium"><option>low</option><option selected>medium</option><option>high</option><option>very_high</option></select><select id="bComplexity"><option>low</option><option selected>medium</option><option>high</option><option>special</option></select><input id="bCost" type="number" min="0" step="0.01" placeholder="安全生产成本 RM"><button id="baselineBtn" class="btn">修改全局基准 / Change global baseline</button><div id="baselineMsg" class="muted"></div></div></div>',
 '<div class="card"><div class="title">Agent Access Link</div><div class="muted">Create a one-time login link valid for 24 hours. Use this when email delivery is delayed or rate-limited.</div><div class="form" style="margin-top:11px"><input id="inviteEmail" type="email" placeholder="agent@email.com"><button id="inviteBtn" class="btn primary">Create one-time Agent link</button><div id="inviteOut" class="muted"></div><button id="copyInvite" class="btn hidden">Copy link</button></div></div>',
@@ -124,6 +126,103 @@ async function refreshHandbook(){
   });
 }
 
+async function refreshLaunchPanels(){
+  const [p,o]=await Promise.all([
+    call({action:"launch_agent_progress"}),
+    call({action:"launch_orders"})
+  ]);
+  const es=escapeHtml;
+  $("launchAgentProgress").innerHTML=(p.agents||[]).length?(p.agents||[]).map(a=>
+    "<div class='item'><b>"+es(a.display_name||a.agent_code)+"</b> <span class='pill'>"+es(a.status)+"</span>"+
+    "<div class='muted'>"+es(a.agent_code)+" · Courses "+Number(a.passed_modules||0)+"/"+Number(p.required_count||7)+
+    " · Exam "+(a.exam_passed?"Passed / 已通过":es(a.exam_status||"Not started"))+"</div></div>"
+  ).join(""):"<div class='muted item'>No registered agents / 暂无代理。</div>";
+  const eligible=o.eligible_quotes||[],orders=o.orders||[];
+  $("launchQuoteOrders").innerHTML=eligible.length?eligible.map(q=>{
+    const id=es(q.id);
+    return "<div class='item launch-quote' data-quote='"+id+"'><b>"+es(q.customer_label)+
+      "</b> <span class='pill'>"+es(q.agent_name)+"</span>"+
+      "<div class='muted'>Approved flower amount RM "+Number(q.selling_price||0).toFixed(2)+" · "+es(q.status)+"</div>"+
+      "<div class='form'><input class='launch-code' maxlength='60' placeholder='Order code / 订单编号 (e.g. EV-2026-0001)' aria-label='Order code'>"+
+      "<input class='launch-fee' type='number' min='0' max='10000' step='0.01' value='0' aria-label='Customer delivery fee RM'>"+
+      "<button class='btn primary launch-create-order' type='button'>Create order / 建立订单</button>"+
+      "<div class='muted launch-qmsg'></div></div></div>";
+  }).join(""):"<div class='muted item'>No eligible accepted quotes / 暂无可建立订单的报价。</div>";
+  const byId=new Map(eligible.map(q=>[q.id,q]));
+  document.querySelectorAll(".launch-create-order").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-quote"),id=wrap.dataset.quote,q=byId.get(id);
+    const code=wrap.querySelector(".launch-code").value.trim();
+    const fee=Number(wrap.querySelector(".launch-fee").value);
+    const msg=wrap.querySelector(".launch-qmsg");
+    if(!q||!code||!Number.isFinite(fee)||fee<0){msg.textContent="Enter a valid order code and delivery fee. / 请填写订单编号及送货费。";return}
+    const total=Number(q.selling_price)+fee;
+    if(!confirm("Create order "+code+"?\nFlower RM "+Number(q.selling_price).toFixed(2)+" + Delivery RM "+fee.toFixed(2)+" = RM "+total.toFixed(2)+"\n确认建立订单？"))return;
+    btn.disabled=true;
+    try{
+      await call({action:"launch_create_order",quote_id:id,order_code:code,delivery_fee:fee,confirm:true});
+      await refresh();
+    }catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
+  $("launchPayments").innerHTML=orders.length?orders.map(o=>{
+    const total=Number(o.commissionable_revenue||0)+Number(o.delivery_fee||0),id=es(o.id);
+    return "<div class='item launch-pay' data-order='"+id+"'><b>"+es(o.order_code)+"</b> <span class='pill'>"+es(o.status)+" / "+es(o.payment_status)+"</span>"+
+      "<div class='muted'>"+es(o.agent_name)+" · Flower RM "+Number(o.commissionable_revenue||0).toFixed(2)+
+      " + Delivery RM "+Number(o.delivery_fee||0).toFixed(2)+" = <b>RM "+total.toFixed(2)+"</b></div>"+
+      (o.payment_status==="pending"?"<div class='form' style='margin-top:10px'>"+
+      "<input class='launch-payment-ref' maxlength='80' placeholder='Bank transaction reference / 银行交易参考号' aria-label='Bank reference'>"+
+      "<label class='muted'><input class='launch-bank-checked' type='checkbox' style='width:auto;min-height:auto'> 我已在银行记录核对真实收款及金额 / I checked bank evidence</label>"+
+      "<button type='button' class='btn primary launch-confirm-payment'>Confirm payment / 确认已收款</button>"+
+      "<div class='muted launch-pmsg'></div></div>":"")+
+      (o.status==="completed"?"<div class='muted'>Commission accrued / 已入账佣金：RM "+(o.commission_amount==null?"—":Number(o.commission_amount).toFixed(2))+(o.commission_status?" · "+es(o.commission_status):"")+"</div>":"")+
+      (o.payment_status==="paid"&&o.status!=="completed"?
+        "<div class='form launch-completion' style='margin-top:10px'>"+
+        [["production_cost","Production cost / 制作成本"],["delivery_cost","Delivery cost / 配送成本"],["payment_cost","Payment cost / 支付手续费"],["refund_cost","Refund cost / 退款成本"],["risk_cost","Risk cost / 风险成本"]].map(([key,label])=>
+          "<label class='muted'>"+es(label)+" (RM)<input class='completion-"+key+"' type='number' min='0' max='100000' step='0.01' value='0'></label>").join("")+
+        "<label class='muted'>Fulfilment / 制作方式<select class='completion-type'><option value='internal'>Internal / 内部制作</option><option value='external'>External / 外部制作</option></select></label>"+
+        "<label class='muted'><input type='checkbox' class='completion-qc' style='width:auto;min-height:auto'> QC passed (required) / 品质检查通过（必须）</label>"+
+        "<label class='muted'><input type='checkbox' class='completion-rework' style='width:auto;min-height:auto'> Rework / 返工</label>"+
+        "<button type='button' class='btn primary launch-complete-order'>Complete order / 完成订单</button>"+
+        "<div class='muted launch-cmsg'></div></div>":"")+"</div>";
+  }).join(""):"<div class='muted item'>No orders / 暂无订单。</div>";
+  document.querySelectorAll(".launch-complete-order").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-pay"),id=wrap.dataset.order,form=wrap.querySelector(".launch-completion");
+    const msg=wrap.querySelector(".launch-cmsg");
+    const payload={action:"launch_complete_order",order_id:id,fulfilment_type:form.querySelector(".completion-type").value,
+      qc_pass:form.querySelector(".completion-qc").checked,rework:form.querySelector(".completion-rework").checked};
+    for(const key of ["production_cost","delivery_cost","payment_cost","refund_cost","risk_cost"]){
+      const raw=form.querySelector(".completion-"+key).value;
+      const value=Number(raw);
+      if(raw.trim()===""||!Number.isFinite(value)||value<0||value>100000){
+        msg.textContent="Enter valid costs between RM 0 and RM 100,000. / 请输入有效成本。";return;
+      }
+      payload[key]=value;
+    }
+    if(!payload.qc_pass){msg.textContent="QC must pass before completion. / 品质检查通过后才能完成订单。";return}
+    if(!confirm("Complete this paid order and accrue commission? / 确认完成已付款订单并入账佣金？"))return;
+    btn.disabled=true;
+    try{await call({...payload,confirm:true});await refresh()}
+    catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
+  const orderMap=new Map(orders.map(o=>[o.id,o]));
+  document.querySelectorAll(".launch-confirm-payment").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-pay"),id=wrap.dataset.order,o=orderMap.get(id);
+    const ref=wrap.querySelector(".launch-payment-ref").value.trim();
+    const checked=wrap.querySelector(".launch-bank-checked").checked;
+    const msg=wrap.querySelector(".launch-pmsg");
+    if(!o||!checked||ref.length<5){msg.textContent="Check actual bank evidence and enter the reference first. / 请先核实实际收款和参考号。";return}
+    const total=Number(o.commissionable_revenue)+Number(o.delivery_fee);
+    if(!confirm("BANK VERIFIED? Confirm RM "+total.toFixed(2)+" received for "+o.order_code+"?\n请再次核对银行交易后确认。"))return;
+    btn.disabled=true;
+    try{
+      await call({action:"launch_confirm_payment",order_id:id,bank_reference:ref,bank_evidence_checked:true,confirm:true});
+      await refresh();
+    }catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
+}
+
 const KYC_VIEW_MS=60000;
 const kycUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 let kycSeq=0,kycTimer=null,kycAbort=null,kycActive=null,kycListBusy=false,kycListSeq=0,kycListAbort=null;
@@ -183,7 +282,7 @@ async function refreshKycList(){
     for(const row of [...all,...pending])if(row&&kycUuid.test(String(row.agent_id||"")))dedup.set(String(row.agent_id),row);
     const safe=[...dedup.values()].filter(r=>r.status!=="draft");
     safe.sort((a,b)=>kycStatusOrder(a.status)-kycStatusOrder(b.status)||(Date.parse(b.submitted_at)||0)-(Date.parse(a.submitted_at)||0));
-    $("kycCount").textContent=safe.filter(r=>r.status==="submitted").length+" 待审核 / pending";
+    const pendingCount=safe.filter(r=>r.status==="submitted").length;\n    $("kycCount").textContent=pendingCount+" 人等你看 / pending";\n    $("kycOpen").textContent="身份审核（"+pendingCount+" 人等你看） / Identity Review ("+pendingCount+")";
     $("kycMessage").textContent=safe.length?"":"暂无已提交的身份资料 / No submitted applications.";
     const fragment=document.createDocumentFragment();
     for(const row of safe){
@@ -372,11 +471,16 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
   finally{b.disabled=false}
 }));
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
-$("handbookCard").classList.toggle("hidden",j.role!=="owner");
-$("kycOpen").classList.toggle("hidden",j.role!=="owner");
-if(j.role!=="owner"&&!$("kycPage").classList.contains("hidden"))closeKycPage();
+$("handbookCard").classList.toggle("hidden",j.role!=="owner");\n$("kycOpen").classList.toggle("hidden",j.role!=="owner");\nif(j.role!=="owner"&&!$("kycPage").classList.contains("hidden"))closeKycPage();
 if(j.role==="owner"){try{await refreshHandbook()}catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}}
 $("recoveryBtn").closest(".card").classList.toggle("hidden",j.role!=="owner");
+ $("launchOrdersCard").classList.toggle("hidden",j.role!=="owner");
+ $("launchProgressCard").classList.toggle("hidden",j.role!=="owner");
+ if(j.role==="owner")try{await refreshLaunchPanels()}catch(e){
+   $("launchPayments").textContent="Unable to load orders. / 订单读取失败。";
+   $("launchAgentProgress").textContent="Unable to load Agent progress. / 代理进度读取失败。";
+ }
+
 
 }catch(e){
   const m=String(e?.message||e||"");
