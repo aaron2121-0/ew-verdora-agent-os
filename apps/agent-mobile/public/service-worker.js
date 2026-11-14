@@ -1,7 +1,5 @@
 // EW VERDORA Agent: public static files only. Never cache session/PII/API responses.
-// v2: network-first. v1 was cache-first with a fixed name, so phones never
-// received new releases. Bumping the name purges every v1 cache on activate.
-const CACHE_NAME="ew-agent-static-v2";
+const CACHE_NAME="ew-agent-static-v1";
 const STATIC_FILES=new Set([
   "/styles.css","/app.js","/pwa-install.js","/i18n.js","/icons.js",
   "/components.js","/phase1.js","/order.js","/date.js","/draft.js",
@@ -37,18 +35,13 @@ self.addEventListener("fetch",event=>{
   if(!cacheable(url,req))return;
   event.respondWith((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    try{
-      // Always prefer the latest release; the cache is only an offline fallback.
-      const response=await fetch(req,{cache:"no-store"});
-      if(response.ok&&response.type==="basic"&&response.status===200){
-        const type=response.headers.get("content-type")||"";
-        if(/javascript|css|font|image|json/.test(type))await cache.put(req,response.clone());
-      }
-      return response;
-    }catch(error){
-      const hit=await cache.match(req);
-      if(hit)return hit;
-      throw error;
+    const hit=await cache.match(req);
+    if(hit)return hit;
+    const response=await fetch(req,{cache:"no-store"});
+    if(response.ok&&response.type==="basic"&&response.status===200){
+      const type=response.headers.get("content-type")||"";
+      if(/javascript|css|font|image|json/.test(type))await cache.put(req,response.clone());
     }
+    return response;
   })());
 });

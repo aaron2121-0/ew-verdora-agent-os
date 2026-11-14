@@ -62,18 +62,15 @@ export function initAIOrb({onClick,tr,getData,getLang}){
  if(orb)return orb;
  orb=document.createElement("button");orb.type="button";orb.className="ai-orb";orb.dataset.aiState=state;orb.setAttribute("aria-label",tr("aiOpenChat"));
  const slot=document.createElement("span");slot.className="ai-orb-vendor-slot";slot.setAttribute("aria-hidden","true");
- // Gemini EW VERDORA logo orb loads lazily (keeps first-load JS within budget);
- // the plain core shows for a moment until it is ready.
- const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);
- const mountLogoOrb=()=>{
-   const vm=vendorMotion();
-   if(!vm?.mountAiOrb||orbMotion)return;
+ const vm=vendorMotion();
+ if(vm?.mountAiOrb){
    orbMotion=trackMotion("ai-orb",vm.mountAiOrb(slot,{
-     lang:getLang?.()||"en",size:52,state:state==="thinking"?"thinking":"idle"
+     lang:getLang?.()||"en",size:52,state:state==="thinking"?"thinking":"idle",
+
    }));
- };
- if(vendorMotion()?.mountAiOrb)mountLogoOrb();
- else import("./ew-verdora-content/motion/ai-orb.js").then(mountLogoOrb).catch(()=>{});
+ }else{
+   const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);
+ }
  const label=document.createElement("span");label.className="sr-only";label.textContent=tr("aiOpenChat");
  orb.append(slot,label);orb.addEventListener("click",onClick);document.body.append(orb);
  motionBudget();

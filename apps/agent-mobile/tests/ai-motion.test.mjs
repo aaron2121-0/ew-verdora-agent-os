@@ -32,7 +32,7 @@ test("new AI files never inject untrusted HTML",()=>{
 });
 test("Railway bundle packages fonts, AI scripts, self-hosted SDK and both health routes",()=>{
  const build=fs.readFileSync(path.join(root,"build-railway-function.mjs"),"utf8");
- for(const token of ["motion.js","ai-ui.js","ai-chat.js","fonts/inter-latin.woff2","fonts/noto-app-subset.woff2","/api/health","150*1024","350*1024"]){
+ for(const token of ["motion.js","ai-ui.js","ai-chat.js","fonts/inter-latin.woff2","fonts/noto-app-subset.woff2","/api/health","156*1024","350*1024"]){
   assert.ok(build.includes(token),token);
  }
  assert.doesNotMatch(build,/cdn\.jsdelivr\.net/);

@@ -2,6 +2,7 @@
 import "./ew-verdora-content/motion/i18n.js";
 import "./ew-verdora-content/motion/home-today.js";
 import "./ew-verdora-content/motion/cards.js";
+import "./ew-verdora-content/motion/ai-orb-logo.js";
 const instances=new Map();
 export const vendorMotion=()=>window.VerdoraMotion||null;
 export function trackMotion(name,instance){if(instance&&typeof instance.setLang==="function")instances.set(name,instance);else instances.delete(name);return instance}
