@@ -60,6 +60,15 @@ function applyI18n(){
   if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
 
+function setBrandBackground(target,placement,seed){
+  const mount=window.VerdoraMotion?.mountBrandBg;
+  if(typeof mount!=="function"||!target)return null;
+  return mount(target,{placement,seed});
+}
+function clearBrandBackground(){
+  window.VerdoraMotion?.brandBg?.destroy?.();
+}
+
 function view(name){
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
@@ -69,6 +78,8 @@ function view(name){
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
   $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
+  clearBrandBackground();
+  if(name==="login")requestAnimationFrame(()=>setBrandBackground($("login"),"tr",20261114));
 }
 
 async function fn(path,body){
