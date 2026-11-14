@@ -4,7 +4,7 @@ const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",
 const CSP=[
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "font-src 'self'",
