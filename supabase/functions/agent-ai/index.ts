@@ -415,7 +415,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["micro_tip","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -748,6 +748,37 @@ Deno.serve(async req=>{
       next_followup_hours:Math.min(72,Math.max(4,Number(parsed.next_followup_hours)||24))
     }:fallback;
     return reply({ok:true,provider:valid?"gemini":"fallback",outcome,lead_id:lead.id,content:out});
+  }
+
+  if(action==="micro_tip"){
+    const context=String(body.context||"reply");
+    if(!["reply","followup","quote","send"].includes(context)) return reply({error:"invalid_context"},400);
+    let lead=null;
+    if(body.lead_id){
+      const leadId=String(body.lead_id).slice(0,80);
+      if(!/^[0-9a-f-]{36}$/i.test(leadId)) return reply({error:"invalid_lead_id"},400);
+      const q=await admin.from("leads").select("id,occasion,status,source,delivery_date").eq("id",leadId).eq("agent_id",agent.id).maybeSingle();
+      if(q.error){ console.error("MICRO_TIP_LEAD",q.error.code||""); return reply({error:"request_failed"},500); }
+      if(!q.data) return reply({error:"lead_not_found"},404);
+      lead=q.data;
+    }
+    const weakness=Array.isArray(prof?.weaknesses)&&prof.weaknesses.length?String(prof.weaknesses[0]).slice(0,160):"";
+    const ai=await callAI(
+      "Give this EW VERDORA Agent ONE micro coaching tip at the exact moment they are about to "+context+". Return ONLY JSON {tip:string}. The tip must be one short sentence, max 22 words, practical, not a score, not an exam, and tailored to the Agent's own known weakness if available. Never mention internal AI/profile data. Focus on safe selling: clarify one missing need, do not invent price/discount, do not promise exact-copy/availability, and use only official payment channels."+RULES+profileBrief(prof),
+      JSON.stringify({context,weakness:weakness||null,lead:lead?{occasion:lead.occasion,status:lead.status,source:lead.source,delivery_date:lead.delivery_date}:null}),
+      true
+    );
+    const parsed=parseJson(ai||"");
+    const valid=parsed && typeof parsed.tip==="string" && parsed.tip.trim()
+      && !containsSensitiveOutput(parsed.tip)
+      && !containsMarketingPolicyViolation(parsed.tip);
+    const fallbackMap={
+      reply:lang==="zh"?"回之前先确认客人真正缺的一个资料，不要一次问太多。":"Before replying, confirm the one missing detail that matters most instead of asking everything at once.",
+      followup:lang==="zh"?"跟进要轻一点，给客人一个很容易回答的问题。":"Keep the follow-up light and end with one question that is easy to answer.",
+      quote:lang==="zh"?"报价只能用系统正式价格，不要自己加折扣或承诺指定花材。":"Use only the official quote; do not add your own discount or promise specific flowers.",
+      send:lang==="zh"?"发出去前看一次：日期、场合、下一步有没有讲清楚。":"Before sending, check that the date, occasion and next step are clear."
+    };
+    return reply({ok:true,provider:valid?"gemini":"fallback",tip:valid?String(parsed.tip).trim().slice(0,240):fallbackMap[context]});
   }
 
   if(action==="coach"){
