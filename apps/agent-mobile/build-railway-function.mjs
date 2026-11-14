@@ -40,6 +40,20 @@ function gatherMotion(directory){
 }
 gatherMotion(contentRoot);
 
+const motionPackRoot=path.join(root,"vendor","motion-pack-v1");
+const motionPackAll=["brand-bg.js","brand-bg.css","ai-orb.js","ai-orb.css","icons/logo.svg"];
+for(const name of motionPackAll){
+ const source=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
+ if(/\beval\s*\(/.test(source))throw new Error("motion-pack-v1 eval is not allowed: "+name);
+ if(/\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/.test(source))throw new Error("motion-pack-v1 external network code is not allowed: "+name);
+}
+const motionPackRuntime=["brand-bg.js","brand-bg.css","icons/logo.svg"];
+const motionPackAssets=motionPackRuntime.map(name=>{
+ const target="vendor/motion-pack-v1/"+name;
+ files[target]=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
+ return target;
+});
+
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
  const found=fontModuleRoots.map(base=>path.join(base,packageName,"files",filename)).find(p=>fs.existsSync(p));
@@ -86,7 +100,7 @@ const CSP=[
 
 const encoded={"/":gzip(files["index.html"]),"/index.html":gzip(files["index.html"])};
 const types={"/":"text/html; charset=utf-8","/index.html":"text/html; charset=utf-8"};
-for(const name of [...names.slice(1),...optionalAssets,...reviewedAssets,"vendor/supabase-2.119.0.js"]){
+for(const name of [...names.slice(1),...optionalAssets,...reviewedAssets,...motionPackAssets,"vendor/supabase-2.119.0.js"]){
   encoded["/"+name]=gzip(files[name]);
   types["/"+name]=name.endsWith(".html")?"text/html; charset=utf-8":name.endsWith(".css")?"text/css; charset=utf-8":
     name.endsWith(".svg")?"image/svg+xml":name.endsWith(".json")?"application/json":
@@ -116,7 +130,7 @@ function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type
 export default {fetch(req){
   const u=new URL(req.url);
   if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
-  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.9.0-kyc-ui",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
+  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.9.0",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
   const compressed=/\\bgzip\\b/.test(req.headers.get("accept-encoding")||"");
   const body=bodyFor(u.pathname,compressed);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
@@ -125,13 +139,17 @@ export default {fetch(req){
 
 const outDir=path.join(root,"dist");
 fs.mkdirSync(outDir,{recursive:true});
+if(Buffer.byteLength(output,"utf8")>900*1024)throw new Error("Railway bundle exceeds 900KB");
 fs.writeFileSync(path.join(outDir,"railway-function.ts"),output);
 const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
-const initialJsNames=jsNames.filter(n=>n!=="kyc.js");
+const lazyBrandJs="vendor/motion-pack-v1/brand-bg.js";
+const initialJsNames=jsNames.filter(n=>n!=="kyc.js"&&n!==lazyBrandJs);
 const jsBytes=initialJsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 const kycJsBytes=zlib.gzipSync(Buffer.from(files["kyc.js"]||""),{level:9}).length;
+const brandJsBytes=zlib.gzipSync(Buffer.from(files[lazyBrandJs]||""),{level:9}).length;
 console.log("JS_GZIP_BREAKDOWN "+initialJsNames.map(n=>[n,zlib.gzipSync(Buffer.from(files[n]),{level:9}).length]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+":"+x[1]).join(","));
 if(jsBytes>150*1024)throw new Error(`Initial JS gzip budget exceeded: ${jsBytes} bytes`);
 if(kycJsBytes>16*1024)throw new Error(`KYC lazy JS gzip budget exceeded: ${kycJsBytes} bytes`);
-console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
+if(brandJsBytes>4*1024)throw new Error(`Brand background lazy JS gzip budget exceeded: ${brandJsBytes} bytes`);
+console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; brand lazy JS gzip ${brandJsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
 console.log("BUNDLE_SHA256 "+createHash("sha256").update(output,"utf8").digest("hex"));
