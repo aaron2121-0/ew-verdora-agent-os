@@ -1035,14 +1035,10 @@ export const I18N={
   }
 };
 
-/* Agent handbook navigation labels retained from the #11 UI; all onboarding,
-   spotlight, empty-state and AI suggestion sentences come from reviewed JSON. */
 I18N.en.handbookTitle="Product handbook";
 I18N.en.handbookSubtitle="Approved product lines, photos and scripts";
 I18N.zh.handbookTitle="产品手册";
 I18N.zh.handbookSubtitle="五大业务线 · 核准作品 · 客户话术";
-
-
 
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
