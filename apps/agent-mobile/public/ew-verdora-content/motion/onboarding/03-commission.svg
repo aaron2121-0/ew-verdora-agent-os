@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" fill="none" role="img" aria-label="Commission tiers and earnings growth">
+  <style>
+    .ob-3-root {
+      --c-bg: var(--surface-2, #F5EFE4);
+      --c-card: var(--surface, #FFFFFF);
+      --c-brand: var(--brand, #1F4D3A);
+      --c-brand-soft: var(--verdora-700, #2d6b52);
+      --c-gold: var(--gold, #9D783D);
+      --c-gold-soft: var(--gold-300, #D8BD86);
+      --c-ink: var(--text, #173629);
+      --c-line: var(--border, rgba(31,77,58,0.16));
+    }
+    @media (prefers-color-scheme: dark) {
+      .ob-3-root {
+        --c-bg: var(--surface-2, #1D2222);
+        --c-card: var(--surface, #161A1A);
+        --c-brand: var(--brand, #2E7D5B);
+        --c-brand-soft: var(--verdora-800, #277A56);
+        --c-gold: var(--gold, #D4B47A);
+        --c-gold-soft: var(--gold-300, #D4B47A);
+        --c-ink: var(--text, #ECEFEE);
+        --c-line: var(--border, rgba(255,255,255,0.12));
+      }
+    }
+    .ob-3-base { animation: ob-3-fade .45s ease-out .04s both; }
+    .ob-3-bar1 { animation: ob-3-grow .55s cubic-bezier(.2,.9,.28,1.04) .16s both; transform-box: fill-box; transform-origin: center bottom; }
+    .ob-3-bar2 { animation: ob-3-grow .55s cubic-bezier(.2,.9,.28,1.04) .28s both; transform-box: fill-box; transform-origin: center bottom; }
+    .ob-3-bar3 { animation: ob-3-grow .55s cubic-bezier(.2,.9,.28,1.04) .40s both; transform-box: fill-box; transform-origin: center bottom; }
+    .ob-3-coin1 { animation: ob-3-pop .48s cubic-bezier(.2,.9,.28,1.04) .50s both; transform-box: fill-box; transform-origin: center; }
+    .ob-3-coin2 { animation: ob-3-pop .48s cubic-bezier(.2,.9,.28,1.04) .60s both; transform-box: fill-box; transform-origin: center; }
+    .ob-3-hover { animation: ob-3-float 3.2s ease-in-out 1.2s infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes ob-3-fade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ob-3-grow {
+      from { opacity: 0; transform: scaleY(0.15); }
+      to { opacity: 1; transform: scaleY(1); }
+    }
+    @keyframes ob-3-pop {
+      from { opacity: 0; transform: scale(0.6) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes ob-3-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ob-3-base, .ob-3-bar1, .ob-3-bar2, .ob-3-bar3, .ob-3-coin1, .ob-3-coin2, .ob-3-hover {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+  </style>
+  <g class="ob-3-root">
+    <rect x="8" y="8" width="344" height="204" rx="22" fill="var(--c-bg)" stroke="var(--c-line)" stroke-width="1.2"/>
+    <g class="ob-3-base">
+      <rect x="44" y="34" width="272" height="152" rx="18" fill="var(--c-card)" stroke="var(--c-line)" stroke-width="1.3"/>
+      <path d="M68 158H292" stroke="var(--c-line)" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M68 122H292M68 86H292" stroke="var(--c-line)" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="3 4"/>
+    </g>
+    <g class="ob-3-bar1">
+      <rect x="84" y="122" width="44" height="36" rx="8" fill="var(--c-brand)" fill-opacity="0.22" stroke="var(--c-brand)" stroke-width="1.5"/>
+      <path d="M96 140H116" stroke="var(--c-brand)" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    <g class="ob-3-bar2">
+      <rect x="158" y="96" width="44" height="62" rx="8" fill="var(--c-brand)" fill-opacity="0.34" stroke="var(--c-brand)" stroke-width="1.6"/>
+      <path d="M170 116H190M170 124H184" stroke="var(--c-brand)" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    <g class="ob-3-bar3">
+      <rect x="232" y="66" width="44" height="92" rx="8" fill="var(--c-brand)" fill-opacity="0.88" stroke="var(--c-brand)" stroke-width="1.6"/>
+      <path d="M244 88H264M244 96H258" stroke="var(--c-card)" stroke-opacity="0.85" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    <g class="ob-3-hover">
+      <g class="ob-3-coin1">
+        <circle cx="106" cy="96" r="14" fill="var(--c-gold-soft)" fill-opacity="0.36" stroke="var(--c-gold)" stroke-width="1.7"/>
+        <path d="M106 89V103M101.5 93.5H110.5M101.5 98.5H110.5" stroke="var(--c-gold)" stroke-width="1.6" stroke-linecap="round"/>
+      </g>
+      <g class="ob-3-coin2">
+        <circle cx="254" cy="46" r="16" fill="var(--c-gold-soft)" fill-opacity="0.44" stroke="var(--c-gold)" stroke-width="1.8"/>
+        <path d="M254 37.5C257 41.5 257 47.5 254 51.5C251 47.5 251 41.5 254 37.5Z" fill="var(--c-gold)" fill-opacity="0.3" stroke="var(--c-gold)" stroke-width="1.4"/>
+        <path d="M180 74C180 68 184.5 64 190 64.5C189.5 70 185.5 74 180 74Z" fill="var(--c-brand)" fill-opacity="0.3" stroke="var(--c-brand)" stroke-width="1.5"/>
+      </g>
+    </g>
+  </g>
+</svg>

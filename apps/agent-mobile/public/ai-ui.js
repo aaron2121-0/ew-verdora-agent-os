@@ -1,10 +1,17 @@
 import {typeText,flipReorder,motionBudget} from "./motion.js";
+import {suggestions} from "./approved-content.js";
+import {vendorMotion,trackMotion,removeMotion} from "./motion-vendor.js";
 import {kuchingHour,kuchingDateKey} from "./date.js";
-let state="idle",pending=0,orb=null,promptUsed=false,agentProfile=null;
+let state="idle",pending=0,orb=null,orbMotion=null,promptUsed=false,agentProfile=null;
 export function setAgentProfile(value){agentProfile=value&&typeof value==="object"?value:null}
 const states=new Set(["idle","listening","thinking","speaking","done","error"]);
 export function setAIState(next){
- if(!states.has(next))next="idle";state=next;if(orb){orb.dataset.aiState=next;orb.setAttribute("aria-busy",String(next==="thinking"||next==="speaking"))}
+ if(!states.has(next))next="idle";state=next;if(orb){
+  orb.dataset.aiState=next;
+  orb.setAttribute("aria-busy",String(next==="thinking"||next==="speaking"));
+  orbMotion?.setState?.(next==="thinking"||next==="listening"?"thinking":
+    next==="speaking"||next==="done"?"replying":"idle");
+ }
 }
 export function aiStart(){pending++;setAIState("thinking")}
 export function aiEnd(ok=true){pending=Math.max(0,pending-1);setAIState(pending?"thinking":ok?"done":"error");if(!pending)setTimeout(()=>{if(state==="done"||state==="error")setAIState("idle")},1300)}
@@ -16,7 +23,7 @@ export function contextTips(data={},now=Date.now(),tr=k=>k){
  else if(hour<12)tips.push({key:"aiTipMorning",prompt:"aiPromptPlan"});
  else if(hour<14)tips.push({key:"aiTipLunch",prompt:"aiPromptPlan"});
  else tips.push({key:"aiTipEvening",prompt:"aiPromptPlan"});
- if(p.training_pending)tips.push({key:"aiTipTraining",prompt:"aiPromptPlan"});
+
  return tips;
 }
 function canShowTipNow(profile,now){
@@ -34,12 +41,12 @@ export function adaptToProfile(profile){
 export function prioritizeCards(data,container,tr){
  if(!container)return;
  const due=(data?.phase1?.due_followups||[]).length;
- const training=!!data?.phase1?.training_pending;
+
  const cards=[...container.children].filter(n=>n.dataset.priorityCard);
- const rank=n=>n.dataset.priorityCard==="followup"?(due?0:5):n.dataset.priorityCard==="training"?(training?1:6):n.dataset.priorityCard==="brief"?2:3;
+ const rank=n=>n.dataset.priorityCard==="followup"?(due?0:5):n.dataset.priorityCard==="tasks"?1:n.dataset.priorityCard==="brief"?2:3;
  const ordered=cards.slice().sort((a,b)=>rank(a)-rank(b));
  flipReorder(container,()=>ordered.forEach(n=>container.append(n)));
- for(const node of ordered){const why=node.querySelector("[data-priority-why]");if(why)why.textContent=tr(node.dataset.priorityCard==="followup"&&due?"aiWhyFollowup":node.dataset.priorityCard==="training"&&training?"aiWhyTraining":"aiWhyToday")}
+ for(const node of ordered){const why=node.querySelector("[data-priority-why]");if(why)why.textContent=tr(node.dataset.priorityCard==="followup"&&due?"aiWhyFollowup":"aiWhyToday")}
 }
 export function createAICard({title,text="",provider="gemini",cached=false,tr,actions=null}){
  const card=document.createElement("section");card.className="ai-output-card "+(provider==="gemini"?"ai-live":"ai-template");
@@ -51,25 +58,45 @@ export function createAICard({title,text="",provider="gemini",cached=false,tr,ac
  if(cached||provider!=="gemini")body.textContent=String(text||"");else typeText(body,text,{duration:16});
  return {card,body};
 }
-export function initAIOrb({onClick,tr,getData}){
+export function initAIOrb({onClick,tr,getData,getLang}){
  if(orb)return orb;
  orb=document.createElement("button");orb.type="button";orb.className="ai-orb";orb.dataset.aiState=state;orb.setAttribute("aria-label",tr("aiOpenChat"));
- const ring=document.createElement("span");ring.className="ai-orb-core";ring.setAttribute("aria-hidden","true");
+ const slot=document.createElement("span");slot.className="ai-orb-vendor-slot";slot.setAttribute("aria-hidden","true");
+ const vm=vendorMotion();
+ if(vm?.mountAiOrb){
+   orbMotion=trackMotion("ai-orb",vm.mountAiOrb(slot,{
+     lang:getLang?.()||"en",size:52,state:state==="thinking"?"thinking":"idle",
+
+   }));
+ }else{
+   const fallback=document.createElement("span");fallback.className="ai-orb-core";slot.append(fallback);
+ }
  const label=document.createElement("span");label.className="sr-only";label.textContent=tr("aiOpenChat");
- orb.append(ring,label);orb.addEventListener("click",onClick);document.body.append(orb);
+ orb.append(slot,label);orb.addEventListener("click",onClick);document.body.append(orb);
  motionBudget();
  const tips=contextTips(getData(),Date.now(),tr);
  if(!promptUsed&&tips.length&&canShowTipNow(agentProfile,Date.now())){promptUsed=true;
   const tip=document.createElement("div");tip.className="ai-orb-tip";
   const msg=document.createElement("span");msg.textContent=tr(tips[0].key,tips[0].params||{});
   const close=document.createElement("button");close.type="button";close.textContent="×";close.setAttribute("aria-label",tr("close"));close.addEventListener("click",()=>tip.remove());
-  tip.append(msg,close);orb.before(tip);
+  tip.append(msg,close);
+  const questions=suggestions("home",getLang?.()||"en");
+  const promptList=document.createElement("div");promptList.className="ai-orb-suggestions";
+  for(const prompt of questions){
+    const b=document.createElement("button");b.type="button";b.textContent=prompt;
+    b.addEventListener("click",()=>{
+      document.dispatchEvent(new CustomEvent("ew-open-ai-question",{detail:{text:prompt}}));
+      tip.remove();
+    });
+    promptList.append(b);
+  }
+  tip.append(promptList);orb.before(tip);
   orb.addEventListener("click",()=>tip.remove(),{once:true});
  }
  return orb;
 }
 export function refreshAIOrb(tr){if(orb){orb.setAttribute("aria-label",tr("aiOpenChat"));orb.querySelector(".sr-only").textContent=tr("aiOpenChat")}}
-export function resetAIOrb(){agentProfile=null;orb?.remove();orb=null;document.querySelector(".ai-orb-tip")?.remove();pending=0;state="idle"}
+export function resetAIOrb(){agentProfile=null;orb?.remove();orb=null;orbMotion=null;removeMotion("ai-orb");document.querySelector(".ai-orb-tip")?.remove();promptUsed=false;pending=0;state="idle"}
 
 export function createAIProfile({api,tr,getLang}){
  const backdrop=document.createElement("div");backdrop.className="ai-profile-overlay hidden";

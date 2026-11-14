@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="Wedding florals">
+  <style>
+    .ic-wed-ring-l {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ic-wed-nudge-l 1.8s ease-in-out infinite;
+    }
+    .ic-wed-ring-r {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: ic-wed-nudge-r 1.8s ease-in-out infinite;
+    }
+    .ic-wed-bloom {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+      animation: ic-wed-petal 1.8s cubic-bezier(.34,1.3,.64,1) infinite;
+    }
+    @keyframes ic-wed-nudge-l {
+      0%, 100% { transform: translateX(-0.8px) rotate(-4deg); }
+      50% { transform: translateX(1.6px) rotate(4deg) scale(1.05); }
+    }
+    @keyframes ic-wed-nudge-r {
+      0%, 100% { transform: translateX(0.8px) rotate(4deg); }
+      50% { transform: translateX(-1.6px) rotate(-4deg) scale(1.05); }
+    }
+    @keyframes ic-wed-petal {
+      0%, 100% { transform: scale(0.9) translateY(0.5px); opacity: 0.78; }
+      50% { transform: scale(1.15) translateY(-1.8px); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ic-wed-ring-l, .ic-wed-ring-r, .ic-wed-bloom { animation: none !important; }
+    }
+  </style>
+  <g class="ic-wed-bloom">
+    <path d="M24 9.5C26.4 12.2 26.4 15.8 24 18.5C21.6 15.8 21.6 12.2 24 9.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="currentColor" fill-opacity="0.24"/>
+    <path d="M22.5 18C18.5 17.5 16 14.8 16.8 11.5C19.8 12 22 14.5 22.5 18Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.16"/>
+    <path d="M25.5 18C29.5 17.5 32 14.8 31.2 11.5C28.2 12 26 14.5 25.5 18Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="currentColor" fill-opacity="0.16"/>
+  </g>
+  <circle class="ic-wed-ring-l" cx="19" cy="29.5" r="8.5" stroke="currentColor" stroke-width="1.9" fill="currentColor" fill-opacity="0.08"/>
+  <circle class="ic-wed-ring-r" cx="29" cy="29.5" r="8.5" stroke="currentColor" stroke-width="1.9" fill="currentColor" fill-opacity="0.08"/>
+</svg>

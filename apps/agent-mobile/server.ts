@@ -21,7 +21,9 @@ Bun.serve({port:PORT,async fetch(req){
   if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.6.0-motion"},{headers:headers({"cache-control":"no-store"})});
   let path=u.pathname==="/"?"index.html":u.pathname.replace(/^\//,"");
   if(path.includes(".."))return new Response("Not found",{status:404,headers:headers()});
-  const file=path==="vendor/supabase-2.119.0.js"?Bun.file(new URL("../../node_modules/@supabase/supabase-js/dist/umd/supabase.js",import.meta.url)):Bun.file(new URL(path,ROOT));
+  const file=path==="vendor/supabase-2.119.0.js"?Bun.file(new URL("../../node_modules/@supabase/supabase-js/dist/umd/supabase.js",import.meta.url)):
+    path.startsWith("content/handbook/")?Bun.file(new URL("../../"+path,import.meta.url)):
+    Bun.file(new URL(path,ROOT));
   if(!(await file.exists()))return new Response("Not found",{status:404,headers:headers()});
   const ext=path.slice(path.lastIndexOf("."));
   return new Response(file,{headers:headers({"content-type":mime[ext]||"application/octet-stream","cache-control":ext===".html"?"no-store":"public, max-age=300"})});

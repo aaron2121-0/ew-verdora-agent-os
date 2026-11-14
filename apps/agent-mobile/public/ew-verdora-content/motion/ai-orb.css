@@ -1,0 +1,28 @@
+.vd-orb-wrap{--orb-size:96px;position:relative;width:var(--orb-size);height:var(--orb-size);display:grid;place-items:center;flex-shrink:0}
+.vd-orb-aura,.vd-orb-ripple,.vd-orb-blob{position:absolute;pointer-events:none;will-change:transform,opacity}
+.vd-orb-aura{inset:-14%;border-radius:50%;background:radial-gradient(circle,rgba(63,182,168,.38) 0%,rgba(46,125,91,.22) 48%,transparent 72%);filter:blur(8px);animation:vd-orb-breathe 2.8s ease-in-out infinite}
+.vd-orb-ripple{inset:0;border-radius:50%;border:2px solid rgba(63,182,168,.65);opacity:0}
+.vd-orb-wrap[data-state="replying"] .vd-orb-ripple--1{animation:vd-orb-ripple 1.2s cubic-bezier(.16,1,.3,1) 0ms infinite}
+.vd-orb-wrap[data-state="replying"] .vd-orb-ripple--2{border-color:rgba(212,180,122,.62);animation:vd-orb-ripple 1.2s cubic-bezier(.16,1,.3,1) 360ms infinite}
+.vd-orb-wrap[data-state="replying"] .vd-orb-ripple--3{animation:vd-orb-ripple 1.2s cubic-bezier(.16,1,.3,1) 720ms infinite}
+.vd-orb-sphere{position:relative;width:100%;height:100%;border-radius:50%;overflow:hidden;background:radial-gradient(circle at 32% 28%,#184235 0%,#0e261f 65%,#071410 100%);box-shadow:inset 0 2px 10px rgba(255,255,255,.32),inset 0 -10px 20px rgba(4,12,10,.82),0 14px 30px rgba(16,47,39,.34);animation:vd-orb-core 2.8s ease-in-out infinite;will-change:transform,filter}
+.vd-orb-blob{border-radius:44% 56% 52% 48% / 48% 42% 58% 52%;filter:blur(5px)}
+.vd-orb-blob--1{inset:-6% 10% 18% -16%;background:radial-gradient(circle at 40% 40%,#4cc38a 0%,#236e4f 58%,transparent 82%);opacity:.88;animation:vd-blob-orbit-a 5.4s linear infinite}
+.vd-orb-blob--2{inset:14% -16% -8% 12%;background:radial-gradient(circle at 60% 50%,#3fb6a8 0%,rgba(45,138,128,.48) 54%,transparent 80%);opacity:.82;animation:vd-blob-orbit-b 6.8s linear infinite reverse}
+.vd-orb-blob--3{inset:24% 18% -14% -4%;background:radial-gradient(circle at 50% 60%,#e8c78a 0%,rgba(177,139,77,.55) 48%,transparent 76%);opacity:.85;animation:vd-blob-orbit-c 4.8s ease-in-out infinite alternate}
+.vd-orb-gloss{position:absolute;inset:6% 16% 54% 16%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.38) 0%,rgba(255,255,255,0) 100%);pointer-events:none}
+.vd-orb-wrap[data-state="thinking"] .vd-orb-aura{animation-duration:1.05s;opacity:.95}
+.vd-orb-wrap[data-state="thinking"] .vd-orb-sphere{animation:vd-orb-think-core 1.05s ease-in-out infinite}
+.vd-orb-wrap[data-state="thinking"] .vd-orb-blob--1{animation-duration:1.25s}.vd-orb-wrap[data-state="thinking"] .vd-orb-blob--2{animation-duration:1.55s}.vd-orb-wrap[data-state="thinking"] .vd-orb-blob--3{animation-duration:1.05s}
+.vd-orb-wrap[data-state="replying"] .vd-orb-sphere{animation:vd-orb-reply-core 1.2s cubic-bezier(.22,1.2,.36,1) infinite}
+.vd-orb-wrap[data-state="replying"] .vd-orb-blob--1{animation-duration:2.6s}.vd-orb-wrap[data-state="replying"] .vd-orb-blob--2{animation-duration:3.1s}
+@keyframes vd-orb-breathe{0%,100%{transform:scale(.92);opacity:.48}50%{transform:scale(1.12);opacity:.88}}
+@keyframes vd-orb-core{0%,100%{transform:scale(.97) translate3d(0,1px,0);filter:brightness(1)}50%{transform:scale(1.04) translate3d(0,-2px,0);filter:brightness(1.08)}}
+@keyframes vd-orb-think-core{0%,100%{transform:scale(.95) rotate(-4deg);filter:brightness(1.08) saturate(1.15)}50%{transform:scale(1.07) rotate(6deg);filter:brightness(1.24) saturate(1.28)}}
+@keyframes vd-orb-reply-core{0%,100%{transform:scale(.98);filter:brightness(1.06)}35%{transform:scale(1.08);filter:brightness(1.18)}}
+@keyframes vd-blob-orbit-a{0%{transform:rotate(0deg) translate3d(10%,-6%,0) scale(1)}50%{transform:rotate(180deg) translate3d(-10%,8%,0) scale(1.14)}100%{transform:rotate(360deg) translate3d(10%,-6%,0) scale(1)}}
+@keyframes vd-blob-orbit-b{0%{transform:rotate(0deg) translate3d(-12%,8%,0) scale(1.06)}50%{transform:rotate(180deg) translate3d(12%,-8%,0) scale(.94)}100%{transform:rotate(360deg) translate3d(-12%,8%,0) scale(1.06)}}
+@keyframes vd-blob-orbit-c{0%{transform:translate3d(-14%,12%,0) scale(.9) rotate(0deg);opacity:.65}100%{transform:translate3d(14%,-14%,0) scale(1.16) rotate(120deg);opacity:.95}}
+@keyframes vd-orb-ripple{0%{transform:scale(.88);opacity:.85}100%{transform:scale(2.05);opacity:0}}
+@media (prefers-reduced-motion:reduce){.vd-orb-wrap *{animation:none!important}.vd-orb-ripple{opacity:0!important}}
+:root[data-motion="reduced"] .vd-orb-wrap *{animation:none!important}:root[data-motion="reduced"] .vd-orb-ripple{opacity:0!important}

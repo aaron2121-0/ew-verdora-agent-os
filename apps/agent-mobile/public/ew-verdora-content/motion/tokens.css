@@ -1,0 +1,26 @@
+/* EW VERDORA Design Tokens & Fade Swap */
+:root {
+  --verdora-950:#102f27; --verdora-900:#173F35; --verdora-800:#1F4D3A; --verdora-700:#2d6b52;
+  --cream-50:#FAF7F0; --cream-100:#F5EFE4; --gold-300:#D8BD86; --gold-100:#F5EAD3;
+  --bg:#FAF7F0; --surface:#FFFFFF; --surface-2:#F5EFE4;
+  --border:rgba(31,77,58,.14); --line:#DADFD6;
+  --text:#173629; --text-secondary:#375649; --text-muted:#526A5F;
+  --brand:#1F4D3A; --gold:#9D783D;
+  --radius-sm:10px; --radius-md:14px; --radius-lg:18px; --radius-xl:24px;
+  --shadow-1:0 1px 2px rgba(16,47,39,.04),0 10px 28px rgba(16,47,39,.06);
+  --font-en:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Arial,sans-serif;
+  --font-zh:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  color-scheme:light;
+}
+:root[data-theme="dark"] {
+  --verdora-900:#235E47; --verdora-800:#277A56; --gold-300:#D4B47A; --gold-100:#382D1D;
+  --bg:#0E1111; --surface:#161A1A; --surface-2:#1D2222;
+  --border:rgba(255,255,255,.12); --line:rgba(255,255,255,.12);
+  --text:#ECEFEE; --text-secondary:#B4C0BC; --text-muted:#93A19B;
+  --brand:#2E7D5B; --gold:#D4B47A;
+  --shadow-1:0 2px 6px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+.vd-lang-fade { transition:opacity 140ms ease; }
+.vd-lang-fade.is-lang-fading { opacity:0; }
+@media (prefers-reduced-motion:reduce) { .vd-lang-fade { transition:opacity 80ms ease; } }

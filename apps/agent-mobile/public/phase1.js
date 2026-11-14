@@ -6,6 +6,9 @@ import {createOrderWizard} from "./order.js";
 import {createPerformanceDashboard} from "./performance.js";
 import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
+import {createHandbookExperience} from "./handbook.js";
+import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
+import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -77,10 +80,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   const performance=createPerformanceDashboard({
     getUserId,getLang,tr,api
   });
-  const training=createTrainingUI({getData,getLang,tr,api,onSummary:today=>{
+  const training=createTrainingUI({getData,getLang,tr,api,onHandbook:code=>handbook.openForCourse(code),onSummary:today=>{
     unlockSummary=today;
     if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
   }});
+
+  const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate,onJourneyChange:()=>{if(active==="today")renderToday()}});
 
   function langText(value){
     const key=categoryKey(value);
@@ -187,7 +192,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       target.classList.add("active");
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if(document.startViewTransition&&!reduced){
+    const vm=vendorMotion();
+    if(old&&old!==target&&vm?.runSharedSwap){
+      vm.runSharedSwap(old,swap,()=>target);
+    }else if(document.startViewTransition&&!reduced){
       document.startViewTransition(swap);
     }else{
       swap();
@@ -210,7 +218,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     else if(next==="training")renderTraining({focusModule,focusExam});
     else if(next==="performance")renderPerformance();
     else if(next==="selling")renderSelling();
+    else if(next==="handbook")handbook.reRender();
     requestAnimationFrame(()=>{
+      if(next!=="today"||document.querySelector(".onboarding-layer")===null)handbook.spotlight(next);
       if(scrollTo)document.getElementById(scrollTo)?.scrollIntoView({behavior:"smooth",block:"start"});
       else if(!focusModule&&!focusExam)window.scrollTo({top:0,behavior:"instant"});
     });
@@ -285,14 +295,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const local=localTaskState().data;
     return {
       followup:(p.due_followups||[]).length===0,
-      kit:Boolean(local.kit),
-      training:!p.training_pending
+      kit:Boolean(local.kit)
     };
   }
 
   function celebrateIfNeeded(){
     const facts=taskFacts();
-    const all=facts.followup&&facts.kit&&facts.training;
+    const all=facts.followup&&facts.kit;
     if(all&&!lastAllDone){
       const date=getData()?.phase1?.kuching_date||kuchingDateKey();
       const key="ew_phase1_celebrated_"+date;
@@ -365,6 +374,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       element("span",{className:"badge badge-"+statusTone(a.status),text:statusLabel(a.status)}));
     greet.append(gLeft,badges);
     page.append(greet);
+    page.append(renderEarningActions());
+    page.append(handbook.journey());
 
     if(isLocked()){
       const lock=element("div",{className:"lock-banner"});
@@ -415,8 +426,21 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
+    // An empty order state must teach the next permitted action, not just
+    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
+    if(Number(D?.today_progress?.orders||0)===0){
+      const copy=emptyCopy("orders");
+      if(copy){
+        const empty=element("section",{className:"handbook-empty-orders"});
+        empty.append(element("strong",{text:localized(copy,"title",getLang())}),
+          element("p",{text:localized(copy,"body",getLang())}));
+        const go=iconButton("phoneCall",localized(copy,"cta",getLang()),"btn btn-secondary");
+        go.addEventListener("click",()=>navigate("today",{scrollTo:"dueFollowups"}));
+        empty.append(go);page.append(empty);
+      }
+    }
     const priorities=element("div",{className:"ai-priority-list"});
-    for(const [name,card] of [["training",renderTodayTasks()],["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
+    for(const [name,card] of [["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
       card.dataset.priorityCard=name;
       const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
       card.prepend(why);priorities.append(card);
@@ -425,7 +449,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     host.append(page);
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
-    celebrateIfNeeded();
+    // The 3-action vendor component owns the completion celebration.
   }
 
   function renderDailyBrief(response){
@@ -458,7 +482,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       {icon:"plus",title:"tileOrder",sub:"tileOrderSub",tone:"primary",action:()=>isLocked()?showLock():navigate("order"),status:tr("readyBadge"),locked:isLocked()},
       {icon:"phoneCall",title:"tileFollowup",sub:"tileFollowupSub",tone:"amber",action:()=>navigate("today",{scrollTo:"dueFollowups"}),status:tr("dueBadge",{count:(p.due_followups||[]).length})},
       {icon:"megaphone",title:"tileSelling",sub:"tileSellingSub",tone:"blue",action:()=>isLocked()?showLock():navigate("selling"),status:taskFacts().kit?tr("completedBadge"):tr("readyBadge"),locked:isLocked()},
-      {icon:"graduationCap",title:"tileTraining",sub:"tileTrainingSub",tone:"green",action:()=>navigate("training"),status:p.training_pending?tr("trainingPendingBadge"):tr("completedBadge")},
+      {icon:"graduationCap",title:"tileTraining",sub:"tileTrainingSub",tone:"green",action:()=>navigate("training"),status:getUnlockProgress(getData(),unlockSummary).completed<7?tr("trainingPendingBadge"):tr("completedBadge")},
+      {icon:"flower2",title:"handbookTitle",sub:"handbookSubtitle",tone:"green",action:()=>handbook.open(),status:tr("readyBadge")},
       {icon:"trendingUp",title:"tilePerformance",sub:"tilePerformanceSub",tone:"indigo",action:()=>navigate("performance"),status:tr(tierKey(p.tier_progress?.current_tier||getData()?.agent?.tier))},
       {icon:"wallet",title:"tileWallet",sub:"tileWalletSub",tone:"gold",action:()=>navigate("performance",{scrollTo:"commissionPreview"}),status:money(m.pending)}
     ];
@@ -475,36 +500,62 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return section;
   }
 
-  function renderTodayTasks(){
-    const section=element("section",{className:"task-card"});
-    const facts=taskFacts();
-    const doneCount=Object.values(facts).filter(Boolean).length;
-    const head=element("div",{className:"card-head"});
-    const title=element("div",{className:"card-head-title"});title.append(createIcon("listChecks",{size:20}),element("h2",{text:tr("todayThreeTitle")}));
-    head.append(title,element("span",{className:"task-count",text:doneCount+" / 3"}));
-    section.append(head);
-    const tasks=[
-      {id:"followup",title:"taskFollowupTitle",desc:"taskFollowupDesc",done:facts.followup,go:()=>navigate("today",{scrollTo:"dueFollowups"})},
-      {id:"kit",title:"taskKitTitle",desc:"taskKitDesc",done:facts.kit,go:()=>isLocked()?showLock():navigate("selling")},
-      {id:"training",title:"taskTrainingTitle",desc:"taskTrainingDesc",done:facts.training,go:()=>navigate("training")}
-    ].sort((a,b)=>Number(a.done)-Number(b.done));
-    if(doneCount===3){
-      const all=element("div",{className:"all-done"});
-      all.append(createIcon("sparkles",{size:18}),element("span",{text:tr("allDoneText")}));
-      section.append(all);
+  function renderEarningActions(){
+    const section=element("section",{className:"earning-actions",attrs:{
+      id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"
+    }});
+    const vm=vendorMotion();
+    // All customer-facing action text comes from Claude-reviewed daily_actions.json
+    // when present, otherwise from the already-approved dashboard/Selling Kits.
+    const zh=dailyActions(getData()||{},"zh");
+    const en=dailyActions(getData()||{},"en");
+    const kinds=["lead","followup","post"];
+    const data={actions:zh.slice(0,3).map((row,i)=>({
+      id:"earning-"+i,type:kinds[i],
+      title_zh:String(row.title||""),title_en:String(en[i]?.title||""),
+      detail_zh:String(row.detail||""),detail_en:String(en[i]?.detail||"")
+    })),tip:null};
+    // Demo package copy is never displayed.
+    applyReviewedMotionCopy(reviewed()?.ui);
+    const date=String(getData()?.phase1?.kuching_date||kuchingDateKey()).replace(/[^0-9-]/g,"");
+    const user=String(getUserId()||"unknown").replace(/[^a-zA-Z0-9-]/g,"");
+    const storeKey="ew_motion_actions_"+user+"_"+date;
+    let completed=[];
+    try{const stored=JSON.parse(localStorage.getItem(storeKey)||"[]");
+      if(Array.isArray(stored))completed=stored.filter(x=>data.actions.some(a=>a.id===x));
+    }catch{}
+    if(vm?.mountHomeToday){
+      const instance=trackMotion("home-today",vm.mountHomeToday(section,data,{
+        lang:getLang(),doneIds:completed,
+        onChange:(_status,done)=>{try{localStorage.setItem(storeKey,JSON.stringify(done))}catch{}}
+      }));
+      const cards=section.querySelectorAll(".vd-ht-item");
+      cards.forEach((card,i)=>{
+        const row=getLang()==="zh"?zh[i]:en[i];
+        const copy=element("p",{className:"vd-ht-action-detail",text:String(row?.detail||"")});
+        const go=element("button",{className:"vd-ht-go btn btn-secondary btn-small",
+          text:getLang()==="zh"?"前往处理":"Open action",attrs:{type:"button"}});
+        go.addEventListener("click",()=>{
+          const target=row?.target;
+          if(target==="order"||target==="selling"){
+            if(isLocked())return showLock();
+            navigate(target);
+          }else if(target==="today")navigate("today",{scrollTo:"dueFollowups"});
+          else navigate(["customers","training"].includes(target)?target:"customers");
+        });
+        card.append(copy,go);
+      });
+      // Retain the actual UI with interactive buttons, not any sample data.
+      if(instance)return section;
     }
-    const list=element("div",{className:"task-list"});
-    tasks.forEach(task=>{
-      const row=element("button",{className:"task-row"+(task.done?" done":""),attrs:{type:"button"}});
-      const check=element("span",{className:"task-check"});
-      if(task.done)check.append(createIcon("check",{size:17}));
-      const copy=element("span",{className:"task-copy"});
-      copy.append(element("strong",{text:tr(task.title)}),element("small",{text:tr(task.desc)}));
-      row.append(check,copy,element("span",{className:"task-go",text:task.done?tr("completedBadge"):tr("goNow")}));
-      row.addEventListener("click",task.go);
-      list.append(row);
+    // The base application remains usable if a vendor script cannot load.
+    const list=element("div",{className:"earning-action-list"});
+    data.actions.forEach((action,i)=>{
+      const row=getLang()==="zh"?zh[i]:en[i];
+      const button=element("button",{className:"earning-action",text:row?.title||action["title_"+getLang()]});
+      button.addEventListener("click",()=>navigate("customers"));list.append(button);
     });
-    section.append(list);
+    section.append(element("h2",{text:getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"}),list);
     return section;
   }
 
@@ -587,7 +638,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
     const allRows=getData()?.phase1?.recent_leads||[];
-    if(!allRows.length){page.append(emptyState({icon:"users",title:tr("noCustomers")}));const ask=element("button",{className:"btn btn-secondary",text:tr("aiEmptyCustomerAction"),attrs:{type:"button"}});ask.addEventListener("click",()=>document.dispatchEvent(new Event("ew-open-ai")));page.append(ask);host.append(page);return}
+    if(!allRows.length){
+      const copy=emptyCopy("customers");
+      page.append(emptyState({icon:"users",title:localized(copy,"title",getLang())||tr("noCustomers"),
+        message:localized(copy,"body",getLang())}));
+      const add=iconButton("plus",localized(copy,"cta",getLang())||tr("goNow"),"btn btn-primary");
+      add.addEventListener("click",()=>isLocked()?showLock():navigate("order"));
+      page.append(add);host.append(page);return;
+    }
 
     const filters=element("div",{className:"follow-actions",attrs:{"data-phase4-hook":"customer-segments"}});
     [
@@ -834,15 +892,18 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
   function renderAll(){
     setupNav();
-    renderToday();renderCustomers();if(active==="training")renderTraining();if(active==="performance")renderPerformance();renderSelling();order.render();
+    renderToday();renderCustomers();if(active==="training")renderTraining();if(active==="performance")renderPerformance();if(active==="handbook")handbook.reRender();renderSelling();order.render();
     renderNavBadges();
   }
 
   function onLanguageChange(){
+    setMotionLanguage(getLang());
     renderAll();
     order.onLanguageChange();
     performance.onLanguageChange();
     training.onLanguageChange();
+    handbook.onLanguageChange?.();
+    if(active==="handbook")handbook.reRender();
   }
 
   function onForeground(){
@@ -854,7 +915,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     setupSheets();
     setupNav();
     await order.init();
+    await handbook.initContent();
     renderAll();
+    handbook.showWelcome();
     navigate("today");
     refreshUnlockSummary();
   }

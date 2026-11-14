@@ -15,7 +15,7 @@ function moduleStatus(value,tr){
   return key?tr(key):String(value||"—");
 }
 
-export function createTrainingUI({getData,getLang,tr,api,onSummary}){
+export function createTrainingUI({getData,getLang,tr,api,onSummary,onHandbook}){
   let host=null;
   let today=null;
   let exam=null;
@@ -230,6 +230,11 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
       b.addEventListener("click",()=>expandModule(code));
       r.append(b);
       item.append(r);
+      if(onHandbook){
+        const open=element("button",{className:"btn btn-secondary btn-small training3-approved-handbook",attrs:{type:"button"}});
+        open.append(createIcon("bookOpen",{size:16}),element("span",{text:getLang()==="zh"?"先读上手卡／开始测验":"Read cards / start quiz"}));
+        open.addEventListener("click",()=>onHandbook(code));item.append(open);
+      }
       if(expandedModule===code){
         const detail=element("div",{className:"training3-course-content"});
         const content=(getLang()==="zh"?mod.content_zh:mod.content_en)||{};
@@ -385,20 +390,22 @@ export function createTrainingUI({getData,getLang,tr,api,onSummary}){
         onExam:()=>document.getElementById("training-exam-entry")?.scrollIntoView({behavior:"smooth",block:"center"})
       }));
     }
-    page.append(dailyHero(),skills());
+    const optional=element("details",{className:"training-optional-review"});
+    optional.append(element("summary",{text:getLang()==="zh"?"每日练习（选做） · 复习用，不计入解锁":"Optional daily practice · review only, not counted toward unlocking"}));
+    optional.append(dailyHero(),skills());
     if(today?.status==="completed"){
       const done=element("section",{className:"training3-daily-done"});
       done.append(createIcon(today?.passed?"circleCheck":"target",{size:22}),
         element("div",{className:"training3-done-copy"}));
       done.lastChild.append(element("strong",{text:tr("todayScore",{score:Math.round(Number(today.score||0))})}),
         element("span",{text:today?.passed?tr("dailyPassText"):tr("dailyFailText")}));
-      page.append(done);
+      optional.append(done);
     }else{
       const start=element("button",{className:"btn btn-primary btn-wide training3-start",attrs:{type:"button",disabled:loading}});
       start.append(createIcon("target",{size:19}),element("span",{text:today?.status==="active"?tr("resumeDaily"):tr("startDaily")}));
-      start.addEventListener("click",startDaily);page.append(start);
+      start.addEventListener("click",startDaily);optional.append(start);
     }
-    page.append(examCard(),modules());
+    page.append(examCard(),modules(),optional);
     return page;
   }
 

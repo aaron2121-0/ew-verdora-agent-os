@@ -4,6 +4,7 @@ import {setupBottomSheet,setButtonLoading,toast,vibrate} from "./components.js";
 import {createPhase1UI} from "./phase1.js";
 import {clearOrderDraft,prepareOrderDraftForUser} from "./draft.js";
 import {initMotion} from "./motion.js";
+import {setMotionLanguage,vendorMotion,clearMotion} from "./motion-vendor.js";
 import {initAIOrb,resetAIOrb,refreshAIOrb,createAIProfile,aiStart,aiEnd} from "./ai-ui.js";
 import {createAIChat} from "./ai-chat.js";
 
@@ -48,6 +49,9 @@ function applyI18n(){
     langBtn.textContent="";
     langBtn.append(createIcon("languages",{size:18}),document.createTextNode(tr("languageName")));
   }
+  const vm=vendorMotion();
+  if(vm?.i18n?.[lang])vm.i18n[lang].orbLabel=tr("aiOpenChat");
+  setMotionLanguage(lang);
   UI?.onLanguageChange();
   refreshAIOrb(tr);
   const themeBtn=$("themeToggle");
@@ -119,7 +123,7 @@ async function refresh(){
       const aiCall=body=>fn("agent-ai",body);
       aiChat=createAIChat({api:aiCall,tr,getData:()=>D,getLang:()=>lang});
       aiProfile=createAIProfile({api:aiCall,tr,getLang:()=>lang});
-      initAIOrb({onClick:()=>aiChat?.open(),tr,getData:()=>D});
+      initAIOrb({onClick:()=>aiChat?.open(),tr,getData:()=>D,getLang:()=>lang});
     }
     return result;
   })();
@@ -151,6 +155,7 @@ function setupAppearance(){
   $("themeToggle")?.addEventListener("click",()=>{localStorage.setItem("ew_theme",document.documentElement.dataset.theme==="dark"?"light":"dark");apply()});
   $("aiProfileOpen")?.addEventListener("click",()=>aiProfile?.open());
   document.addEventListener("ew-open-ai",()=>aiChat?.open());
+  document.addEventListener("ew-open-ai-question",event=>aiChat?.open(event.detail?.text||""));
 }
 
 function setupHandlers(){
