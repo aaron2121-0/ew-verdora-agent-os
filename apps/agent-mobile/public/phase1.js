@@ -210,6 +210,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
     active=next;
+    if(next!=="today")window.VerdoraMotion?.brandBg?.destroy?.();
     pageSwap(next);
     updateNavIndicator();
     if(next==="today")renderToday();
@@ -234,7 +235,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       unlockSummary=result?.today||null;
       if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
     }catch{
-      // Training data is optional here. Never show an exam as ready before its state is confirmed.
     }finally{unlockLoading=false}
   }
 
@@ -352,6 +352,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
     const page=element("div",{className:"page-shell today-shell"});
+    import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
     if(identityTop)page.append(identityTop);
 
@@ -429,8 +430,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    // An empty order state must teach the next permitted action, not just
-    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
     if(Number(D?.today_progress?.orders||0)===0){
       const copy=emptyCopy("orders");
       if(copy){
@@ -452,7 +451,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     host.append(page);
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
-    // The 3-action vendor component owns the completion celebration.
   }
 
   function renderDailyBrief(response){
@@ -508,8 +506,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"
     }});
     const vm=vendorMotion();
-    // All customer-facing action text comes from Claude-reviewed daily_actions.json
-    // when present, otherwise from the already-approved dashboard/Selling Kits.
     const zh=dailyActions(getData()||{},"zh");
     const en=dailyActions(getData()||{},"en");
     const kinds=["lead","followup","post"];
@@ -518,7 +514,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       title_zh:String(row.title||""),title_en:String(en[i]?.title||""),
       detail_zh:String(row.detail||""),detail_en:String(en[i]?.detail||"")
     })),tip:null};
-    // Demo package copy is never displayed.
     applyReviewedMotionCopy(reviewed()?.ui);
     const date=String(getData()?.phase1?.kuching_date||kuchingDateKey()).replace(/[^0-9-]/g,"");
     const user=String(getUserId()||"unknown").replace(/[^a-zA-Z0-9-]/g,"");
@@ -548,10 +543,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
         });
         card.append(copy,go);
       });
-      // Retain the actual UI with interactive buttons, not any sample data.
       if(instance)return section;
     }
-    // The base application remains usable if a vendor script cannot load.
     const list=element("div",{className:"earning-action-list"});
     data.actions.forEach((action,i)=>{
       const row=getLang()==="zh"?zh[i]:en[i];
@@ -563,7 +556,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
 
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
