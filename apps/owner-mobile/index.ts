@@ -1,10 +1,10 @@
 
 const HTML=[
 '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EW VERDORA Owner</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>',
-'<style>*{box-sizing:border-box}body{margin:0;background:#0E1111;color:#ecf3ee;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.shell{max-width:760px;margin:auto;padding:18px 14px 60px}.top,.row{display:flex;gap:8px;align-items:center}.top{justify-content:space-between}.brand{font-size:21px;font-weight:850}.muted{font-size:12px;color:#a6b6ae;line-height:1.5}.card{background:#161A1A;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:15px;margin-top:12px}.title{font-weight:800;font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{font-size:22px;font-weight:850}.btn{min-height:42px;border:1px solid #384741;border-radius:13px;background:#1d2924;color:#eaf7ee;padding:0 13px;font-weight:700}.primary{background:#2E7D5B;color:white;border-color:#2E7D5B}input,select,textarea{width:100%;background:#101816;color:#ecf3ee;border:1px solid #384741;border-radius:13px;padding:10px 12px;min-height:45px}.form{display:grid;gap:8px}.hidden{display:none!important}.item{padding:11px 0;border-top:1px solid rgba(255,255,255,0.08)}.item:first-child{border-top:0}.pill{display:inline-block;border:1px solid #385548;border-radius:999px;padding:4px 8px;font-size:11px}.danger{color:#ff9186}.ok{color:#67dca8}@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}@media(min-width:1100px){.shell{max-width:1200px}.grid{grid-template-columns:repeat(4,1fr)}}@media(prefers-reduced-motion:no-preference){.card{animation:rise .45s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}</style></head><body><main class="shell">',
+'<style>*{box-sizing:border-box}body{margin:0;background:#0E1111;color:#ecf3ee;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.shell{max-width:760px;margin:auto;padding:18px 14px 60px}.top,.row{display:flex;gap:8px;align-items:center}.top{justify-content:space-between}.brand{font-size:21px;font-weight:850}.muted{font-size:12px;color:#a6b6ae;line-height:1.5}.card{background:#161A1A;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:15px;margin-top:12px}.title{font-weight:800;font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{font-size:22px;font-weight:850}.btn{min-height:42px;border:1px solid #384741;border-radius:13px;background:#1d2924;color:#eaf7ee;padding:0 13px;font-weight:700}.primary{background:#2E7D5B;color:white;border-color:#2E7D5B}input,select,textarea{width:100%;background:#101816;color:#ecf3ee;border:1px solid #384741;border-radius:13px;padding:10px 12px;min-height:45px}.form{display:grid;gap:8px}.hidden{display:none!important}.item{padding:11px 0;border-top:1px solid rgba(255,255,255,0.08)}.item:first-child{border-top:0}.pill{display:inline-block;border:1px solid #385548;border-radius:999px;padding:4px 8px;font-size:11px}.danger{color:#ff9186}.ok{color:#67dca8}@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}@media(min-width:1100px){.shell{max-width:1200px}.grid{grid-template-columns:repeat(4,1fr)}}@media(prefers-reduced-motion:no-preference){.card{animation:rise .45s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}.kyc-mode > :not(#kycPage){display:none!important}.kyc-photo{display:block;width:100%;max-width:100%;height:auto;max-height:650px;object-fit:contain;border:1px solid #384741;border-radius:12px;margin-top:8px;touch-action:pan-y;-webkit-user-select:none;user-select:none}.kyc-photo:not([width]){display:none}.kyc-field{overflow-wrap:anywhere;padding:6px 0;border-bottom:1px solid #384741}.kyc-item{display:block;text-align:left;width:100%;margin-top:8px}.danger-btn{background:#341d1d;border-color:#814441;color:#ffb3ad}.kyc-field strong{display:block;font-size:12px;color:#a6b6ae;margin-bottom:3px}</style></head><body><main class="shell">',
 '<div class="top"><div><div class="brand">EW VERDORA</div><div class="muted">Owner Command · Quote Review & Security</div></div><button id="logout" class="btn hidden">Sign out</button></div>',
 '<div id="login" class="card"><div class="title">Owner Secure Access</div><div class="muted">Open your one-time Owner Recovery Link. Email magic-link login is disabled to avoid redirect and rate-limit failures.</div><div class="form" style="margin-top:12px"><input id="email" class="hidden" type="email" placeholder="owner@email.com"><button id="loginBtn" class="btn primary hidden">Send sign-in link</button><div id="msg" class="muted"></div></div></div>',
-'<div id="app" class="hidden"><div class="card"><div class="row" style="justify-content:space-between"><div class="title">Company Health</div><span id="mode" class="pill"></span></div><div class="grid" style="margin-top:13px"><div><div class="muted">30D Net Margin</div><div id="margin" class="metric"></div></div><div><div class="muted">Orders Today</div><div id="orders" class="metric"></div></div><div><div class="muted">Revenue Today</div><div id="revenue" class="metric"></div></div><div><div class="muted">Orders / Active Agent</div><div id="avg" class="metric"></div></div></div></div>',
+'<div id="app" class="hidden"><div class="row" style="margin-top:12px"><button id="kycOpen" type="button" class="btn primary hidden">身份审核 / Identity Review</button></div><section id="kycPage" class="hidden" aria-label="身份审核"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><button id="kycBack" type="button" class="btn">← 返回 Owner 首页</button><div class="title">身份审核 / Identity Review</div></div><div class="muted">仅显示称呼、地区、提交时间及 IC 后四位。敏感资料仅在查看时读取，60 秒自动遮盖。 / Sensitive details expire after 60 seconds.</div><div class="row" style="margin-top:12px"><button id="kycReload" class="btn" type="button">刷新列表 / Refresh</button><span id="kycCount" class="pill"></span></div><div id="kycMessage" class="muted" role="status" aria-live="polite"></div><div id="kycQueue"></div></div><section id="kycDetail" class="card hidden" aria-label="KYC sensitive review"><div class="row" style="justify-content:space-between"><div class="title">身份资料（限时查看）</div><button id="kycClose" class="btn" type="button">立即遮盖 / Hide</button></div><div id="kycClock" class="muted"></div><div id="kycFields" class="form" style="margin-top:10px"></div><div class="muted" style="margin-top:10px">IC 正面 / IC front (temporary view)</div><canvas id="kycCanvas" class="kyc-photo" role="img" aria-label="IC front photo"></canvas><div id="kycPhotoMessage" class="muted"></div><div id="kycActions" class="form" style="margin-top:12px"><div class="row" style="flex-wrap:wrap"><button id="kycApprove" type="button" class="btn primary">一键核准 / Approve</button><button id="kycReject" type="button" class="btn">退回 / Reject</button></div><label class="muted" for="kycRejectCode">退回原因（必填） / Rejection reason<select id="kycRejectCode"><option value="">请选择原因 / Choose a reason</option><option value="IC photo is unclear / IC 照片不清晰">IC 照片不清晰 / Blurry photo</option><option value="IC information does not match / 身份资料不一致">身份资料不一致 / Data mismatch</option><option value="IC photo is incomplete / IC 照片不完整">IC 照片不完整 / Incomplete photo</option><option value="other">其他 / Other</option></select></label><label class="muted" for="kycRejectNote">说明 / Explanation<textarea id="kycRejectNote" rows="2" maxlength="500" placeholder="选择其他时必须填写 / Required when Other is selected"></textarea></label></div><button id="kycDelete" type="button" class="btn danger-btn">永久删除 KYC / Delete KYC record</button><div id="kycDecisionMessage" class="muted" role="status" aria-live="polite"></div></section><div id="kycMasked" class="card muted hidden" role="status" aria-live="polite"></div></section><div class="card"><div class="row" style="justify-content:space-between"><div class="title">Company Health</div><span id="mode" class="pill"></span></div><div class="grid" style="margin-top:13px"><div><div class="muted">30D Net Margin</div><div id="margin" class="metric"></div></div><div><div class="muted">Orders Today</div><div id="orders" class="metric"></div></div><div><div class="muted">Revenue Today</div><div id="revenue" class="metric"></div></div><div><div class="muted">Orders / Active Agent</div><div id="avg" class="metric"></div></div></div></div>',
 '<div class="card"><div class="grid"><div><div class="muted">Active Agents</div><div id="active" class="metric"></div></div><div><div class="muted">Dormant</div><div id="dormant" class="metric"></div></div><div><div class="muted">Commission Liability</div><div id="comm" class="metric"></div></div><div><div class="muted">Bonus Liability</div><div id="bonus" class="metric"></div></div></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Serious Exceptions</div><span id="exCount" class="pill"></span></div><div id="exceptions"></div></div>',
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
@@ -30,8 +30,8 @@ const friendlyError=code=>{
   if(c.includes("rate"))return "Service is temporarily busy. Please try again later. / 服务暂时繁忙，请稍后再试。";
   return "Unable to complete this action. Please try again. / 暂时无法完成，请再试一次。";
 };
-async function call(body){let r=await fetch(CFG.url+"/functions/v1/owner-session",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":CFG.key},body:JSON.stringify(body||{})});let j=await r.json();if(!r.ok)throw Error(j.error||"Request failed");return j}
-function show(x){$("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
+async function call(body,options={}){let r=await fetch(CFG.url+"/functions/v1/owner-session",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":CFG.key},body:JSON.stringify(body||{}),signal:options.signal,cache:"no-store",referrerPolicy:"no-referrer"});let j=await r.json();if(!r.ok)throw Error(j.error||"Request failed");return j}
+function show(x){if(x!=="app"){maskKyc("身份资料已遮盖 / Sensitive details hidden.");$("app").classList.remove("kyc-mode")} $("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
 async function refreshHandbook(){
   const j=await call({action:"handbook_pending"});
   const entries=j.entries||[],batchById=new Map((j.batches||[]).map(b=>[b.id,b]));
@@ -123,6 +123,200 @@ async function refreshHandbook(){
     finally{btn.disabled=false}
   });
 }
+
+const KYC_VIEW_MS=60000;
+const kycUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+let kycSeq=0,kycTimer=null,kycAbort=null,kycActive=null,kycListBusy=false;
+function maskKyc(message="身份资料已遮盖。请重新点开查看。 / Details hidden. Open again to view."){
+  ++kycSeq;
+  if(kycTimer!==null){clearTimeout(kycTimer);kycTimer=null}
+  if(kycAbort){kycAbort.abort();kycAbort=null}
+  kycActive=null;
+  const canvas=$("kycCanvas");
+  if(canvas){canvas.width=0;canvas.height=0;canvas.removeAttribute("width");canvas.removeAttribute("height")}
+  if($("kycFields"))$("kycFields").replaceChildren();
+  if($("kycRejectNote"))$("kycRejectNote").value="";
+  if($("kycRejectCode"))$("kycRejectCode").value="";
+  if($("kycClock"))$("kycClock").textContent="";
+  if($("kycPhotoMessage"))$("kycPhotoMessage").textContent="";
+  if($("kycDecisionMessage"))$("kycDecisionMessage").textContent="";
+  if($("kycDetail"))$("kycDetail").classList.add("hidden");
+  if($("kycMasked")){$("kycMasked").textContent=message;$("kycMasked").classList.remove("hidden")}
+}
+function closeKycPage(){
+  maskKyc();
+  $("app").classList.remove("kyc-mode");
+  $("kycPage").classList.add("hidden");
+  $("kycQueue").replaceChildren();
+  $("kycCount").textContent="";
+  $("kycMessage").textContent="";
+}
+function kycTextField(label,value){
+  const node=document.createElement("div"),name=document.createElement("strong"),body=document.createElement("span");
+  node.className="kyc-field";name.textContent=label;body.textContent=String(value??"—");
+  node.append(name,body);return node;
+}
+function kycTime(v){if(!v)return "—";const d=new Date(v);return Number.isNaN(d.valueOf())?"—":kuchingDateTime(d)}
+function kycStatusOrder(s){return s==="submitted"?0:s==="rejected"?1:s==="approved"?2:3}
+async function refreshKycList(){
+  if(kycListBusy||$("kycPage").classList.contains("hidden"))return;
+  kycListBusy=true;
+  $("kycReload").disabled=true;
+  $("kycMessage").textContent="读取审核列表中… / Loading review queue…";
+  $("kycQueue").replaceChildren();
+  try{
+    // Contract: kyc_list returns {items:[{agent_id,preferred_name,area,submitted_at,ic_last4,status}]}.
+    const j=await call({action:"kyc_list"});
+    const rows=j.items??j.entries??j.records;
+    if(!Array.isArray(rows))throw Error("kyc_contract_error");
+    const safe=rows.filter(r=>r&&kycUuid.test(String(r.agent_id||""))&&r.status!=="draft");
+    safe.sort((a,b)=>kycStatusOrder(a.status)-kycStatusOrder(b.status)||(Date.parse(b.submitted_at)||0)-(Date.parse(a.submitted_at)||0));
+    $("kycCount").textContent=safe.filter(r=>r.status==="submitted").length+" 待审核 / pending";
+    $("kycMessage").textContent=safe.length?"":"暂无已提交的身份资料 / No submitted applications.";
+    const fragment=document.createDocumentFragment();
+    for(const row of safe){
+      const button=document.createElement("button");
+      button.type="button";button.className="btn kyc-item";
+      const name=document.createElement("strong"),subtitle=document.createElement("div");
+      const last4=/^\d{4}$/.test(String(row.ic_last4||""))?String(row.ic_last4):"••••";
+      name.textContent=String(row.preferred_name||"—");
+      subtitle.className="muted";
+      subtitle.textContent=String(row.area||"—")+" · "+kycTime(row.submitted_at)+" · IC •••• "+last4;
+      button.append(name,subtitle);
+      button.addEventListener("click",()=>openKycView(String(row.agent_id)));
+      fragment.append(button);
+    }
+    $("kycQueue").append(fragment);
+  }catch{
+    $("kycCount").textContent="";
+    $("kycMessage").textContent="身份审核接口未就绪或读取失败。请确认 GPT 1 的 kyc_list 已上线并授权 Owner。 / KYC service unavailable.";
+  }finally{kycListBusy=false;$("kycReload").disabled=false}
+}
+function kycSignedPhotoUrl(value){
+  if(typeof value!=="string"||!value)return null;
+  try{
+    const u=new URL(value),base=new URL(CFG.url);
+    // Only short-lived signed URLs for the private agent-kyc bucket, never public links.
+    if(u.protocol!=="https:"||u.origin!==base.origin||!u.pathname.startsWith("/storage/v1/object/sign/agent-kyc/")||!u.searchParams.has("token"))return null;
+    return u.href;
+  }catch{return null}
+}
+async function drawKycPhoto(rawUrl,seq,signal){
+  const url=kycSignedPhotoUrl(rawUrl);
+  if(!url){$("kycPhotoMessage").textContent="照片暂时无法安全显示 / Secure photo link unavailable.";return}
+  try{
+    const response=await fetch(url,{cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer",signal});
+    if(!response.ok)throw Error("photo_response");
+    const mime=(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+    if(!["image/jpeg","image/png","image/webp"].includes(mime))throw Error("photo_type");
+    const blob=await response.blob();
+    if(blob.size>5*1024*1024||blob.size===0)throw Error("photo_size");
+    if(seq!==kycSeq||signal.aborted)return;
+    if(typeof createImageBitmap!=="function")throw Error("image_bitmap_unsupported");
+    const bitmap=await createImageBitmap(blob);
+    try{
+      if(seq!==kycSeq||signal.aborted)return;
+      const canvas=$("kycCanvas"),ctx=canvas.getContext("2d");
+      if(!ctx)throw Error("canvas_unavailable");
+      const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));
+      canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+      canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      $("kycPhotoMessage").textContent="仅供核验，请勿保存或截图。 / Review only. Do not copy.";
+    }finally{bitmap.close()}
+  }catch{
+    if(seq===kycSeq&&!signal.aborted)$("kycPhotoMessage").textContent="照片读取失败，请核实访问权限或图片格式。 / Photo unavailable.";
+  }
+}
+async function openKycView(agentId){
+  if(!kycUuid.test(agentId))return;
+  maskKyc("读取中… / Loading protected details…");
+  const seq=kycSeq,controller=new AbortController();
+  kycAbort=controller;
+  $("kycMasked").classList.add("hidden");
+  $("kycDetail").classList.remove("hidden");
+  $("kycClock").textContent="限时 60 秒 / Auto-hide after 60 seconds";
+  $("kycFields").append(kycTextField("资料读取中 / Loading","…"));
+  kycTimer=setTimeout(()=>maskKyc("已超过 60 秒，敏感资料自动遮盖。 / 60-second viewing limit reached."),KYC_VIEW_MS);
+  try{
+    // Contract: kyc_view returns {kyc:{agent_id,...},ic_front_signed_url:"https://..."}.
+    const j=await call({action:"kyc_view",agent_id:agentId},{signal:controller.signal});
+    if(seq!==kycSeq||controller.signal.aborted)return;
+    const record=j.kyc??j.record??j.entry;
+    if(!record||record.agent_id!==agentId)throw Error("kyc_contract_error");
+    kycActive={agentId,status:String(record.status||"")};
+    const values=[
+      ["法定姓名 / Legal name",record.legal_name],
+      ["称呼 / Preferred name",record.preferred_name],
+      ["IC 号码 / IC number",record.ic_number],
+      ["出生日期 / Date of birth",record.date_of_birth],
+      ["WhatsApp / Phone",record.phone_whatsapp],
+      ["地区 / Area",record.area],
+      ["状态 / Status",record.status],
+      ["提交时间 / Submitted",kycTime(record.submitted_at)],
+      ["同意版本 / Consent version",record.consent_version],
+      ["同意时间 / Consent at",kycTime(record.consent_at)],
+      ["审核时间 / Reviewed",kycTime(record.reviewed_at)],
+      ["退回理由 / Reject reason",record.reject_reason]
+    ];
+    $("kycFields").replaceChildren(...values.map(([label,value])=>kycTextField(label,value)));
+    const submitted=record.status==="submitted";
+    $("kycActions").classList.toggle("hidden",!submitted);
+    $("kycDelete").classList.remove("hidden");
+    // Do not put a signed URL into img/src, href, logs, localStorage or IndexedDB.
+    await drawKycPhoto(j.ic_front_signed_url,seq,controller.signal);
+  }catch{
+    if(seq===kycSeq)maskKyc("无法读取该身份资料。请确认权限及 GPT 1 接口格式。 / Unable to view identity record.");
+  }
+}
+async function reviewKyc(decision){
+  const selected=kycActive;
+  if(!selected||selected.status!=="submitted")return;
+  const code=$("kycRejectCode").value,note=$("kycRejectNote").value.trim();
+  let reason=null;
+  if(decision==="reject"){
+    if(!code||(code==="other"&&!note)){
+      $("kycDecisionMessage").textContent="退回必须选择原因；选择「其他」必须填写说明。 / Rejection reason required.";return;
+    }
+    reason=(code==="other"?note:(code+(note?" — "+note:""))).slice(0,500);
+  }
+  const buttons=[$("kycApprove"),$("kycReject"),$("kycDelete")];
+  buttons.forEach(b=>b.disabled=true);
+  $("kycDecisionMessage").textContent="处理中… / Processing…";
+  try{
+    await call({action:"kyc_review",agent_id:selected.agentId,decision,reject_reason:reason},{signal:kycAbort?.signal});
+    maskKyc(decision==="approve"?"身份已核准 / Identity approved.":"已退回并记录原因 / Rejected with reason.");
+    await refreshKycList();
+  }catch{
+    if(kycActive?.agentId===selected.agentId)$("kycDecisionMessage").textContent="审核失败，未确认状态变更。请刷新列表后再试。 / Review failed; verify status before retry.";
+  }finally{buttons.forEach(b=>b.disabled=false)}
+}
+async function deleteKyc(){
+  const selected=kycActive;
+  if(!selected)return;
+  if(!confirm("永久删除此 Agent 的身份审核资料与 IC 照片？此操作不可恢复。\nPermanently delete this Agent's KYC record and photo?"))return;
+  if(prompt("输入 DELETE 确认永久删除 / Type DELETE to confirm")!=="DELETE")return;
+  $("kycDelete").disabled=true;
+  try{
+    await call({action:"kyc_delete",agent_id:selected.agentId,confirm:true},{signal:kycAbort?.signal});
+    maskKyc("已提交永久删除 / Deletion completed.");
+    await refreshKycList();
+  }catch{
+    if(kycActive?.agentId===selected.agentId)$("kycDecisionMessage").textContent="删除失败，未确认记录已移除。 / Delete failed; record may remain.";
+  }finally{$("kycDelete").disabled=false}
+}
+$("kycOpen").onclick=()=>{$("app").classList.add("kyc-mode");$("kycPage").classList.remove("hidden");maskKyc("点击列表项目查看完整身份资料。 / Select an applicant to view.");refreshKycList()};
+$("kycBack").onclick=closeKycPage;
+$("kycReload").onclick=()=>{maskKyc("列表已刷新。 / List refreshed.");refreshKycList()};
+$("kycClose").onclick=()=>maskKyc();
+$("kycApprove").onclick=()=>reviewKyc("approve");
+$("kycReject").onclick=()=>reviewKyc("reject");
+$("kycDelete").onclick=deleteKyc;
+$("kycCanvas").addEventListener("contextmenu",event=>event.preventDefault());
+document.addEventListener("visibilitychange",()=>{if(document.hidden)maskKyc("已切换页面，身份资料自动遮盖。 / Hidden when tab is not visible.")});
+window.addEventListener("blur",()=>{if(kycActive)maskKyc("窗口失去焦点，身份资料自动遮盖。 / Hidden on focus loss.")});
+window.addEventListener("pagehide",()=>maskKyc());
+
 async function refresh(){try{let [j,qj]=await Promise.all([call({action:"dashboard"}),call({action:"quote_queue"})]),d=j.dashboard||{};show("app");$("mode").textContent=String(d.profit_mode||"normal").toUpperCase();$("margin").textContent=(Number(d.net_margin_30d||0)*100).toFixed(1)+"%";$("orders").textContent=d.orders_today||0;$("revenue").textContent="RM "+Number(d.revenue_today||0).toFixed(0);$("avg").textContent=Number(d.avg_orders_per_active_agent||0).toFixed(2);$("active").textContent=d.active_agents||0;$("dormant").textContent=d.dormant_agents||0;$("comm").textContent="RM "+Number(d.commission_liability||0).toFixed(0);$("bonus").textContent="RM "+Number(d.bonus_liability||0).toFixed(0);$("exCount").textContent=(d.serious_exceptions||0)+" open";let ex=j.exceptions||[];$("exceptions").innerHTML=ex.length?ex.map(e=>"<div class=item><div class=row style='justify-content:space-between'><div><b class=damage>"+escapeHtml(String(e.severity||"").toUpperCase())+" · "+escapeHtml(e.type)+"</b><div class=muted>"+escapeHtml(e.summary)+"</div></div><div class=row><button class='btn ex' data-id='"+escapeHtml(e.id)+"' data-a='freeze'>Freeze</button><button class='btn ex' data-id='"+escapeHtml(e.id)+"' data-a='dismiss'>Dismiss</button></div></div></div>").join(""):"<div class='item muted'>No serious exceptions.</div>";document.querySelectorAll(".ex").forEach(b=>b.onclick=async()=>{await call({action:"decide_exception",exception_id:b.dataset.id,decision:b.dataset.a});await refresh()});
 let qq=qj.queue||[];
 $("quoteCount").textContent=qq.length+" pending";
@@ -156,6 +350,8 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
 }));
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
 $("handbookCard").classList.toggle("hidden",j.role!=="owner");
+$("kycOpen").classList.toggle("hidden",j.role!=="owner");
+if(j.role!=="owner"&&!$("kycPage").classList.contains("hidden"))closeKycPage();
 if(j.role==="owner"){try{await refreshHandbook()}catch(e){$("handbookMsg").textContent=friendlyError(e?.message)}}
 $("recoveryBtn").closest(".card").classList.toggle("hidden",j.role!=="owner");
 
