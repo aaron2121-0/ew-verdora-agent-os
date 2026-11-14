@@ -30,3 +30,9 @@ Open Owner Mobile -> **Manual Quote Review** -> inspect Agent/customer/reference
 ## Rollback reference
 - Owner Edge Function former v17 code re-deployed as v19 before this release.
 - Owner Railway former deployment `d90ff850`.
+
+## Follow-up code review (not deployed)
+- **PR #17**: https://github.com/aaron2121-0/ew-verdora-agent-os/pull/17 — now ready for Claude review; contains proposed Owner order creation, manual bank-payment confirmation and per-Agent progress. No production release of this PR.
+- PR #17 checks: **Core CI passed**, **Phase 0 UI Security passed**. The separate `Agent Motion Live Supabase QA` workflow failed because the GitHub Actions environment lacks `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_QA_SECRET_KEY` (configuration absence, not a proven product regression). Live authenticated E2E remains unverified.
+- Database code inspection: a passed 20-question certification exam calls `refresh_agent_certification_internal`, which may move an eligible agent to `active` only if all required modules are passed and no active recovery task or unresolved serious violation remains. No live test Agent passed this sequence during this release.
+- **Do not** call PR #17's order/payment UI live until Claude approves, the code is merged, deployed, and 401/403/E2E plus cleanup verified.
