@@ -85,13 +85,20 @@ const server=createServer(async(req,res)=>{
  if(pathname==="/vendor/supabase-2.119.0.js"){res.writeHead(200,{"content-type":"text/javascript"});if(u.searchParams.get("real")==="1"){const sdkPath=path.join(root,"..","..","node_modules","@supabase","supabase-js","dist","umd","supabase.js");res.end(await fs.readFile(sdkPath))}else res.end(sdkMock);return}
  if(pathname.includes("..")){res.writeHead(404);res.end();return}
  try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):
-   pathname.startsWith("/content/handbook/")?path.join(root,"..","..",pathname.slice(1)):
+   pathname.startsWith("/content/")?path.join(root,"..","..",pathname.slice(1)):
+   pathname.startsWith("/vendor/motion-pack-v1/")?path.join(root,pathname.slice(1)):
    path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\bgzip\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
  catch{res.writeHead(404);res.end("Not found")}
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const origin="http://127.0.0.1:"+server.address().port;
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"],executablePath:process.env.CHROME_PATH||undefined});
+async function press(locator){
+ const page=locator.page(),dismiss=page.locator(".ai-orb-tip > button");
+ if(await dismiss.count()&&!await page.locator('[role="dialog"]:visible').count())await dismiss.click();
+ await locator.evaluate(el=>el.scrollIntoView({block:"center",behavior:"instant"}));
+ await locator.click();
+}
 try{
  for(const width of [360,430])for(const lang of ["en","zh"])for(const theme of ["dark","light"]){
   const ctx=await browser.newContext({viewport:{width,height:850},locale:lang==="zh"?"zh-CN":"en-US",colorScheme:theme});
@@ -104,29 +111,33 @@ try{
   await page.goto(origin,{waitUntil:"domcontentloaded"});
   await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
   await page.locator("#todayPage .page-shell").waitFor({timeout:15000});
-  if(lang==="zh")await page.locator("#lang").click();
+  if(lang==="zh")await press(page.locator("#lang"));
   assert.equal(await page.locator("html").getAttribute("lang"),lang==="zh"?"zh-CN":"en");
   assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
-  assert.equal(await page.locator("#todayPage .vd-ht-item").count(),3);
-  assert.ok(await page.locator("#todayPage .earning-actions").evaluate(el=>!!(el.compareDocumentPosition(document.querySelector(".journey-card"))&Node.DOCUMENT_POSITION_FOLLOWING)),"earning actions must come before learning");
+  await page.locator("#todayPage .today-coach").waitFor({timeout:15000});
+  assert.equal(await page.locator("#todayPage .tc-tab").count(),5);
+  assert.equal(await page.locator("#todayPage .tc-ring").getAttribute("aria-label"),"尚无今日任务资料");
+  assert.equal(await page.locator("#todayPage .tc-streak").count(),0,"unavailable streak must stay hidden");
+  assert.ok(await page.locator("#todayPage .today-coach").evaluate(el=>!!(el.compareDocumentPosition(document.querySelector(".journey-card"))&Node.DOCUMENT_POSITION_FOLLOWING)),"today coach must come before optional learning/account tools");
   const dims=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));
   assert.ok(dims.scroll<=dims.view+1,"horizontal overflow "+width+" "+lang+" "+theme+": "+JSON.stringify(dims));
-  assert.equal(await page.locator(".vd-ht-title").textContent(),lang==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today");
+  assert.equal(await page.locator(".tc-hero h1").textContent(),"AI 每日带单计划","coach labels remain Chinese first in both languages");
   assert.equal(await page.locator(".vd-orb-wrap").count(),1,"Approved AI orb not mounted");
   await page.screenshot({path:path.join(screenshots,"home-today-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.screenshot({path:path.join(screenshots,width+"-"+lang+"-"+theme+".png"),fullPage:true});
-  const before=await page.locator(".vd-ht-title").textContent();
-  await page.locator("#lang").click();
-  assert.notEqual(await page.locator(".vd-ht-title").textContent(),before,"Vendor setLang was not called");
-  await page.locator("#lang").click();
+  const before=await page.locator("html").getAttribute("lang");
+  await press(page.locator("#lang"));
+  assert.notEqual(await page.locator("html").getAttribute("lang"),before,"language switch must still update the application");
+  assert.equal(await page.locator(".tc-hero h1").textContent(),"AI 每日带单计划","coach Chinese-first title stays intact");
+  await press(page.locator("#lang"));
   if(width===360&&lang==="zh"&&theme==="dark"){
-   await page.locator(".ai-orb").click();
+   await press(page.locator(".ai-orb"));
    await page.locator(".ai-chat-input").fill("怎么跟进客户？");
-   await page.locator(".ai-chat-form button[type=submit]").click();
+   await press(page.locator(".ai-chat-form button[type=submit]"));
    await page.locator(".ai-message-assistant").last().waitFor({timeout:15000});
    await page.locator(".ai-message-actions:not(.hidden)").last().waitFor({timeout:15000});
-   await page.locator(".ai-chat-close").click();
-   await page.locator("#aiProfileOpen").click();
+   await press(page.locator(".ai-chat-close"));
+   await press(page.locator("#aiProfileOpen"));
    await page.locator(".ai-profile-sheet:not(.hidden)").waitFor({timeout:15000});
    await page.screenshot({path:path.join(screenshots,"ai-profile.png")});
    await page.evaluate(()=>window.__testAuthChange?.("TOKEN_REFRESHED",{access_token:"renewed-token",refresh_token:"renewed-refresh",user:{id:"e2e-agent"}}));
@@ -159,16 +170,16 @@ try{
   page.on("pageerror",e=>errors.push(e.message));
   await page.goto(origin,{waitUntil:"domcontentloaded"});
   await page.locator(".lock-banner").waitFor({timeout:15000});
-  if(lang==="zh")await page.locator("#lang").click();
-  await page.locator(".lock-banner button").click();
+  if(lang==="zh")await press(page.locator("#lang"));
+  await press(page.locator(".lock-banner button"));
   await page.locator("#lockSheet:not(.hidden)").waitFor({timeout:15000});
-  await page.locator("#lockHowSummary").click();
+  await press(page.locator("#lockHowSummary"));
   await page.locator("#lockChecklist .unlock-progress-count").waitFor();
   assert.equal(await page.locator("#lockChecklist .unlock-progress-count").textContent(),"0/7");
   assert.ok(await page.locator("#lockChecklist .unlock-step").count()>=2,"module and exam rows");
   assert.ok(await page.locator("#lockChecklist .unlock-progress-logo").evaluate(el=>el.complete&&el.naturalWidth>0),"company logo loads");
   await page.screenshot({path:path.join(screenshots,`unlock-${width}-${lang}-sheet.png`),fullPage:true});
-  await page.locator("#lockChecklist .unlock-step-action").first().click();
+  await press(page.locator("#lockChecklist .unlock-step-action").first());
   await page.locator("#trainingPage.section.active").waitFor({timeout:15000});
   await page.locator("#lockSheet").waitFor({state:"hidden",timeout:5000});
   await page.locator('[data-course="CORE-BRAND"] .training3-course-content').waitFor({timeout:15000});
@@ -195,24 +206,26 @@ try{
   const copy=await page.evaluate(()=>fetch("/content/handbook/ui_microcopy.json").then(r=>r.json()));
   assert.equal(await page.locator(".onboarding-panel h2").textContent(),copy.tour[0]["title_"+lang]);
   await page.screenshot({path:path.join(screenshots,"onboarding-"+width+"-"+lang+"-"+theme+".png")});
-  for(let i=0;i<4;i++)await page.locator(".onboarding-panel > .btn-primary").click();
+  for(let i=0;i<4;i++)await press(page.locator(".onboarding-panel > .btn-primary"));
   assert.equal(await page.locator(".onboarding-layer").count(),0);
-  await page.locator(".quick-tile").filter({hasText:lang==="zh"?"产品手册":"Product handbook"}).click();
+  await press(page.locator(".tc-account-tools > summary"));
+  await press(page.locator(".quick-tile").filter({hasText:lang==="zh"?"产品手册":"Product handbook"}));
   await page.locator("#handbookPage .vd-hero-card").first().waitFor();
   assert.equal(await page.locator("#handbookPage .vd-hero-card").count(),5);
   await page.screenshot({path:path.join(screenshots,"business-cards-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
   await page.screenshot({path:path.join(screenshots,"handbook-overview-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
-  await page.locator('[data-handbook-line="bouquet"]').click();
+  await press(page.locator('[data-handbook-line="bouquet"]'));
   await page.locator(".handbook-slide-body h2").waitFor();
   assert.match(await page.locator(".handbook-slide-body").innerText(),/1 \/ 4/);
   await page.screenshot({path:path.join(screenshots,"handbook-detail-"+width+"-"+lang+"-"+theme+".png"),fullPage:true});
-  await page.locator(".handbook-head button").click();
-  await page.locator(".handbook-head button").click();
-  await page.locator("#todayPage .journey-card > button").click();
+  await press(page.locator(".handbook-head button"));
+  await press(page.locator(".handbook-head button"));
+  if(!await page.locator(".tc-account-tools").evaluate(el=>el.open))await press(page.locator(".tc-account-tools > summary"));
+  await press(page.locator("#todayPage .journey-card > button"));
   await page.locator(".handbook-lesson-action .btn-primary").waitFor();
   assert.match(await page.locator(".handbook-read-status").textContent(),lang==="zh"?/没有核准卡片/:/No approved cards/);
   await page.screenshot({path:path.join(screenshots,"no-approved-cards-"+width+"-"+lang+"-"+theme+".png")});
-  await page.locator(".handbook-lesson-action .btn-primary").click();
+  await press(page.locator(".handbook-lesson-action .btn-primary"));
   await page.locator(".handbook-quiz-options .handbook-quiz-option").first().waitFor();
   assert.match(await page.locator(".handbook-quiz-panel small").textContent(),/1 \/ 5/);
   await page.screenshot({path:path.join(screenshots,"five-question-"+width+"-"+lang+"-"+theme+".png")});
@@ -226,7 +239,7 @@ try{
   const ctx=await browser.newContext({viewport:{width:360,height:850}});
   await ctx.addInitScript(()=>localStorage.setItem("ew_onboarding_v1_e2e-agent","1"));
   const page=await ctx.newPage();await page.goto(origin);
-  await page.locator(".vd-ht-card").waitFor({timeout:15000});
+  await page.locator(".today-coach").waitFor({timeout:15000});
   const result=await page.evaluate(()=>{
     const bad='"><img src=x onerror="window.__motionXss=1">';
     const vm=window.VerdoraMotion,c=document.createElement("div");document.body.append(c);
@@ -264,7 +277,8 @@ try{
  });
  const lesson=await lessonCtx.newPage(),errors=[];lesson.on("pageerror",e=>errors.push(e.message));
  await lesson.goto(origin);
- await lesson.locator("#todayPage .journey-card > button").click();
+ await press(lesson.locator(".tc-account-tools > summary"));
+ await press(lesson.locator("#todayPage .journey-card > button"));
  await lesson.locator(".handbook-slide-body h2").waitFor();
  const early=await lesson.evaluate(async()=>{
   const r=await fetch("/functions/v1/agent-training",{method:"POST",headers:{"content-type":"application/json"},
@@ -274,12 +288,12 @@ try{
  assert.equal(early.status,403);assert.equal(early.body.error,"must_read_handbook_first");
  for(let i=0;i<4;i++){
   await lesson.locator(".handbook-read-status").filter({hasText:/saved to your learning progress/}).waitFor({timeout:12000});
-  if(i<3)await lesson.locator(".handbook-slide-controls button").last().click();
+  if(i<3)await press(lesson.locator(".handbook-slide-controls button").last());
  }
  assert.equal((mockReads.get("LEAD-FINDING")||new Set()).size,4);
- await lesson.locator("[data-reading-complete=true]").click();
- await lesson.locator(".handbook-quiz-options .handbook-quiz-option").first().click();
- await lesson.locator(".handbook-quiz-options button").filter({hasText:"Review this handbook card"}).click();
+ await press(lesson.locator("[data-reading-complete=true]"));
+ await press(lesson.locator(".handbook-quiz-options .handbook-quiz-option").first());
+ await press(lesson.locator(".handbook-quiz-options button").filter({hasText:"Review this handbook card"}));
  await lesson.locator(".handbook-slide-body").filter({hasText:/2 \/ 4/}).waitFor();
  await lesson.screenshot({path:path.join(screenshots,"wrong-answer-back-to-card.png"),fullPage:true});
  assert.deepEqual(errors,[]);
