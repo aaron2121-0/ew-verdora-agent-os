@@ -1,0 +1,176 @@
+{
+ "source_version": "grok-kyc-2026-11-14-claude-reviewed",
+ "steps": [
+  {
+   "title_en": "Your Details",
+   "title_zh": "你的资料",
+   "subtitle_en": "Just a few simple details so we can get started.",
+   "subtitle_zh": "填写简单资料，我们就能开始了。"
+  },
+  {
+   "title_en": "Verify Identity",
+   "title_zh": "确认身份",
+   "subtitle_en": "A clear IC photo helps us keep everything safe.",
+   "subtitle_zh": "上传清晰的身份证照片，让一切更安心。"
+  },
+  {
+   "title_en": "Almost Done",
+   "title_zh": "快完成了",
+   "subtitle_en": "Review and agree — you're ready to go.",
+   "subtitle_zh": "确认并同意，马上就能加入。"
+  }
+ ],
+ "fields": {
+  "legal_name": {
+   "label_en": "Full Legal Name",
+   "label_zh": "法定姓名",
+   "placeholder_en": "Exactly as on your IC",
+   "placeholder_zh": "与身份证完全相同",
+   "help_en": "Must match your IC",
+   "help_zh": "必须与身份证一致"
+  },
+  "preferred_name": {
+   "label_en": "Preferred Name",
+   "label_zh": "称呼",
+   "placeholder_en": "How should we call you?",
+   "placeholder_zh": "希望我们怎么称呼你？",
+   "help_en": "Optional, for friendly use",
+   "help_zh": "选填，方便称呼"
+  },
+  "ic_number": {
+   "label_en": "IC Number",
+   "label_zh": "身份证号码",
+   "placeholder_en": "YYMMDD-PB-####",
+   "placeholder_zh": "YYMMDD-PB-####",
+   "help_en": "12 digits; dashes are added for you",
+   "help_zh": "12 位数字，横线会自动加上"
+  },
+  "phone_whatsapp": {
+   "label_en": "WhatsApp Number",
+   "label_zh": "WhatsApp 电话",
+   "placeholder_en": "e.g. 012-345 6789",
+   "placeholder_zh": "例如 012-345 6789",
+   "help_en": "For quick contact only",
+   "help_zh": "方便快速联络"
+  },
+  "area": {
+   "label_en": "Your Area",
+   "label_zh": "所在地区",
+   "placeholder_en": "Choose your main area",
+   "placeholder_zh": "选择你主要活动的地区",
+   "help_en": "Main area you cover",
+   "help_zh": "你主要活动的地区"
+  },
+  "ic_front": {
+   "label_en": "IC Front Photo",
+   "label_zh": "身份证正面照片",
+   "placeholder_en": "Tap to upload photo",
+   "placeholder_zh": "点击上传照片",
+   "help_en": "Clear and fully visible",
+   "help_zh": "清晰完整可见即可"
+  }
+ },
+ "errors": [
+  {
+   "code": "REQUIRED",
+   "text_en": "This field is required.",
+   "text_zh": "此栏位必填。"
+  },
+  {
+   "code": "IC_FORMAT",
+   "text_en": "IC number format is incorrect.",
+   "text_zh": "身份证号码格式错误。"
+  },
+  {
+   "code": "IC_DATE_INVALID",
+   "text_en": "The date in the IC is not valid.",
+   "text_zh": "身份证日期不合法。"
+  },
+  {
+   "code": "UNDER_18",
+   "text_en": "You must be 18 or older to register.",
+   "text_zh": "未满18岁，无法注册。"
+  },
+  {
+   "code": "IC_ALREADY_REGISTERED",
+   "text_en": "This IC is already registered.",
+   "text_zh": "此身份证已注册。"
+  },
+  {
+   "code": "PHONE_FORMAT",
+   "text_en": "Phone number format is incorrect.",
+   "text_zh": "电话号码格式错误。"
+  },
+  {
+   "code": "PHOTO_TOO_LARGE",
+   "text_en": "Photo is too large. Please compress and try again.",
+   "text_zh": "照片太大，请压缩后再上传。"
+  },
+  {
+   "code": "PHOTO_FORMAT",
+   "text_en": "Photo format not supported. Please use JPG or PNG.",
+   "text_zh": "照片格式不支援，请使用 JPG 或 PNG。"
+  },
+  {
+   "code": "PHOTO_BLURRY",
+   "text_en": "Photo is blurry. Please retake a clearer one.",
+   "text_zh": "照片模糊，请重新拍摄。"
+  },
+  {
+   "code": "CONSENT_NOT_CHECKED",
+   "text_en": "Please agree to the consent to continue.",
+   "text_zh": "请勾选同意书以继续。"
+  },
+  {
+   "code": "NETWORK_ERROR",
+   "text_en": "Network error. Please try again.",
+   "text_zh": "网络错误，请重试。"
+  }
+ ],
+ "why_ic": {
+  "title_en": "Why we need your IC",
+  "title_zh": "为什么需要身份证",
+  "body_en": "To confirm your identity, protect your commission payments and prevent impersonation. Only the company owner can view it. It is stored securely, never sold, and only shared where the law requires.",
+  "body_zh": "用来确认身份、保障你的佣金发放、防止冒名。只有公司负责人看得到。资料安全保存，绝不出售，除法律要求外不会提供给他人。"
+ },
+ "photo_tips": [
+  {
+   "en": "Place your IC on a plain surface with good lighting.",
+   "zh": "把身份证放在平坦背景，光线充足。"
+  },
+  {
+   "en": "Make sure all text and the photo are sharp and clear.",
+   "zh": "确保所有文字和照片都清晰可读。"
+  },
+  {
+   "en": "Avoid glare, shadows, or covering any part of the IC.",
+   "zh": "避免反光、阴影，不要遮挡任何部分。"
+  }
+ ],
+ "status": {
+  "submitted": {
+   "title_en": "Application Submitted",
+   "title_zh": "申请已提交",
+   "body_en": "We've received your details. We'll review them and get back to you soon.",
+   "body_zh": "我们已收到你的资料，会尽快审核并回复你。"
+  },
+  "approved": {
+   "title_en": "Identity Confirmed",
+   "title_zh": "身份已确认",
+   "body_en": "Your identity is confirmed. Finish the required courses and the certification exam to start taking orders.",
+   "body_zh": "你的身份已确认。完成必修课和认证考试后，就能开始接单。"
+  },
+  "rejected": {
+   "title_en": "Application Update",
+   "title_zh": "申请结果",
+   "body_en": "We couldn't confirm your details this time. Please check the reason below, update and submit again.",
+   "body_zh": "这次未能确认你的资料。请查看下方原因，修改后重新提交。"
+  }
+ },
+ "consent_draft": {
+  "title_en": "Data Use Consent (Draft)",
+  "title_zh": "资料使用同意书（草稿）",
+  "body_en": "EWCRESCENDO SDN. BHD. (EW VERDORA) collects your legal name, preferred name, IC number, IC front photo, WhatsApp number and area to confirm your identity, pay your commissions and meet legal requirements. Only the company owner can view your IC details. Your data is stored securely with our cloud service providers, is never sold, and is shared with others only where the law requires. You may request to view, correct or delete your data, or withdraw this consent, by emailing ewverdora@gmail.com; after our cooperation ends we will delete it unless the law requires us to keep it. This consent form is a draft and requires company confirmation.",
+  "body_zh": "EWCRESCENDO SDN. BHD.（EW VERDORA）会收集你的法定姓名、称呼、身份证号码、身份证正面照片、WhatsApp 电话和地区，用于确认身份、发放佣金及符合法律要求。只有公司负责人可以查看你的身份证资料。资料安全保存在我们的云端服务供应商系统中，绝不出售，除法律要求外不会提供给他人。你可以发电邮至 ewverdora@gmail.com，申请查阅、更正或删除资料，或撤回本同意；合作结束后，除非法律要求保留，我们会删除你的资料。本同意书为草稿，需经公司确认。"
+ }
+}
