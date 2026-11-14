@@ -46,7 +46,7 @@ test("photo flow is camera-first, previews, compresses and refreshes short uploa
 
 test("Today identity card is server-gated and uses safe DOM creation",()=>{
   assert.match(app,/createKycExperience/);
-  assert.match(app,/renderTodayTop:\(\)=>identity\.renderTodayCard\(\)/);
+  assert.match(app,/renderTodayTop:\(\)=>identity\?\.renderTodayCard\?\.\(\)\|\|null/);
   assert.match(phase1,/renderTodayTop/);
   assert.match(kyc,/if\(!d\.kyc_required&&!status\)return null/);
   assert.match(kyc,/element\("section"/);
