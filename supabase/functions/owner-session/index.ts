@@ -273,7 +273,7 @@ Deno.serve(async req=>{
     const [qr,orr]=await Promise.all([
       admin.from("quotes").select("id,lead_id,agent_id,selling_price,status,valid_until,created_at")
         .in("status",["approved","sent","accepted"]).order("created_at",{ascending:false}).limit(100),
-      admin.from("orders").select("id,order_code,quote_id,agent_id,status,commissionable_revenue,delivery_fee,payment_status,created_at")
+      admin.from("orders").select("*")
         .order("created_at",{ascending:false}).limit(100)
     ]);
     if(qr.error||orr.error)return reply({error:"order_queue_unavailable"},400);
