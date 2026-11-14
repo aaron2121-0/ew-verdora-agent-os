@@ -237,7 +237,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       unlockSummary=result?.today||null;
       if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
     }catch{
-      // Training data is optional here. Never show an exam as ready before its state is confirmed.
+
     }finally{unlockLoading=false}
   }
 
@@ -432,8 +432,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
     else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
     page.append(renderQuickActions());
-    // An empty order state must teach the next permitted action, not just
-    // render zeroes. TRAINEEs are taken to learning rather than bypassing lock.
+
     if(Number(D?.today_progress?.orders||0)===0){
       const copy=emptyCopy("orders");
       if(copy){
@@ -455,11 +454,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     host.append(page);
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
-    // The 3-action vendor component owns the completion celebration.
+
   }
-
-
-
 
   function renderMicroTip(context,lead=null){
     const wrap=element("div",{className:"ai-micro-tip ai-assist-surface"});
@@ -482,7 +478,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     }
     return wrap;
   }
-
 
   const homeAI={
     today_first:["aiTodayFirstTitle","aiTodayFirstHint","aiTodayFirstLoading","aiTodayFirstEmpty","sparkles","ai-today-first"],
@@ -566,8 +561,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       id:"earningActions","aria-label":getLang()==="zh"?"今天赚钱 3 件事":"3 Money-Making Actions Today"
     }});
     const vm=vendorMotion();
-    // All customer-facing action text comes from Claude-reviewed daily_actions.json
-    // when present, otherwise from the already-approved dashboard/Selling Kits.
+
     const zh=dailyActions(getData()||{},"zh");
     const en=dailyActions(getData()||{},"en");
     const kinds=["lead","followup","post"];
@@ -576,7 +570,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
       title_zh:String(row.title||""),title_en:String(en[i]?.title||""),
       detail_zh:String(row.detail||""),detail_en:String(en[i]?.detail||"")
     })),tip:null};
-    // Demo package copy is never displayed.
+
     applyReviewedMotionCopy(reviewed()?.ui);
     const date=String(getData()?.phase1?.kuching_date||kuchingDateKey()).replace(/[^0-9-]/g,"");
     const user=String(getUserId()||"unknown").replace(/[^a-zA-Z0-9-]/g,"");
@@ -606,10 +600,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
         });
         card.append(copy,go);
       });
-      // Retain the actual UI with interactive buttons, not any sample data.
+
       if(instance)return section;
     }
-    // The base application remains usable if a vendor script cannot load.
+
     const list=element("div",{className:"earning-action-list"});
     data.actions.forEach((action,i)=>{
       const row=getLang()==="zh"?zh[i]:en[i];
@@ -620,8 +614,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return section;
   }
 
-
-  // ===== Full-AI helpers (real Gemini via agent-ai; template fallback is labelled) =====
   function aiCopyButton(text){
     const b=element("button",{className:"btn btn-secondary btn-small",text:tr("aiCopySend"),attrs:{type:"button"}});
     b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(text);toast(tr("aiCopied"),{tone:"success"})}catch{}});
@@ -673,8 +665,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     sec.append(said,row);
     return sec;
   }
-
-
 
   function renderFollowupScheduler(lead){
     const sec=element("section",{className:"ai-coach-panel ai-assist-surface"});
@@ -841,8 +831,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     });
     section.append(strip);return section;
   }
-
-
 
   function renderConversationImporter(){
     const sec=element("section",{className:"section-block ai-conversation-import"});
