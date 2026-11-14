@@ -62,44 +62,69 @@ function photoUrl(value){
   if(typeof value!=="string"||!value.trim())return "";
   try{
     const u=new URL(value,window.location.origin);
-    if(u.origin!==window.location.origin&&!(u.protocol==="https:"&&u.hostname.endsWith(".supabase.co")))return "";
-    return u.href;
-  }catch{return ""}
+    if(!["https:","http:"].includes(u.protocol))return "";
+    if(u.origin===window.location.origin)return u.href;
+    if(u.protocol==="https:" && (u.hostname.endsWith(".supabase.co")||u.hostname.endsWith(".supabase.in")))return u.href;
+  }catch{}
+  return "";
 }
+const portfolioRows=response=>Array.isArray(response)?response:
+  Array.isArray(response?.items)?response.items:
+  Array.isArray(response?.portfolio)?response.portfolio:
+  Array.isArray(response?.portfolio?.items)?response.portfolio.items:
+  Array.isArray(response?.photos)?response.photos:[];
 export function mountD6Gallery(items,{lang="en"}={}){
-  const source=Array.isArray(items)?items:[];
-  const records=source.filter(x=>x&&(x.approved===true||x.is_approved===true||["approved","published"].includes(String(x.status||"").toLowerCase())))
-    .map(x=>({...x,d6Photo:photoUrl(x.approved_photo_url||x.photo_url||x.image_url||x.imageUrl||"")})).filter(x=>x.d6Photo);
-  if(!records.length)return null; // Never show demo images or unapproved work.
-  loadD6Css("d6");
-  loadD6Css("gallery");
+  const rows=portfolioRows(items);
+  const records=rows.filter(x=>x && !["draft","rejected","pending","unapproved"].includes(String(x.status||"").toLowerCase()) &&
+    (x.approved===true||x.is_approved===true||x.is_published===true||["approved","published"].includes(String(x.status||"").toLowerCase()) || Boolean(x.signed_url && !x.status)))
+    .map(x=>({...x,d6Photo:photoUrl(x.signed_url||x.photo_signed_url||x.approved_photo_url||x.photo_url||x.image_url||"")}))
+    .filter(x=>x.d6Photo);
   const section=node("section","","d6-gallery-real");
-  section.append(node("h2",loc(lang,"作品图库","Approved portfolio"),"section-title"));
-  const host=node("div","");section.append(host);
-  const iconsBase="/ew-verdora-content/motion/icons";
-  const svg='<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 6v36M6 24h36" stroke="currentColor" stroke-width="2"/></svg>';
-  const data=records.map((x,i)=>({
-    id:String(x.id||"portfolio-"+i).replace(/[^a-z0-9_-]/gi,""),line:"bouquet",icon:"bouquet.svg",
-    kicker:String(x.category||"EW VERDORA"),
-    title_zh:String(x.title_zh||x.title||x.name||""),
-    title_en:String(x.title_en||x.title||x.name||""),
-    subtitle_zh:String(x.caption_zh||x.caption||""),
-    subtitle_en:String(x.caption_en||x.caption||"")
-  }));
-  void loadVendorMotion("gallery").then(vm=>{
-    if(!section.isConnected)return;
-    const instance=vm.mountGallery(host,data,{lang,autoplayMs:0,iconsBase,svgCache:{[iconsBase+"/bouquet.svg"]:svg}});
-  host.querySelectorAll(".vd-gallery-slide").forEach((slide,i)=>{
-    const placeholder=slide.querySelector(".vd-gallery-placeholder");
-    if(!placeholder)return;
-    const img=document.createElement("img");
-    img.src=records[i].d6Photo;img.alt=String(records[i].title_en||records[i].title||"EW VERDORA portfolio");
-    img.loading=i===0?"eager":"lazy";img.decoding="async";img.className="d6-gallery-photo";
-    placeholder.prepend(img);
+  section.append(node("h2",lang==="zh"?"作品图库":"Portfolio","section-title"));
+  if(!records.length){
+    section.append(node("p",lang==="zh"?"还没有作品照片，老板上传后就会出现在这里":"No portfolio photos yet. Photos will appear here after the owner uploads them.","d6-gallery-empty"));
+    return section;
+  }
+  loadD6Css("gallery");
+  const slides=node("div","","d6-gallery-track");
+  slides.setAttribute("aria-label",lang==="zh"?"已核准作品照片":"Approved portfolio photos");
+  slides.setAttribute("role","region");
+  slides.setAttribute("aria-roledescription","carousel");
+  const cards=[];
+  let index=0;
+  let lightbox=null;
+  const label=x=>String((lang==="zh"?x.caption_zh:x.caption_en)||x.caption_zh||x.caption_en||"");
+  const line=x=>String(x.product_line||"").replace(/_/g," ");
+  const closeLightbox=()=>{if(!lightbox)return;document.removeEventListener("keydown",onKey);lightbox.remove();lightbox=null;};
+  const onKey=e=>{if(e.key==="Escape")closeLightbox();};
+  const openLightbox=x=>{
+    closeLightbox();
+    lightbox=node("div","","d6-photo-dialog");
+    lightbox.setAttribute("role","dialog");lightbox.setAttribute("aria-modal","true");
+    lightbox.setAttribute("aria-label",label(x)||line(x)||"Portfolio photo");
+    const panel=node("div","","d6-photo-dialog-panel");
+    const close=node("button",lang==="zh"?"关闭":"Close","d6-photo-close");
+    close.type="button";close.setAttribute("aria-label",lang==="zh"?"关闭照片":"Close photo");
+    close.addEventListener("click",closeLightbox);
+    const img=document.createElement("img");img.src=x.d6Photo;img.alt=label(x)||line(x)||"Portfolio photo";img.decoding="async";
+    panel.append(close,img,node("p",label(x),"d6-photo-caption"));
+    lightbox.append(panel);lightbox.addEventListener("click",e=>{if(e.target===lightbox)closeLightbox();});
+    document.body.append(lightbox);document.addEventListener("keydown",onKey);close.focus();
+  };
+  records.forEach((x,i)=>{
+    const card=node("button","","d6-gallery-card");
+    card.type="button";card.setAttribute("aria-label",(lang==="zh"?"查看照片 ":"View photo ")+(i+1)+": "+(label(x)||line(x)));
+    const img=document.createElement("img");img.src=x.d6Photo;img.alt=label(x)||line(x)||"EW VERDORA portfolio";img.loading=i===0?"eager":"lazy";img.decoding="async";
+    card.append(img,node("span",line(x),"d6-gallery-line"),node("span",label(x),"d6-gallery-caption"));
+    card.addEventListener("click",()=>openLightbox(x));slides.append(card);cards.push(card);
   });
-  host.querySelector("[d-zm]")?.remove(); // Vendor's zoom still displays a demo placeholder.
-    trackMotion("d6-approved-gallery",instance);
-  }).catch(()=>section.remove());
+  const nav=node("div","","d6-gallery-nav");
+  const prev=node("button","‹","d6-gallery-arrow"),next=node("button","›","d6-gallery-arrow");
+  [prev,next].forEach((b,i)=>{b.type="button";b.setAttribute("aria-label",i?(lang==="zh"?"下一张":"Next photo"):(lang==="zh"?"上一张":"Previous photo"));});
+  const count=node("span","","d6-gallery-count");
+  const show=i=>{index=(i+cards.length)%cards.length;count.textContent=(index+1)+" / "+cards.length;cards[index].scrollIntoView({behavior:isReduced()?"instant":"smooth",block:"nearest",inline:"center"});};
+  prev.addEventListener("click",()=>show(index-1));next.addEventListener("click",()=>show(index+1));
+  nav.append(prev,count,next);section.append(slides,nav);count.textContent="1 / "+cards.length;
   return section;
 }
 export function decorateD6KycCard(card){loadD6Css("d6");loadD6Css("kyc");card?.classList.add("vk-card","d6-kyc-card");return card}
