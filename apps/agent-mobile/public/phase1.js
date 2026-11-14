@@ -812,7 +812,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const wrap=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"lead-intake"}});
     wrap.append(element("h2",{className:"section-title",text:tr("aiIntakeTitle")}),
       element("p",{className:"screen-subtitle",text:tr("aiIntakeSubtitle")}));
-    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiIntakePlaceholder")}});
+    const input=element("textarea",{className:"ai-intake-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiIntakePlaceholder")}});
     input.placeholder=tr("aiIntakePlaceholder");
     const read=element("button",{className:"btn btn-primary btn-large",text:tr("aiIntakeRead"),attrs:{type:"button"}});
     const out=element("div",{});
