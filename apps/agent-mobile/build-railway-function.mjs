@@ -7,7 +7,7 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
+const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 // Bundle only the actual Claude-reviewed JSON from the repository.
 // No duplicate or rewritten onboarding/microcopy strings in frontend code.
@@ -20,6 +20,9 @@ const reviewedAssets=reviewedNames.map(name=>{
  files[target]=fs.readFileSync(path.join(reviewedRoot,name),"utf8");
  return target;
 });
+const kycCopyTarget="content/onboarding/kyc_copy.json";
+files[kycCopyTarget]=fs.readFileSync(path.resolve(root,"..","..",kycCopyTarget),"utf8");
+reviewedAssets.push(kycCopyTarget);
 // Bundle the actual EW Verdora animation assets when the content package is
 // supplied. Missing assets are not replaced with invented imagery.
 const contentRoot=path.join(publicDir,"ew-verdora-content","motion");
@@ -113,7 +116,7 @@ function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type
 export default {fetch(req){
   const u=new URL(req.url);
   if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
-  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.6.1-motion",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
+  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.9.0-kyc-ui",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
   const compressed=/\\bgzip\\b/.test(req.headers.get("accept-encoding")||"");
   const body=bodyFor(u.pathname,compressed);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
