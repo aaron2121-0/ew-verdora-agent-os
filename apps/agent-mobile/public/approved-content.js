@@ -1,5 +1,5 @@
-// Published, reviewed UI copy lives in content/handbook/*.json.
-// We serve those exact files from this app; do not create divergent client copy.
+
+
 export const COURSE_CODES=Object.freeze(["CORE-BRAND","LEAD-FINDING","QUALIFY","REFERENCE","OBJECTION","CLOSING","PAYMENT"]);
 const BASE="/content/handbook/";
 let snapshot=null,pending=null;
@@ -48,8 +48,7 @@ export function suggestions(screen,lang){
   const list=row?.[lang==="zh"?"prompts_zh":"prompts_en"];
   return Array.isArray(list)?list.filter(x=>typeof x==="string"&&x.trim()).slice(0,3):[];
 }
-// Owner/Grok daily_actions.json may be added later without changing application logic.
-// The fallback is derived exclusively from existing dashboard data, never a fabricated lead.
+
 export function dailyActions(data={},lang="en"){
   const sourced=reviewed()?.daily;
   if(Array.isArray(sourced?.actions)&&sourced.actions.length>=3){
