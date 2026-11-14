@@ -66,6 +66,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let generatedKit=null;
   let generatedKitCode=null;
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
+  let todayFirst=null,todayFirstLoading=false;
   let lastAllDone=false;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
@@ -375,6 +376,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     greet.append(gLeft,badges);
     page.append(greet);
     page.append(renderEarningActions());
+    page.append(renderTodayFirst());
     page.append(renderAIWeekly());
     page.append(handbook.journey());
 
@@ -451,6 +453,48 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     prioritizeCards(D,priorities,tr);
     stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
     // The 3-action vendor component owns the completion celebration.
+  }
+
+
+  function renderTodayFirst(){
+    const sec=element("section",{className:"section-block ai-today-first",attrs:{id:"aiTodayFirst"}});
+    const head=element("div",{className:"section-heading-row"});
+    const left=element("div",{className:"section-heading-left"});
+    left.append(createIcon("sparkles",{size:20}),element("h2",{className:"section-title",text:tr("aiTodayFirstTitle")}));
+    head.append(left);sec.append(head,element("p",{className:"muted",text:tr("aiTodayFirstHint")}));
+    const body=element("div",{className:"ai-today-first-list"});sec.append(body);
+    const draw=()=>{
+      body.replaceChildren();
+      if(!todayFirst){
+        body.append(element("p",{className:"ai-chat-thinking",text:tr("aiTodayFirstLoading")}));
+        return;
+      }
+      const rows=Array.isArray(todayFirst.customers)?todayFirst.customers:[];
+      if(!rows.length){body.append(element("p",{className:"muted",text:tr("aiTodayFirstEmpty")}));return}
+      rows.forEach((row,i)=>{
+        const actions=element("div",{className:"ai-message-actions"});
+        const msg=String(row.message||"");
+        actions.append(aiCopyButton(msg));
+        const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+        wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer"));
+        actions.append(wa);
+        const chance=Number(row.lead_score)>=70?tr("aiChanceHigh"):Number(row.lead_score)>=45?tr("aiChanceMedium"):tr("aiChanceLow");
+        const title=(row.customer_label||tr("customer"))+" · "+chance;
+        const card=createAICard({title,text:msg,provider:todayFirst.provider||"template",cached:false,tr,actions}).card;
+        if(row.reason)card.append(element("p",{className:"ai-priority-why",text:String(row.reason)}));
+        if(row.why)card.append(element("small",{className:"muted",text:tr("aiWhy")+"："+String(row.why)}));
+        body.append(card);
+      });
+    };
+    draw();
+    if(!todayFirst&&!todayFirstLoading)loadTodayFirst(draw);
+    return sec;
+  }
+  async function loadTodayFirst(draw){
+    todayFirstLoading=true;aiStart();let ok=false;
+    try{todayFirst=await api.ai({action:"today_first"});ok=true;draw()}
+    catch(e){todayFirst={customers:[]};draw();toast(api.friendlyError(e?.message),{tone:"danger"})}
+    finally{todayFirstLoading=false;aiEnd(ok)}
   }
 
   function renderDailyBrief(response){
