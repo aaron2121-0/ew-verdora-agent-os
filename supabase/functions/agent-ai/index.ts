@@ -271,6 +271,20 @@ function fallbackLostReview(lang,reason){
   return {summary:x[0],next_time:x[1],model_message:x[2],avoid:zh?"不要私自降价、假稀缺或要求私人收款。":"Do not privately discount, create fake scarcity or ask for personal payment."};
 }
 
+
+function fallbackTodayFirst(lang,lead){
+  const zh=lang==="zh";
+  const name=String(lead?.customer_label||"").trim();
+  const prefix=name?(name+(zh?"，":" — ")):"";
+  const occasion=String(lead?.occasion||lead?.sales_category||"").trim();
+  return {
+    message:zh
+      ?prefix+"Hi～想跟进一下"+(occasion?occasion+"的安排":"之前聊的花礼")+"。方便告诉我你现在最想先确认的是日期、款式还是预算方向吗？我可以帮你整理下一步。"
+      :"Hi"+(name?" "+name:"")+"! Just following up on "+(occasion||"the flowers we discussed")+". What would you like to confirm first — the date, style, or budget direction? I can help organise the next step.",
+    why:zh?"先让客人容易回复，再带到下一步。":"Make it easy to reply, then move to the next step."
+  };
+}
+
 function containsSensitiveOutput(text){
   return /(production cost|maximum buy cost|\bmbc\b|supplier|external florist|company margin|profit margin|内部成本|最高采购|供应商|外部花店|公司利润率)/i.test(String(text||""));
 }
@@ -408,7 +422,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["today_first","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -668,6 +682,50 @@ Deno.serve(async req=>{
       provider="fallback";
     }
     return reply({ok:true,provider,lead_id:lead.id,loss_reason:lead.loss_reason,review});
+  }
+
+
+  if(action==="today_first"){
+    const intel=await admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:30});
+    if(intel.error){ console.error("TODAY_FIRST_INTEL",intel.error.code||""); return reply({error:"request_failed"},500); }
+    const rows=Array.isArray(intel.data)?intel.data:[];
+    const ranked=rows.filter(x=>Number(x.lead_score)>0 && x.next_best_action!=="none")
+      .sort((a,b)=>Number(b.lead_score)-Number(a.lead_score)).slice(0,3);
+    if(!ranked.length) return reply({ok:true,provider:"fallback",customers:[]});
+    const ids=ranked.map(x=>String(x.lead_id));
+    const leadsRes=await admin.from("leads")
+      .select("id,customer_label,occasion,sales_category,status,source,delivery_date,next_followup_at")
+      .eq("agent_id",agent.id).in("id",ids);
+    if(leadsRes.error){ console.error("TODAY_FIRST_LEADS",leadsRes.error.code||""); return reply({error:"request_failed"},500); }
+    const byId=new Map((leadsRes.data||[]).map(x=>[x.id,x]));
+    const safe=ranked.map(x=>({intel:x,lead:byId.get(x.lead_id)})).filter(x=>x.lead);
+    const ai=await callAI(
+      "You are EW VERDORA's daily selling assistant. Return ONLY JSON {items:[{lead_id:string,message:string,why:string}]}. Write one short WhatsApp message for each supplied customer. Max 55 words each, warm Kuching tone, one easy question, no hashtags. Never invent price, discount, availability or scarcity; never promise an exact copy; never mention suppliers, costs, margins or personal payment. Use only supplied data. Language: "+lang+"."+RULES+profileBrief(prof),
+      JSON.stringify({customers:safe.map(({intel,lead})=>({lead_id:lead.id,name:lead.customer_label||null,occasion:lead.occasion||lead.sales_category||null,status:lead.status,source:lead.source,delivery_date:lead.delivery_date||null,next_best_action:intel.next_best_action,reason:lang==="zh"?intel.lead_score_reason?.zh:intel.lead_score_reason?.en}))}),
+      true
+    );
+    const parsed=parseJson(ai||"");
+    const aiMap=new Map(Array.isArray(parsed?.items)?parsed.items.map(x=>[String(x.lead_id),x]):[]);
+    let provider="gemini";
+    const customers=safe.map(({intel,lead})=>{
+      const candidate=aiMap.get(String(lead.id));
+      const valid=candidate && typeof candidate.message==="string" && typeof candidate.why==="string"
+        && !containsSensitiveOutput(candidate.message+" "+candidate.why)
+        && !containsMarketingPolicyViolation(candidate.message);
+      if(!valid) provider="fallback";
+      const fb=fallbackTodayFirst(lang,lead);
+      return {
+        lead_id:lead.id,
+        customer_label:String(lead.customer_label||"").slice(0,80),
+        lead_score:Number(intel.lead_score)||0,
+        reason:String(lang==="zh"?intel.lead_score_reason?.zh||"":intel.lead_score_reason?.en||"").slice(0,500),
+        next_best_action:String(intel.next_best_action||"follow_up"),
+        best_followup_time:intel.best_followup_time||null,
+        message:String(valid?candidate.message:fb.message).slice(0,700),
+        why:String(valid?candidate.why:fb.why).slice(0,240)
+      };
+    });
+    return reply({ok:true,provider:provider==="gemini"&&customers.length===safe.length?"gemini":"fallback",customers});
   }
 
   if(action==="daily_content"){

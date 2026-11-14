@@ -1042,6 +1042,22 @@ I18N.en.handbookSubtitle="Approved product lines, photos and scripts";
 I18N.zh.handbookTitle="产品手册";
 I18N.zh.handbookSubtitle="五大业务线 · 核准作品 · 客户话术";
 
+
+Object.assign(I18N.en,{
+  aiTodayFirstTitle:"Who to contact first today",
+  aiTodayFirstHint:"I picked the customers most worth contacting now and wrote the first message for you.",
+  aiTodayFirstLoading:"Choosing today's first customers…",
+  aiTodayFirstEmpty:"No customer needs attention right now. You can focus on finding new enquiries.",
+  customer:"Customer"
+});
+Object.assign(I18N.zh,{
+  aiTodayFirstTitle:"今天先联系谁",
+  aiTodayFirstHint:"我已经帮你排好现在最值得先联系的客人，也写好第一句。",
+  aiTodayFirstLoading:"正在帮你排今天先联系谁…",
+  aiTodayFirstEmpty:"现在没有客人需要马上跟进，可以先去找新的询问。",
+  customer:"客人"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){
