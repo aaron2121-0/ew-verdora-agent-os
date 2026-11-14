@@ -415,7 +415,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["today_contacts","next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -710,6 +710,44 @@ Deno.serve(async req=>{
 
   // AI next message: the agent taps how the customer responded; Gemini writes the
   // exact WhatsApp message to send next, using only this agent's own lead data.
+  if(action==="today_contacts"){
+    const {data:intel,error:intelError}=await admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
+    if(intelError){ console.error("TODAY_CONTACTS_INTEL",intelError.code||""); return reply({error:"request_failed"},500); }
+    const ranked=(Array.isArray(intel)?intel:[])
+      .filter(x=>x && Number(x.lead_score)>0 && String(x.next_best_action||"")!=="none")
+      .sort((a,b)=>Number(b.lead_score||0)-Number(a.lead_score||0))
+      .slice(0,3);
+    if(!ranked.length) return reply({ok:true,provider:"fallback",contacts:[]});
+    const ids=ranked.map(x=>String(x.lead_id));
+    const {data:rows,error:leadError}=await admin.from("leads")
+      .select("id,customer_label,occasion,status,source,delivery_date,next_followup_at")
+      .eq("agent_id",agent.id).in("id",ids);
+    if(leadError){ console.error("TODAY_CONTACTS_LEADS",leadError.code||""); return reply({error:"request_failed"},500); }
+    const byId=new Map((rows||[]).map(x=>[String(x.id),x]));
+    const compact=ranked.map(x=>{
+      const l=byId.get(String(x.lead_id))||{};
+      return {lead_id:x.lead_id,name:l.customer_label||null,occasion:l.occasion||null,status:l.status||null,source:l.source||null,delivery_date:l.delivery_date||null,lead_score:Number(x.lead_score||0),reason:x.lead_score_reason||{},next_best_action:x.next_best_action,best_followup_time:x.best_followup_time||null};
+    });
+    const ai=await callAI(
+      "You are the EW VERDORA AI sales partner. For each supplied customer, write ONE short WhatsApp message the Agent can choose to copy today. Return ONLY JSON {contacts:[{lead_id:string,message:string,why:string}]}. Keep same lead_id. Max 55 words each. Do not state or change any price. If requirements are incomplete, ask one easy question. If a quote exists or follow-up is due, write a light follow-up. Use the Agent's language and style. Do not pressure the customer."+RULES+profileBrief(prof),
+      JSON.stringify(compact),
+      true
+    );
+    const parsed=parseJson(ai||"");
+    const list=Array.isArray(parsed?.contacts)?parsed.contacts:[];
+    const valid=list.length>0 && !containsSensitiveOutput(JSON.stringify(list)) && !containsMarketingPolicyViolation(JSON.stringify(list));
+    const generated=new Map(valid?list.map(x=>[String(x.lead_id),x]):[]);
+    const contacts=compact.map((x,i)=>{
+      const g=generated.get(String(x.lead_id));
+      const fallback=lang==="zh"
+        ?{message:(x.name?x.name+"，":"")+"Hi～想跟进一下之前聊的花礼。"+(x.delivery_date?"你那边送达日期还是 "+x.delivery_date+" 吗？":"你方便告诉我大概哪一天需要吗？"),why:"先联系最接近下一步的客人，问题简单，容易回。"}
+        :{message:"Hi"+(x.name?" "+x.name:"")+"! Just following up on the flowers we discussed. "+(x.delivery_date?"Is "+x.delivery_date+" still your delivery date?":"Could you share roughly which day you need them?"),why:"Start with the customers closest to a next step and ask one easy question."};
+      const use=g&&typeof g.message==="string"&&typeof g.why==="string"?g:fallback;
+      return {...x,rank:i+1,message:String(use.message).slice(0,700),why:String(use.why).slice(0,240)};
+    });
+    return reply({ok:true,provider:valid?"gemini":"fallback",contacts});
+  }
+
   if(action==="next_message"){
     const OUTCOMES=new Set(["followup","no_reply","replied","interested","wants_quote"]);
     const outcome=String(body.outcome||"followup");
