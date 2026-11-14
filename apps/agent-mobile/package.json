@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run server.ts",
-    "check": "node --test tests/phase0-security.test.mjs tests/ai-motion.test.mjs tests/unlock-progress.test.mjs tests/approved-content.test.mjs tests/ai-assist-today-first.test.mjs tests/ai-assist-conversation-customer.test.mjs tests/ai-assist-objection-helper.test.mjs tests/ai-assist-followup-scheduler.test.mjs && node build-railway-function.mjs",
+    "check": "node --test tests/phase0-security.test.mjs tests/ai-motion.test.mjs tests/unlock-progress.test.mjs tests/approved-content.test.mjs tests/ai-assist-today-first.test.mjs tests/ai-assist-conversation-customer.test.mjs tests/ai-assist-objection-helper.test.mjs tests/ai-assist-followup-scheduler.test.mjs tests/ai-assist-repeat-customer.test.mjs && node build-railway-function.mjs",
     "build:function": "node build-railway-function.mjs"
   },
   "dependencies": {
