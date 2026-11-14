@@ -1,11 +1,13 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { validateAgentKyc, KYC_MIME_TYPES, KYC_MAX_BYTES, matchesKycImage, registerAgentWithKycGate } from "../_shared/agent-kyc-validate.mjs";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
+  "Content-Type": "application/json",
+  "Cache-Control": "no-store"
 };
 
 function reply(data, status = 200) {
@@ -17,6 +19,47 @@ function safeErr(e){
   if(/^[a-z][a-z0-9 _-]{2,60}$/i.test(m) && !/(violates|relation|column|constraint|syntax|permission|function|duplicate|null value|schema)/i.test(m)) return m;
   console.error("INTERNAL_ERROR", e?.code||"", m.slice(0,200));
   return "request_failed";
+}
+// KYC responses never echo SQL details or any personal values.
+function kycErr(e) {
+  const message=String(e?.message||"");
+  const codes=new Set([
+    "kyc_auth_required","kyc_consent_required","kyc_invalid_consent_version",
+    "kyc_invalid_name","kyc_invalid_language","kyc_invalid_area",
+    "kyc_invalid_ic_format","kyc_invalid_ic_date","kyc_underage",
+    "kyc_invalid_phone","kyc_duplicate_ic","kyc_already_registered",
+    "kyc_configuration_missing","kyc_profile_missing","kyc_upload_not_allowed",
+    "kyc_invalid_upload","kyc_upload_token_invalid","kyc_submit_not_allowed",
+    "kyc_photo_missing"
+  ]);
+  return codes.has(message)?message:"kyc_request_failed";
+}
+async function randomKycToken(){
+  const bytes=new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const token=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(token));
+  const hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+  return {token,hash};
+}
+async function boundedImage(req){
+  const reader=req.body?.getReader();
+  if(!reader)return null;
+  const chunks=[];
+  let size=0;
+  try{
+    while(true){
+      const {value,done}=await reader.read();
+      if(done)break;
+      size+=value.length;
+      if(size>KYC_MAX_BYTES){await reader.cancel();return null;}
+      chunks.push(value);
+    }
+    if(!size)return null;
+    const out=new Uint8Array(size);let at=0;
+    for(const chunk of chunks){out.set(chunk,at);at+=chunk.length;}
+    return out;
+  }finally{reader.releaseLock();}
 }
 function clean(v, max = 120) {
   return String(v ?? "").trim().slice(0, max);
@@ -75,31 +118,103 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData.user) return reply({ error: "invalid_session" }, 401);
   const uid = userData.user.id;
+  // Shared DB flag, also used by the certification SQL; never silently bypass it.
+  const {data:kycRequired,error:kycFlagError}=await admin.rpc("agent_kyc_required_internal");
+  if(kycFlagError||typeof kycRequired!=="boolean")
+    return reply({error:"kyc_feature_config_unavailable"},503);
+
+  // Custom, one-use signed upload endpoint. Supabase Storage's own signed
+  // upload URLs last 2 hours, and cannot meet our required 60-second TTL.
+  // JWT + bound one-use 60s token are checked before the service-role upload.
+  const uploadToken=new URL(req.url).searchParams.get("kyc_upload");
+  if(uploadToken!==null){
+    if(!/^[a-f0-9]{64}$/.test(uploadToken))return reply({error:"kyc_upload_token_invalid"},403);
+    const mime=String(req.headers.get("content-type")||"").toLowerCase();
+    if(!KYC_MIME_TYPES.includes(mime))return reply({error:"kyc_invalid_upload"},415);
+    const declared=Number(req.headers.get("content-length")||"0");
+    if(declared>KYC_MAX_BYTES)return reply({error:"kyc_file_too_large"},413);
+    const bytes=await boundedImage(req);
+    if(!bytes)return reply({error:"kyc_file_too_large_or_empty"},413);
+    if(!matchesKycImage(bytes,mime))return reply({error:"kyc_invalid_image_signature"},415);
+    const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(uploadToken));
+    const tokenHash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+    const {data:grant,error:grantError}=await admin.rpc("agent_kyc_consume_upload_internal",{
+      p_user_id:uid,p_token_hash:tokenHash
+    });
+    if(grantError||!grant||grant.content_type!==mime)
+      return reply({error:grantError?kycErr(grantError):"kyc_invalid_upload"},403);
+    // Never upsert, disclose paths through logs, or permit cross-agent paths.
+    const {error:putError}=await admin.storage.from("agent-kyc").upload(
+      grant.path,bytes,{contentType:mime,upsert:false,cacheControl:"0"}
+    );
+    if(putError)return reply({error:"kyc_upload_failed"},500);
+    // A deletion request might race an in-flight upload. Delete this object
+    // rather than leave a new orphan after the Owner has purged the prefix.
+    const {data:afterUpload,error:afterUploadErr}=await admin.rpc(
+      "agent_kyc_status_internal",{p_user_id:uid}
+    );
+    if(afterUploadErr || afterUpload?.delete_requested || !afterUpload?.status){
+      await admin.storage.from("agent-kyc").remove([grant.path]);
+      return reply({error:"kyc_upload_revoked"},409);
+    }
+    return reply({ok:true,uploaded:true});
+  }
 
   let body = {};
   try { body = await req.json(); } catch {}
   const action = body.action || "dashboard";
 
   if (action === "register") {
-    const displayName = clean(body.display_name);
-    const language = body.language === "zh" ? "zh" : "en";
-    if (!displayName) return reply({ error: "display_name_required" }, 400);
-    const { data, error } = await admin.rpc("register_agent_internal", {
-      p_user_id: uid,
-      p_display_name: displayName,
-      p_language: language
+    const result=await registerAgentWithKycGate({
+      body,uid,admin,kycRequired,cleanName:clean,
+      safeLegacyError:safeErr,safeKycError:kycErr
     });
-    if (error) return reply({ error: safeErr(error) }, 400);
-    const { data: agent } = await admin.from("agents").select("id,agent_code").eq("id", data).single();
-    return reply({ ok: true, agent_id: data, agent_code: agent?.agent_code || null });
+    return reply(result.payload,result.status);
   }
 
   const { data: agent, error: agentError } = await admin.from("agents")
     .select("id,agent_code,display_name,status,tier,commission_rate,performance_score,preferred_language,primary_channel")
     .eq("user_id", uid).maybeSingle();
   if (agentError) return reply({ error: safeErr(agentError) }, 400);
-  if (!agent) return reply({ ok: true, needs_registration: true, user: { email: userData.user.email } });
+  if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: kycRequired, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
+
+  if(action==="kyc_status"){
+    const {data,error}=await admin.rpc("agent_kyc_status_internal",{p_user_id:uid});
+    if(error)return reply({error:kycErr(error)},400);
+    return reply({ok:true,...data,kyc_required:kycRequired && data?.kyc_required!==false});
+  }
+  if(action==="kyc_upload_url"){
+    if(!KYC_MIME_TYPES.includes(body.content_type))return reply({error:"kyc_invalid_upload"},422);
+    const {token,hash}=await randomKycToken();
+    const path=agent.id+"/"+crypto.randomUUID()+".jpg";
+    const {error}=await admin.rpc("agent_kyc_issue_upload_internal",{
+      p_user_id:uid,p_token_hash:hash,p_object_path:path,p_content_type:body.content_type
+    });
+    if(error)return reply({error:kycErr(error)},403);
+    return reply({
+      ok:true,method:"POST",content_type:body.content_type,
+      upload_url:url.replace(/\/$/,"")+"/functions/v1/agent-session?kyc_upload="+encodeURIComponent(token),
+      object_path:path,expires_in:60
+    });
+  }
+  if(action==="kyc_submit"){
+    const path=String(body.object_path||"");
+    const {data,error}=await admin.rpc("agent_kyc_submit_internal",{
+      p_user_id:uid,p_object_path:path
+    });
+    if(error)return reply({error:kycErr(error)},422);
+    // Remove the superseded photo; do not reveal storage paths in responses.
+    if(data?.old_path && data.old_path!==path)
+      await admin.storage.from("agent-kyc").remove([data.old_path]);
+    return reply({ok:true,status:"submitted"});
+  }
+  if(action==="kyc_request_delete"){
+    if(body.confirm!==true)return reply({error:"confirmation_required"},400);
+    const {error}=await admin.rpc("agent_kyc_request_delete_internal",{p_user_id:uid});
+    if(error)return reply({error:kycErr(error)},422);
+    return reply({ok:true,delete_requested:true});
+  }
 
 
   // Handbook is always server-filtered; unpublished Grok imports never reach Agents.
@@ -268,14 +383,19 @@ Deno.serve(async (req) => {
     .eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(20);
   const phase1Req = admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: today });
   const intelligenceReq = admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
+  const kycReq = kycRequired
+    ?admin.rpc("agent_kyc_status_internal",{p_user_id:uid})
+    :Promise.resolve({data:{status:null,kyc_required:false},error:null});
 
-  const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res, intelligenceRes] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req, intelligenceReq]);
-  const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error || intelligenceRes.error;
+  const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res, intelligenceRes, kycRes] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req, intelligenceReq, kycReq]);
+  const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error || intelligenceRes.error || kycRes.error;
   if (err) return reply({ error: safeErr(err) }, 400);
 
   return reply({
     ok: true,
     needs_registration: false,
+    kyc_required: kycRequired && kycRes.data?.kyc_required !== false,
+    kyc_status: kycRes.data?.status || null,
     agent,
     mission: missionRes.data,
     today_progress: progressRes.data || {orders:0,qualified_leads:0,quotes:0,followups:0},
