@@ -535,3 +535,8 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .commission-status-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09);font-size:16px}
 .commission-status-row strong{white-space:nowrap}
 \n/* AI assist accessibility surfaces */\n.ai-assist-surface,.ai-assist-surface *{font-size:16px}\n.ai-assist-surface button,.ai-assist-surface .btn,.ai-assist-surface input,.ai-assist-surface select,.ai-assist-surface textarea{min-height:48px;font-size:16px}\n
+/* Logo 切页动态覆盖层(logo-motion-bridge.js) */
+.lm-swap{position:fixed;inset:0;z-index:60;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .22s ease;background:radial-gradient(closest-side,rgba(7,9,8,.55),rgba(7,9,8,0) 70%)}
+.lm-swap.on{opacity:1}
+.lm-swap-logo{width:clamp(84px,22vmin,140px)}
+@media (prefers-reduced-motion:reduce){.lm-swap{display:none}}

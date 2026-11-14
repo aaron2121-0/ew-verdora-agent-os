@@ -143,6 +143,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       b.append(iconWrap,label);
       b.addEventListener("click",()=>{
         if(tab==="order"&&isLocked()){showLock();return}
+        if(tab!==active)import("./logo-motion-bridge.js").then(m=>m.playTabMotion(tab)).catch(()=>{});
         navigate(tab);
       });
       inner.append(b);

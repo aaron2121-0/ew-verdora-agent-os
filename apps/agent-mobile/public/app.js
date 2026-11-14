@@ -71,6 +71,10 @@ function view(name){
   $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
   window.VerdoraMotion?.brandBg?.destroy?.();
   if(name==="login")import("./brand-loader.js").then(m=>m.mountBrandBg($("login"),{placement:"tr",seed:20261114})).catch(()=>{});
+  if(name==="app")import("./logo-motion-bridge.js").then(m=>m.runWelcome({
+    name:String(D?.agent?.display_name||D?.agent?.full_name||"").split(" ")[0]||"",
+    lang:lang==="zh"?"zh":"en"
+  })).catch(()=>{});
 }
 
 async function fn(path,body){
