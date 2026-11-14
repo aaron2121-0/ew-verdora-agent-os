@@ -3,6 +3,7 @@ import {createIcon} from "./icons.js";
 import {kuchingDateKey,deliveryDateChoices,kuchingLocalToIso,formatKuchingDateTime} from "./date.js";
 import {loadOrderDraft,saveOrderDraft,saveOrderReference,loadOrderReference,clearOrderDraft} from "./draft.js";
 import {createAICard,aiStart,aiEnd} from "./ai-ui.js";
+import {assistCopy} from "./approved-content.js";
 
 const SOURCE_OPTIONS=[
   ["whatsapp","sourceWhatsapp"],
@@ -210,8 +211,8 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
     const wrap=element("div",{className:"ai-micro-tip ai-assist-surface"});
     const draw=()=>{
       wrap.replaceChildren();
-      if(quoteMicroTip)wrap.append(createAICard({title:tr("aiMicroTipTitle"),text:String(quoteMicroTip.tip||""),provider:quoteMicroTip.provider||"template",cached:true,tr}).card);
-      else wrap.append(element("p",{className:"ai-chat-thinking",text:tr("aiMicroTipLoading")}));
+      if(quoteMicroTip)wrap.append(createAICard({title:at("aiMicroTipTitle"),text:String(quoteMicroTip.tip||""),provider:quoteMicroTip.provider||"template",cached:true,tr}).card);
+      else wrap.append(element("p",{className:"ai-chat-thinking",text:at("aiMicroTipLoading")}));
     };
     draw();
     if(!quoteMicroTip&&!quoteMicroLoading){
