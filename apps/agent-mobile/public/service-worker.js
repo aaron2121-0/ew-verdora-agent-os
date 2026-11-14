@@ -12,7 +12,7 @@ const STATIC_PREFIXES=[
   "/fonts/","/vendor/motion-pack-v1/","/ew-verdora-content/motion/"
 ];
 function cacheable(url,request){
-  if(request.method!=="GET"||request.mode==="navigate"||url.origin!==self.location.origin)return false;
+  if(request.method!=="GET"||request.mode==="navigate"||url.origin!==self.location.origin||url.search)return false;
   if(url.pathname.startsWith("/config")||url.pathname.startsWith("/api/")||
      url.pathname.startsWith("/functions/")||url.pathname.startsWith("/rest/")||
      url.pathname.startsWith("/auth/")||url.pathname.startsWith("/storage/"))return false;
