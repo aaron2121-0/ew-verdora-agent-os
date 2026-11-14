@@ -15,13 +15,13 @@ export async function loadReviewedContent(){
   if(pending)return pending;
   pending=Promise.all([
     fetchJson("onboarding_7day.json"),fetchJson("ui_microcopy.json"),
-    fetchJson("daily_actions.json",{optional:true}),fetchJson("ai_assist_copy.json")
-  ]).then(([onboarding,ui,daily,assist])=>{
+    fetchJson("daily_actions.json",{optional:true})
+  ]).then(([onboarding,ui,daily])=>{
     if(!Array.isArray(onboarding?.days)||onboarding.days.length!==7||
       !Array.isArray(ui?.tour)||ui.tour.length!==4||
       !Array.isArray(ui?.coach_marks)||!Array.isArray(ui?.empty_states)||
       !Array.isArray(ui?.ai_suggestions))throw new Error("invalid_reviewed_content");
-    snapshot={onboarding,ui,daily,assist};return snapshot;
+    snapshot={onboarding,ui,daily};return snapshot;
   }).finally(()=>{pending=null});
   return pending;
 }
@@ -76,4 +76,4 @@ export function dailyActions(data={},lang="en"){
   ];
 }
 
-export function assistCopy(key,lang){const row=reviewed()?.assist?.[key];return String(row?.[lang==="zh"?"zh":"en"]||key)}
+export function assistCopy(key,lang){const row=reviewed()?.ui?.ai_assist?.[key];return String(row?.[lang==="zh"?"zh":"en"]||key)}
