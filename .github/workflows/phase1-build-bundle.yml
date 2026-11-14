@@ -33,7 +33,9 @@ jobs:
           test -f apps/agent-mobile/dist/railway-function.ts
           bytes=$(wc -c < apps/agent-mobile/dist/railway-function.ts)
           echo "Bundle bytes: $bytes"
-          test "$bytes" -lt 380000
+          # Live Railway Function is the 3KB railway-loader.ts, which fetches this bundle
+          # from a pinned GitHub commit; the 96KB Function cap does not apply here.
+          test "$bytes" -lt 900000
           node --check apps/agent-mobile/dist/railway-function.ts
       - name: Commit generated bundle
         run: |
