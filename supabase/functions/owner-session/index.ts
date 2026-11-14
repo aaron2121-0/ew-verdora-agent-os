@@ -5,7 +5,9 @@ const cors={
   "Access-Control-Allow-Origin":"*",
   "Access-Control-Allow-Headers":"authorization, apikey, content-type",
   "Access-Control-Allow-Methods":"POST, OPTIONS",
-  "Content-Type":"application/json"
+  "Content-Type":"application/json",
+  "Cache-Control":"no-store",
+  "Referrer-Policy":"no-referrer"
 };
 const reply=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:cors});
 
@@ -30,6 +32,14 @@ function publicError(error,fallback="operation_failed"){
   if(m.includes("invalid")) return "invalid_request";
   return fallback;
 }
+// KYC errors are an allowlist; never log or echo database details or identity data.
+function kycError(e){
+ const m=String(e?.message||"");
+ return new Set(["forbidden","kyc_profile_missing","kyc_not_submitted",
+   "kyc_invalid_status","kyc_invalid_decision","kyc_reject_reason_required",
+   "kyc_configuration_missing","kyc_delete_request_required","kyc_reject_reason_invalid"]).has(m)?m:"kyc_operation_failed";
+}
+const kycUUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const url=Deno.env.get("SUPABASE_URL")||"";
 const pub=JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS")||"{}").default||Deno.env.get("SUPABASE_ANON_KEY")||"";
 const sec=JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}").default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -49,7 +59,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","kyc_list","kyc_view","kyc_review","kyc_delete"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
@@ -161,6 +171,80 @@ Deno.serve(async req=>{
     if(auditError)return reply({error:"audit_failed"},500);
     return reply({ok:true,email,expires_at:expiresAt,invite_url:inviteUrl});
   }
+  if(action==="kyc_list"){
+    const status=String(b.status||"all");
+    if(!["all","draft","submitted","approved","rejected"].includes(status))
+      return reply({error:"kyc_invalid_status"},422);
+    const {data,error}=await admin.rpc("owner_kyc_list_internal",{
+      p_user_id:uid,p_status:status,p_limit:Math.min(100,Math.max(1,Number(b.limit)||50))
+    });
+    if(error)return reply({error:kycError(error)},403);
+    return reply({ok:true,entries:data||[]});
+  }
+  if(action==="kyc_view"){
+    const id=String(b.agent_id||"");
+    if(!kycUUID.test(id))return reply({error:"kyc_invalid_agent"},422);
+    // Decrypt and audit in the same privileged transaction.
+    const {data,error}=await admin.rpc("owner_kyc_view_internal",{
+      p_user_id:uid,p_agent_id:id
+    });
+    if(error)return reply({error:kycError(error)},403);
+    let photo_signed_url=null;
+    if(data.ic_front_path){
+      const signed=await admin.storage.from("agent-kyc")
+        .createSignedUrl(data.ic_front_path,60);
+      if(signed.error||!signed.data?.signedUrl)
+        return reply({error:"kyc_photo_url_failed"},500);
+      photo_signed_url=signed.data.signedUrl;
+    }
+    const {ic_front_path,...details}=data;
+    return reply({ok:true,kyc:{...details,photo_signed_url,photo_url_expires_in:60}});
+  }
+  if(action==="kyc_review"){
+    const id=String(b.agent_id||"");
+    const decision=String(b.decision||"");
+    const reason=typeof b.reason==="string"?b.reason.trim():"";
+    if(!kycUUID.test(id))return reply({error:"kyc_invalid_agent"},422);
+    if(!["approve","reject"].includes(decision))return reply({error:"kyc_invalid_decision"},422);
+    if(decision==="reject" && reason.length<3)return reply({error:"kyc_reject_reason_required"},422);
+    if(decision==="reject" && (/[0-9]{6}-?[0-9]{2}-?[0-9]{4}/.test(reason) || /agent-kyc|https?:/i.test(reason)))
+      return reply({error:"kyc_reject_reason_invalid"},422);
+    const {data,error}=await admin.rpc("owner_kyc_review_internal",{
+      p_user_id:uid,p_agent_id:id,p_decision:decision,p_reason:reason||null
+    });
+    if(error)return reply({error:kycError(error)},422);
+    return reply({ok:true,review:data});
+  }
+  if(action==="kyc_delete"){
+    const id=String(b.agent_id||"");
+    if(!kycUUID.test(id))return reply({error:"kyc_invalid_agent"},422);
+    if(b.confirm!==true)return reply({error:"confirmation_required"},400);
+    const {error:readyErr}=await admin.rpc("owner_kyc_delete_ready_internal",{
+      p_user_id:uid,p_agent_id:id
+    });
+    if(readyErr)return reply({error:kycError(readyErr)},403);
+    // Delete ALL files under this agent's isolated prefix, including superseded
+    // uploads, before dropping the encrypted DB record. Do not log file paths.
+    const storage=admin.storage.from("agent-kyc");
+    for(let pass=0;pass<100;pass++){
+      const {data:files,error:listError}=await storage.list(id,{
+        limit:100,offset:0,sortBy:{column:"name",order:"asc"}
+      });
+      if(listError)return reply({error:"kyc_photo_delete_failed"},500);
+      const paths=(files||[]).filter(x=>typeof x.name==="string" && x.id)
+        .map(x=>id+"/"+x.name);
+      if(paths.length===0)break;
+      const {error:removeError}=await storage.remove(paths);
+      if(removeError)return reply({error:"kyc_photo_delete_failed"},500);
+      if(pass===99)return reply({error:"kyc_photo_delete_incomplete"},500);
+    }
+    const {error}=await admin.rpc("owner_kyc_delete_internal",{
+      p_user_id:uid,p_agent_id:id
+    });
+    if(error)return reply({error:kycError(error)},409);
+    return reply({ok:true,deleted:true});
+  }
+
   if(action==="dashboard"){
     const {data,error}=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
     if(error)return reply({error:publicError(error)},403);
