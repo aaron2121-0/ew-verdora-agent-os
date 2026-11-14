@@ -60,7 +60,8 @@ test("migration explicitly isolates identity and photo access",()=>{
   assert.match(sql,/now\(\)\+interval '60 seconds'/i);
   assert.match(sql,/not exists\(select 1 from storage\.objects/i);
   assert.match(sql,/insert into private\.audit_events\(actor_user_id,actor_type,action,entity_type,entity_id\)/i);
-  assert.doesNotMatch(sql,/create policy[\s\S]*on storage\.objects/i);
+  assert.match(sql,/as restrictive for all to anon,authenticated/i);
+  assert.match(sql,/with check \(bucket_id <> 'agent-kyc'\)/i);
 });
 test("Edge routes keep KYC off AI and use bound, one-use upload tokens",()=>{
   const agent=read("supabase/functions/agent-session/index.ts");
