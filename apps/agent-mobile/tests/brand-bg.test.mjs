@@ -24,7 +24,8 @@ test("reviewed motion-pack-v1 files contain no eval or network code",()=>{
 });
 
 test("brand motion is local, lazy and used on Login and Today",()=>{
-  assert.match(html,/\/vendor\/motion-pack-v1\/brand-bg\.css/);
+  assert.doesNotMatch(html,/stylesheet[^>]+\/vendor\/motion-pack-v1\/brand-bg\.css/);
+  assert.match(html,/preload[^>]+onboarding\/01-company\.svg[^>]+fetchpriority="high"/);
   assert.doesNotMatch(html,/<script[^>]+brand-bg\.js/);
   assert.match(app,/import\("\.\/brand-loader\.js"\)/);
   assert.match(loader,/import\("\/vendor\/motion-pack-v1\/brand-bg\.js"\)/);
@@ -40,6 +41,7 @@ test("build keeps original initial-JS cap and separately budgets lazy brand moti
   assert.match(build,/brandLoaderBytes>2\*1024/);
   assert.match(build,/n!==lazyBrandLoader/);
   assert.match(build,/Railway bundle exceeds 900KB/);
+  assert.match(build,/files\["styles\.css"\]\+="\\n"\+files\["vendor\/motion-pack-v1\/brand-bg\.css"\]/);
   assert.match(build,/version:"0\.9\.0"/);
   assert.match(read("vendor/motion-pack-v1/brand-bg.css"),/prefers-reduced-motion:reduce/);
 });
