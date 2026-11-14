@@ -748,11 +748,23 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     section.append(strip);return section;
   }
 
+
+  function renderAIIntake(){
+    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"lead-intake"}});
+    slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
+    import("./ai-assist-intake.js").then(m=>{
+      const node=m.renderAIIntake({element,createAICard,api,getLang,money,setButtonLoading,aiStart,aiEnd,onRefresh,toast});
+      slot.replaceWith(node);
+    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    return slot;
+  }
+
   function renderCustomers(){
     const host=document.getElementById("customersPage");if(!host)return;
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
+    page.append(renderAIIntake());
     const allRows=getData()?.phase1?.recent_leads||[];
     if(!allRows.length){
       const copy=emptyCopy("customers");
