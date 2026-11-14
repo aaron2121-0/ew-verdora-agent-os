@@ -59,14 +59,6 @@ function applyI18n(){
   if(themeBtn){const dark=document.documentElement.dataset.theme==="dark";themeBtn.textContent=dark?"☀ "+tr("themeLight"):"☾ "+tr("themeDark");themeBtn.setAttribute("aria-label",tr("themeToggle"))}
 }
 
-let brandBgImport=null;
-function mountBrandBg(target,options){
-  if(!target)return;
-  const ready=window.VerdoraMotion?.mountBrandBg?Promise.resolve():brandBgImport??=import("/vendor/motion-pack-v1/brand-bg.js");
-  ready.then(()=>{if(target.isConnected)window.VerdoraMotion?.mountBrandBg?.(target,options)}).catch(()=>{});
-}
-window.__verdoraMountBrandBg=mountBrandBg;
-
 function view(name){
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
@@ -76,8 +68,6 @@ function view(name){
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
   $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
-  window.VerdoraMotion?.brandBg?.destroy?.();
-  if(name==="login")mountBrandBg($("login"),{placement:"tr",seed:20261114});
 }
 
 async function fn(path,body){
@@ -312,7 +302,7 @@ async function waitForSupabase(){
 }
 
 async function bootstrap(){
-  initMotion();
+  initMotion();import("/vendor/motion-pack-v1/brand-bg.js").catch(()=>{});
   setupAppearance();
   applyI18n();
   setupHandlers();
