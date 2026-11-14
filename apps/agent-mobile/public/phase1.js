@@ -1034,8 +1034,28 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
             api.ai({action:"feedback",ai_action:"coach",output_ref:null,signal}).catch(()=>{});
           });actions.append(b);
         }
+        const translateRow=element("div",{className:"ai-outcome-row"});
+        [["zh","aiTranslateZh"],["en","aiTranslateEn"],["ms","aiTranslateMs"]].forEach(([target,key])=>{
+          const b=element("button",{className:"btn btn-secondary btn-small",text:tr(key),attrs:{type:"button"}});
+          b.addEventListener("click",async()=>{
+            translateRow.querySelectorAll("button").forEach(x=>x.disabled=true);aiStart();let translatedOk=false;
+            try{
+              const tx=await api.ai({action:"translate_reply",target,text:suggestion});translatedOk=true;
+              coach.querySelector(".ai-translation-card")?.remove();
+              const txActions=element("div",{className:"ai-message-actions"});
+              txActions.append(aiCopyButton(String(tx.text||"")));
+              const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+              wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(tx.text||"")),"_blank","noopener,noreferrer"));
+              txActions.append(wa);
+              const card=createAICard({title:tr("aiTranslationTitle"),text:String(tx.text||""),provider:tx.provider||"template",cached:false,tr,actions:txActions});
+              card.card.classList.add("ai-translation-card");coach.append(card.card);
+            }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+            finally{translateRow.querySelectorAll("button").forEach(x=>x.disabled=false);aiEnd(translatedOk)}
+          });translateRow.append(b);
+        });
         const old=coach.querySelector(".ai-output-card");old?.remove();
-        const out=createAICard({title:tr("aiCoachTitle"),text:suggestion,provider:j.provider||"template",cached:false,tr,actions});coach.append(out.card);
+        const out=createAICard({title:tr("aiCoachTitle"),text:suggestion,provider:j.provider||"template",cached:false,tr,actions});
+        coach.append(out.card,element("small",{className:"muted",text:tr("aiTranslateTo")}),translateRow);
       }catch(e){waiting.textContent=api.friendlyError(e?.message)}
       finally{ask.disabled=false;aiEnd(coachOk)}
     });
