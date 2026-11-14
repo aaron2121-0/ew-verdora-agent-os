@@ -116,7 +116,7 @@ function headers(extra={}){return {"Content-Security-Policy":CSP,"X-Content-Type
 export default {fetch(req){
   const u=new URL(req.url);
   if(u.pathname==="/config")return Response.json({url:Bun.env.SUPABASE_URL||"",key:Bun.env.SUPABASE_PUBLISHABLE_KEY||""},{headers:headers({"cache-control":"no-store"})});
-  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.9.0-kyc-ui",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
+  if(u.pathname==="/health"||u.pathname==="/api/health")return Response.json({ok:true,service:"EW VERDORA Agent Mobile",version:"0.9.0",source:"native-motion-gzip-bundle"},{headers:headers({"cache-control":"no-store"})});
   const compressed=/\\bgzip\\b/.test(req.headers.get("accept-encoding")||"");
   const body=bodyFor(u.pathname,compressed);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
