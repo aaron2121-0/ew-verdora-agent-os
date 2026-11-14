@@ -587,6 +587,27 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       box.append(out.card);
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
       if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:tr("aiScheduleFollowup"),attrs:{type:"button"}});
+      schedule.addEventListener("click",async()=>{
+        setButtonLoading(schedule,true,tr("loading"));aiStart();let scheduleOk=false;
+        try{
+          const s=await api.ai({action:"followup_schedule",lead_id:lead.id,outcome,customer_said:customerSaid});scheduleOk=true;
+          const x=s.content||{};
+          box.querySelector(".ai-followup-suggestion")?.remove();
+          const panel=element("div",{className:"ai-followup-suggestion"});
+          panel.append(createAICard({title:tr("aiFollowupSuggested"),text:(x.reason||"")+"\n"+formatKuchingDateTime(x.suggested_at,getLang()),provider:s.provider||"template",cached:false,tr}).card);
+          const confirm=element("button",{className:"btn btn-primary btn-small",text:tr("aiConfirmFollowup"),attrs:{type:"button"}});
+          confirm.addEventListener("click",async()=>{
+            setButtonLoading(confirm,true,tr("loading"));
+            try{await api.ai({action:"followup_confirm",lead_id:lead.id,suggested_at:x.suggested_at});toast(tr("aiFollowupSaved"),{tone:"success"});confirm.disabled=true}
+            catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+            finally{setButtonLoading(confirm,false,tr("aiConfirmFollowup"))}
+          });
+          panel.append(confirm);box.append(panel);
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+        finally{setButtonLoading(schedule,false,tr("aiScheduleFollowup"));aiEnd(scheduleOk)}
+      });
+      box.append(schedule);
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
