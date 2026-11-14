@@ -495,3 +495,14 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .ai-week-day{padding:10px 12px;border-radius:14px;border:1px solid var(--line,rgba(127,127,127,.2))}
 .ai-week-day.is-today{border-color:var(--brand,#2E7D5B);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand,#2E7D5B) 25%,transparent)}
 .ai-week-day ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5}
+
+
+/* AI assist accessibility: Today First is designed for first-time mobile users. */
+.ai-today-first,.ai-today-first *{font-size:16px}
+.ai-today-first button,.ai-today-first .btn{min-height:48px}
+
+
+/* AI assist accessibility: pasted-conversation review keeps text and controls comfortably readable. */
+.ai-conversation-import,.ai-conversation-import *{font-size:16px}
+.ai-conversation-import button,.ai-conversation-import .btn,
+.ai-conversation-import input,.ai-conversation-import select,.ai-conversation-import textarea{min-height:48px;font-size:16px}
