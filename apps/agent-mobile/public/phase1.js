@@ -76,6 +76,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     getData,getLang,getUserId,tr,api,
     onNavigate:navigate,
     onLocked:showLock,
+    onMicroTip:()=>renderMicroTip("quote"),
     onSent:()=>{markLocalTask("kit",true);renderNavBadges()}
   });
 
@@ -693,35 +694,6 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     return sec;
   }
 
-  function renderObjectionHelper(){
-    const sec=element("section",{className:"ai-coach-panel ai-assist-surface",attrs:{"data-ai":"objection-helper"}});
-    sec.append(element("h3",{text:at("aiObjectionTitle")}),element("p",{className:"muted",text:at("aiObjectionHint")}));
-    const quick=element("div",{className:"ai-outcome-row"});
-    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"1800","aria-label":at("aiObjectionPaste")}});
-    input.placeholder=at("aiObjectionPaste");
-    [[at("aiObjectionExpensive"),getLang()==="zh"?"太贵了":"It's too expensive"],
-     [at("aiObjectionThink"),getLang()==="zh"?"我再想想":"I'll think about it"],
-     [at("aiObjectionSame"),getLang()==="zh"?"我要跟参考图一样":"I want it exactly like the reference"]].forEach(([label,text])=>{
-       const b=element("button",{className:"btn btn-secondary btn-small",text:label,attrs:{type:"button"}});
-       b.addEventListener("click",()=>{input.value=text;input.focus()});quick.append(b);
-    });
-    const ask=element("button",{className:"btn btn-primary",text:at("aiObjectionAsk"),attrs:{type:"button"}});
-    const out=element("div",{className:"ai-objection-results"});
-    ask.addEventListener("click",async()=>{
-      const customerMessage=input.value.trim();if(!customerMessage)return;
-      setButtonLoading(ask,true,tr("loading"));aiStart();let ok=false;
-      try{
-        const j=await api.ai({action:"objection_helper",customer_message:customerMessage});ok=true;
-        out.replaceChildren();
-        (j.replies||[]).forEach(r=>{
-          out.append(assistMessageCard(String(r.label||at("aiObjectionOption")),String(r.message||""),j.provider,tr("aiWhy")+"："+String(r.why||"")));
-        });
-      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
-      finally{setButtonLoading(ask,false,at("aiObjectionAsk"));aiEnd(ok)}
-    });
-    sec.append(quick,input,ask,out);return sec;
-  }
-
   function renderAILostReview(lead){
     const sec=element("section",{className:"ai-coach-panel",attrs:{"data-ai":"lost-review"}});
     const btn=iconButton("sparkles",tr("aiLostReviewBtn"),"btn btn-primary");
@@ -1037,13 +1009,24 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
     if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
     else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
-    if(!["won","archived"].includes(String(lead.status||""))){body.append(renderFollowupScheduler(lead));body.append(renderObjectionHelper())}
+    if(!["won","archived"].includes(String(lead.status||"")))body.append(renderFollowupScheduler(lead));
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
     input.placeholder=tr("aiCoachInput");coach.append(input);
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
-    coach.append(ask);
+    const objections=element("button",{className:"btn btn-primary",text:at("aiObjectionAsk"),attrs:{type:"button"}});
+    const coachActions=element("div",{className:"ai-outcome-row"});coachActions.append(ask,objections);coach.append(coachActions);
+    objections.addEventListener("click",async()=>{
+      const customerMessage=input.value.trim();if(!customerMessage)return;
+      objections.disabled=true;aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"objection_helper",customer_message:customerMessage});ok=true;
+        coach.querySelectorAll(".ai-objection-card").forEach(x=>x.remove());
+        (j.replies||[]).forEach(r=>{const card=assistMessageCard(String(r.label||at("aiObjectionOption")),String(r.message||""),j.provider,tr("aiWhy")+"："+String(r.why||""));card.classList.add("ai-objection-card");coach.append(card)});
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{objections.disabled=false;aiEnd(ok)}
+    });
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
       ask.disabled=true;aiStart();let coachOk=false;
