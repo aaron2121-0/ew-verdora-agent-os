@@ -986,8 +986,30 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
     input.placeholder=tr("aiCoachInput");coach.append(input);
+    const quick=element("div",{className:"ai-outcome-row"});
+    [["expensive","aiObjExpensive"],["think","aiObjThink"],["exact","aiObjExact"]].forEach(([value,key])=>{
+      const b=element("button",{className:"btn btn-secondary btn-small",text:tr(key),attrs:{type:"button"}});
+      b.addEventListener("click",async()=>{
+        quick.querySelectorAll("button").forEach(x=>x.disabled=true);aiStart();let ok=false;
+        try{
+          const j=await api.ai({action:"objection_replies",objection:value,customer_message:input.value.trim()});ok=true;
+          coach.querySelector(".ai-objection-results")?.remove();
+          const results=element("div",{className:"ai-objection-results"});
+          (j.replies||[]).slice(0,3).forEach((replyText,index)=>{
+            const actions=element("div",{className:"ai-message-actions"});
+            actions.append(aiCopyButton(String(replyText)));
+            const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+            wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(replyText)),"_blank","noopener,noreferrer"));
+            const card=createAICard({title:tr("aiObjOption",{n:index+1}),text:String(replyText),provider:j.provider||"template",cached:false,tr,actions});
+            results.append(card.card);
+          });
+          coach.append(results);
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+        finally{quick.querySelectorAll("button").forEach(x=>x.disabled=false);aiEnd(ok)}
+      });quick.append(b);
+    });
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
-    coach.append(ask);
+    coach.append(quick,ask);
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
       ask.disabled=true;aiStart();let coachOk=false;
