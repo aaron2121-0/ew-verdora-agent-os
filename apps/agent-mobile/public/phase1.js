@@ -58,7 +58,7 @@ function categoryKey(value){
   }[value]||null;
 }
 
-export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
+export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,renderTodayTop=null}){
   let active="today";
   let previousNavIndex=0;
   let lockController=null;
@@ -352,6 +352,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
     const page=element("div",{className:"page-shell today-shell"});
+    const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
+    if(identityTop)page.append(identityTop);
 
     const live=element("div",{className:"today-live"});
     const left=element("span",{className:"live-chip"});
