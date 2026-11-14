@@ -589,13 +589,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       actions.append(aiCopyButton(msg),wa);
       const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
       const followupAt=new Date(Date.now()+hours*3600000);
-      const schedule=element("button",{className:"btn btn-secondary btn-small",text:tr("aiSetFollowup",{time:formatKuchingDateTime(followupAt.toISOString(),getLang())}),attrs:{type:"button"}});
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:(getLang()==="zh"?"设下次跟进 · ":"Set follow-up · ")+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
       schedule.addEventListener("click",async()=>{
         schedule.disabled=true;
         try{
           await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:followupAt.toISOString()});
-          schedule.textContent=tr("aiFollowupSet");
-          toast(tr("aiFollowupSet"),{tone:"success"});
+          schedule.textContent=getLang()==="zh"?"下次跟进时间已经存好。":"Next follow-up saved.";
+          toast(getLang()==="zh"?"下次跟进时间已经存好。":"Next follow-up saved.",{tone:"success"});
           await onRefresh();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
       });
@@ -603,7 +603,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
       box.append(out.card);
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
-      box.append(element("small",{className:"muted",text:tr("aiFollowupExact",{time:formatKuchingDateTime(followupAt.toISOString(),getLang())})}));
+      box.append(element("small",{className:"muted",text:(getLang()==="zh"?"建议下次联系：":"Suggested next follow-up: ")+formatKuchingDateTime(followupAt.toISOString(),getLang())}));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
