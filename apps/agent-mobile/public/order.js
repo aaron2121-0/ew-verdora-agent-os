@@ -2,8 +2,6 @@ import {clear,element,setButtonLoading,toast,vibrate} from "./components.js";
 import {createIcon} from "./icons.js";
 import {kuchingDateKey,deliveryDateChoices,kuchingLocalToIso,formatKuchingDateTime} from "./date.js";
 import {loadOrderDraft,saveOrderDraft,saveOrderReference,loadOrderReference,clearOrderDraft} from "./draft.js";
-import {createAICard,aiStart,aiEnd} from "./ai-ui.js";
-import {assistCopy} from "./approved-content.js";
 
 const SOURCE_OPTIONS=[
   ["whatsapp","sourceWhatsapp"],
@@ -66,7 +64,6 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
     sent:false
   });
   let state={...fresh(),...(loadOrderDraft(getUserId())||{})};
-  let quoteMicroTip=null,quoteMicroLoading=false;
   state.step=Math.min(4,Math.max(1,Number(state.step)||1));
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(state.deliveryDate||"")))state.deliveryDate=kuchingDateKey();
 
@@ -207,27 +204,10 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
   }
 
 
-  function quoteMicroCoach(){
-    const wrap=element("div",{className:"ai-micro-tip ai-assist-surface"});
-    const draw=()=>{
-      wrap.replaceChildren();
-      if(quoteMicroTip)wrap.append(createAICard({title:at("aiMicroTipTitle"),text:String(quoteMicroTip.tip||""),provider:quoteMicroTip.provider||"template",cached:true,tr}).card);
-      else wrap.append(element("p",{className:"ai-chat-thinking",text:at("aiMicroTipLoading")}));
-    };
-    draw();
-    if(!quoteMicroTip&&!quoteMicroLoading){
-      quoteMicroLoading=true;aiStart();let ok=false;
-      api.ai({action:"micro_tip",context:"quote",lead_id:state.leadId||null}).then(j=>{quoteMicroTip=j;ok=true;draw()})
-        .catch(()=>{wrap.replaceChildren()})
-        .finally(()=>{quoteMicroLoading=false;aiEnd(ok)});
-    }
-    return wrap;
-  }
-
   function renderStep2(host){
     const card=element("section",{className:"wizard-card page-enter"});
     card.append(element("h2",{className:"card-title",text:tr("stepNeeds")}));
-    card.append(quoteMicroCoach());
+    if(onMicroTip)card.append(onMicroTip());
 
     card.append(fieldTitle(tr("occasionTitle")));
     const occGrid=element("div",{className:"choice-grid choice-grid-2"});
