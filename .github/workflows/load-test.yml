@@ -47,7 +47,7 @@ jobs:
         run: |
           cat > /tmp/read-only.js <<'JS'
           import http from 'k6/http';
-          import { check } from 'k6';
+          import { check, sleep } from 'k6';
           import { Rate } from 'k6/metrics';
 
           const unexpected = new Rate('unexpected_response_rate');
@@ -84,6 +84,8 @@ jobs:
             const ok = t.expected.includes(response.status);
             unexpected.add(!ok);
             check(response, { 'expected status': () => ok });
+            // Realistic pacing: ~1 request/second per virtual user (protects free quotas).
+            sleep(1);
           }
           export function handleSummary(data) {
             return { '/tmp/k6-summary.json': JSON.stringify(data, null, 2) };
