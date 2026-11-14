@@ -160,7 +160,7 @@ declare v_agent uuid; v_status private.agent_kyc_status;
 begin
  select a.id,k.status into v_agent,v_status
  from public.agents a join private.agent_kyc k on k.agent_id=a.id
- where a.user_id=p_user_id for update of k;
+ where a.user_id=p_user_id and k.delete_requested_at is null for update of k;
  if v_agent is null then raise exception 'kyc_profile_missing'; end if;
  if v_status not in ('draft','rejected') then raise exception 'kyc_upload_not_allowed'; end if;
  if p_content_type not in ('image/jpeg','image/png','image/webp')
@@ -183,7 +183,8 @@ begin
  where t.token_hash=p_token_hash and t.agent_id=v_agent
    and t.used_at is null and t.expires_at>now()
    and exists(select 1 from private.agent_kyc k
-       where k.agent_id=v_agent and k.status in ('draft','rejected'))
+       where k.agent_id=v_agent and k.status in ('draft','rejected')
+         and k.delete_requested_at is null)
  returning * into v_t;
  if v_t.agent_id is null then raise exception 'kyc_upload_token_invalid'; end if;
  return jsonb_build_object('path',v_t.object_path,'content_type',v_t.content_type);
@@ -199,7 +200,8 @@ begin
  select * into v_k from private.agent_kyc
  where agent_id=v_agent for update;
  if v_k.agent_id is null then raise exception 'kyc_profile_missing'; end if;
- if v_k.status not in ('draft','rejected') then raise exception 'kyc_submit_not_allowed'; end if;
+ if v_k.status not in ('draft','rejected') or v_k.delete_requested_at is not null
+ then raise exception 'kyc_submit_not_allowed'; end if;
  if p_object_path !~ ('^'||v_agent::text||'/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.jpg$')
  then raise exception 'kyc_invalid_upload'; end if;
  if not exists(select 1 from private.agent_kyc_upload_tokens
@@ -312,6 +314,21 @@ begin
  return jsonb_build_object('status',v_new,'agent_id',p_agent_id);
 end $$;
 
+
+create or replace function public.owner_kyc_delete_ready_internal(
+ p_user_id uuid,p_agent_id uuid
+) returns boolean language plpgsql stable security definer set search_path=''
+as $
+begin
+ if not exists(select 1 from private.user_roles
+  where user_id=p_user_id and role in('owner','admin'))
+ then raise exception 'forbidden' using errcode='42501'; end if;
+ if not exists(select 1 from private.agent_kyc
+  where agent_id=p_agent_id and delete_requested_at is not null)
+ then raise exception 'kyc_delete_request_required'; end if;
+ return true;
+end $;
+
 -- Owner must confirm that every file was removed through Storage API first.
 -- This function deletes all KYC details and upload grants; immutable audit survives.
 create or replace function public.owner_kyc_delete_internal(
@@ -386,6 +403,7 @@ revoke all on function public.agent_kyc_request_delete_internal(uuid) from publi
 revoke all on function public.owner_kyc_list_internal(uuid,text,integer) from public,anon,authenticated;
 revoke all on function public.owner_kyc_view_internal(uuid,uuid) from public,anon,authenticated;
 revoke all on function public.owner_kyc_review_internal(uuid,uuid,text,text) from public,anon,authenticated;
+revoke all on function public.owner_kyc_delete_ready_internal(uuid,uuid) from public,anon,authenticated;
 revoke all on function public.owner_kyc_delete_internal(uuid,uuid) from public,anon,authenticated;
 revoke all on function public.refresh_agent_certification_internal(uuid) from public,anon,authenticated;
 grant execute on function public.agent_kyc_register_internal(uuid,text,text,text,text,text,text,text,boolean,text) to service_role;
@@ -397,5 +415,6 @@ grant execute on function public.agent_kyc_request_delete_internal(uuid) to serv
 grant execute on function public.owner_kyc_list_internal(uuid,text,integer) to service_role;
 grant execute on function public.owner_kyc_view_internal(uuid,uuid) to service_role;
 grant execute on function public.owner_kyc_review_internal(uuid,uuid,text,text) to service_role;
+grant execute on function public.owner_kyc_delete_ready_internal(uuid,uuid) to service_role;
 grant execute on function public.owner_kyc_delete_internal(uuid,uuid) to service_role;
 grant execute on function public.refresh_agent_certification_internal(uuid) to service_role;
