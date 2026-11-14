@@ -6,25 +6,28 @@
 
 | 流程 | 何时运行 | 做什么 |
 | --- | --- | --- |
-| Production auto-deploy | main 的函数、App、构建输入或部署脚本改变；或手动 Run workflow | 等待 bundle 成功并核对来源 → 更新 loader → production 核准 → 部署有改动的 Edge / Railway Functions → 检查 → 失败自动回滚 |
+| Production auto-deploy | main 的函数、App、构建输入或部署脚本改变；或手动 Run workflow | 等待 bundle 成功并核对来源 → 更新 loader → production 自动部署有改动的 Edge / Railway Functions → 检查 → 失败自动回滚 |
 | Phase 1 Build Railway Bundle（已有流程） | main 的 Agent public/vendor、handbook/KYC 文案、构建脚本、package 或此 workflow 改变；或手动 | 生成 bundle 和来源证明；核对构建输入后普通 push 提交到 main；不部署 |
-| Manually reviewed single DB migration | **只有手动**，输入一个 migration 文件名 | 无数据库连接地打印一个 SQL → 检查 production 有审核人 → 等待审核 → 执行相同 SHA、相同 SHA256 的那个文件 |
+| Manually reviewed single DB migration | **只有手动**，输入一个 migration 文件名 | 无数据库连接地打印一个 SQL → 检查 production-db 有审核人 → 等待审核 → 执行相同 SHA、相同 SHA256 的那个文件 |
 
 Production 和 migration 共用 `production-deploy` 锁，`cancel-in-progress: false`。GitHub 保证同时最多一个运行，但原生 concurrency 可能替换尚未开始的 pending run，并不保证 FIFO 或每个 commit 都单独运行；部署始终取最新 main，并与上次成功发布比较，补齐被合并的改动。
 
-**同一个 production Environment 的审核规则会同时拦住自动部署和 migration。** main 合并后会自动准备发布，但必须由 Owner 核准 production 才能上线。不能在同一个 Environment 里只让 migration 需要审核而让其他 job 绕过；本流程不绕过保护规则。
+自动发布与数据库审批使用两个独立的 GitHub Environment：`production` **不设 Required reviewers**，main 合并后自动部署；`production-db` **必须设 Required reviewers**，只有单文件 migration 经过人工核准才执行。两个 Environment 都只允许 main，并各自保存下面的 secrets。
 
-## 一、建立 GitHub production Environment
+## 一、建立两个 GitHub Environment
 
 1. 打开仓库 `aaron2121-0/ew-verdora-agent-os`。**画面位置：仓库顶部 → Settings。**
 2. 左边选 **Environments**，点 **New environment**。**画面位置：Settings 左侧 Code and automation 区域。**
 3. 名称填 `production`（全小写），点 **Configure environment**。**画面位置：Environment name 输入框。**
-4. 勾选 **Required reviewers**，加至少一位 Owner/审核人；建议勾选 **Prevent self-review**。**画面位置：production → Deployment protection rules。** 保存。migration 预览会确认确实有审核人；没设置就失败。
-5. 在 **Deployment branches and tags** 选择只允许 `main` 分支。**画面位置：production 页中段，新增 Branch rule `main`。** workflow 本身也拒绝非 main。
+4. **不勾选 Required reviewers**；若之前设过，请移除审核人并保存，让自动部署不用等核准。**画面位置：production → Deployment protection rules。**
+5. 在 **Deployment branches and tags** 选择只允许 `main`。**画面位置：production 页中段，新增 Branch rule `main`。**
+6. 回到 **Settings → Environments → New environment**，建立 `production-db`。**画面位置：Environment name 输入框。**
+7. 在 production-db 勾选 **Required reviewers**，加至少一位 Owner/审核人；建议勾选 **Prevent self-review**，保存。**画面位置：production-db → Deployment protection rules。** migration 预览会检查这个 Environment 确实有审核人，没设置就失败。
+8. production-db 也只允许 `main`。**画面位置：production-db → Deployment branches and tags → 新增 Branch rule `main`。** 两份 workflow 本身也拒绝非 main。
 
 如果账户方案不提供 Environment 人工审核功能，不要启用数据库执行；需要先解决 GitHub 方案/保护规则。本代码不会用输入一个 yes 代替人工核准。
 
-## 二、Owner 创建并保存两个 secret
+## 二、Owner 创建两个 secret，并分别存入两个 Environment
 
 ### SUPABASE_ACCESS_TOKEN
 
@@ -32,6 +35,7 @@ Production 和 migration 共用 `production-deploy` 锁，`cancel-in-progress: f
 2. 点 **Generate new token**，名字填 `github-deploy`。**画面位置：Access Tokens 列表右上角。** 选择适当有效期；仅给需要的项目权限（若界面提供）。
 3. 自己复制新 token；不要贴到聊天、PR、issue 或截图。**画面位置：创建后只显示一次的 token 弹窗。**
 4. 回 GitHub → Settings → Environments → production → **Environment secrets → Add environment secret**。**画面位置：production 页面底部。** Name 填 `SUPABASE_ACCESS_TOKEN`，Value 贴入刚才的 token，保存。
+5. 再进入 **Settings → Environments → production-db → Environment secrets → Add environment secret**。**画面位置：production-db 页面底部。** 使用相同 Name `SUPABASE_ACCESS_TOKEN`，由 Owner 自己填入 token 并保存。Environment secrets 不会自动共用，两个环境必须各存一份。
 
 ### RAILWAY_TOKEN
 
@@ -39,6 +43,7 @@ Production 和 migration 共用 `production-deploy` 锁，`cancel-in-progress: f
 2. 新建 **Project Token**，环境只选 **production**。**画面位置：Tokens → New token 的环境下拉框。** 环境 ID 应为 `e9d871fd-c95e-4760-a672-31d67932eeac`。不要用全账户 API Token。
 3. 自己复制 token。**画面位置：创建完成的 token 弹窗。** 不要截图 token 内容。
 4. 回 GitHub 的 production → Environment secrets → **Add environment secret**。**画面位置：与上一个 secret 相同的位置。** Name 填 `RAILWAY_TOKEN`，Value 贴入 Project Token，保存。
+5. 再进入 **Settings → Environments → production-db → Environment secrets → Add environment secret**。**画面位置：production-db 页面底部。** 同样新增 `RAILWAY_TOKEN` 并保存；migration 目前只使用 Supabase token，不读取这个 Railway token。
 
 不需要数据库密码、service role key、Vault 内容或 GEMINI_API_KEY。流程不会读写 Supabase Vault、修改任何平台 secret 或 `private.app_settings` / `AGENT_KYC_REQUIRED`。
 
@@ -54,8 +59,8 @@ Production 和 migration 共用 `production-deploy` 锁，`cancel-in-progress: f
 2. 若仓库历史里没有完整对应当前线上版本的 commit，先由 Owner 人工整理一个可信基准；流程会拒绝猜测。基准必须是 main 的祖先。
 3. 合并后，在 GitHub **Actions → Phase 1 Build Railway Bundle** 查看构建是否成功。**画面位置：最近一次 main run 的绿色结果。** 必要时手动 Run workflow，分支 main。
 4. 打开 **Actions → Production auto-deploy → Run workflow**，选 main，`baseline_sha` 填可信基准 SHA。**画面位置：右上角 Run workflow 展开区。**
-5. 先看 loader job；它只固定 bundle 的完整 commit SHA、文件 SHA256、package.json 的 version，使用 `github-actions[bot]` 普通提交。**画面位置：run → loader-commit → Job summary。** 本 PR 给原本缺少 version 的 Agent package 补上与现有 loader 相同的 `0.9.1`；以后发布版本由维护者在 package.json 明确递增。
-6. 查看 **Review deployments → production**，确认 SHA、改动和回滚基准后核准。**画面位置：run 页的等待核准横幅。** 首次发布还会对线上 version、bundle 标记、Agent 首页 HTTP 200 和未登录 401 做基准检查，失败就不部署。首次人工基准可能早于 Google 按钮的 HTML fallback，因此首次基准及它的回滚只检查首页 HTTP 200；新发布必须包含规定文字。
+5. 先看 loader job；它只固定 bundle 的完整 commit SHA、文件 SHA256、package.json 的 version，使用 `github-actions[bot]` 普通提交。**画面位置：run → loader-commit → Job summary。** 本 PR 给原本缺少 version 的 Agent package 补上与现有 loader 相同的 `1.0.1`；以后发布版本由维护者在 package.json 明确递增。
+6. 查看自动运行的 **deploy job**，确认 SHA、改动和回滚基准。**画面位置：run 页 → deploy → Job summary。** production 不设审核人，不需要点击 Review deployments。 首次发布还会对线上 version、bundle 标记、Agent 首页 HTTP 200 和未登录 401 做基准检查，失败就不部署。首次人工基准可能早于 Google 按钮的 HTML fallback，因此首次基准及它的回滚只检查首页 HTTP 200；新发布必须包含规定文字。
 7. 成功后 GitHub Deployment 的 SHA 就是之后的自动回滚基准，后续手动触发不用再填 baseline。**画面位置：仓库 Deployments → production，以及 run 的 Job summary。**
 
 ## 五、每次发布的行为
@@ -77,7 +82,7 @@ Production 和 migration 共用 `production-deploy` 锁，`cancel-in-progress: f
 1. Actions → **Manually reviewed single DB migration → Run workflow**，选 main。**画面位置：Actions 左侧工作流列表和右上角 Run workflow。**
 2. 输入 `supabase/migrations/` 里的完整文件名，例如 `20261114000000_add_example.sql`，**不含目录**。**画面位置：migration_file 输入框。** 这是格式示例，不是仓库里应执行的文件。
 3. 展开 **preview → Dry-run**，逐行阅读 SQL，确认文件 SHA256。**画面位置：preview job 日志及 summary。** 这里没有数据库连接，不是数据库端试执行，不证明依赖、锁或语法一定成立。
-4. 审核人看完 SQL 后，从 **Review deployments → production** 核准。**画面位置：run 等待横幅。** apply 固定相同 GitHub SHA 并复核 SQL hash，才通过官方 Supabase Management API 执行那一个文件。
+4. 审核人看完 SQL 后，从 **Review deployments → production-db** 核准。**画面位置：run 等待横幅。** apply 固定相同 GitHub SHA 并复核 SQL hash，才通过官方 Supabase Management API 执行那一个文件。
 5. 查看 apply summary。**画面位置：apply job 结果。** 一次显式 transaction，不自动更新或修复 migration history；永远不运行 `supabase db push` / `migration up`。
 
 此通道保守拒绝敏感标识、动态/过程 SQL（包括 DO、创建 function/procedure）、外部 I/O 和事务控制语句；这些 migration 要另外人工审核与执行。也不适用于必须 transaction 外执行的 SQL。检查有意偏严格，注释触发也拒绝。不要改写 SQL 来绕过限制。

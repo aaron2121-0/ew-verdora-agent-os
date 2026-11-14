@@ -159,8 +159,9 @@ class DeployTests(unittest.TestCase):
     def test_migration_preview_cannot_proceed_without_required_reviewer(self):
         with tempfile.TemporaryDirectory() as directory:
             output=str(Path(directory)/'output'); summary=str(Path(directory)/'summary')
-            with patch.dict(os.environ,{'MIGRATION_FILE':'123_test.sql','GITHUB_OUTPUT':output,'GITHUB_STEP_SUMMARY':summary}), patch.object(migration,'migration_file',return_value=(Path('123_test.sql'),'SELECT 1;')), patch.object(migration,'api',return_value={'protection_rules':[]}), patch.object(sys,'argv',['migration.py','preview']), patch('builtins.print'):
-                with self.assertRaisesRegex(ValueError,'required reviewers'): migration.main()
+            with patch.dict(os.environ,{'MIGRATION_FILE':'123_test.sql','GITHUB_OUTPUT':output,'GITHUB_STEP_SUMMARY':summary}), patch.object(migration,'migration_file',return_value=(Path('123_test.sql'),'SELECT 1;')), patch.object(migration,'api',return_value={'protection_rules':[]}) as environment_api, patch.object(sys,'argv',['migration.py','preview']), patch('builtins.print'):
+                with self.assertRaisesRegex(ValueError,'production-db must have required reviewers'): migration.main()
+                environment_api.assert_called_once_with('/environments/production-db')
 
     def test_migration_apply_uses_one_transaction_and_suppresses_rows(self):
         from unittest.mock import MagicMock

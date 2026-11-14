@@ -39,11 +39,11 @@ def main():
         with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
             output.write(f'digest={digest}\n')
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-            summary.write(f'待审核：`{path}`，SHA256 `{digest}`。请先查看 preview job 的完整 SQL，再核准 production。此预览没有连接数据库、没有验证 SQL 可执行性。\n')
-        environment = api('/environments/production')
+            summary.write(f'待审核：`{path}`，SHA256 `{digest}`。请先查看 preview job 的完整 SQL，再核准 production-db。此预览没有连接数据库、没有验证 SQL 可执行性。\n')
+        environment = api('/environments/production-db')
         rules = environment.get('protection_rules', [])
         if not any(rule.get('type') == 'required_reviewers' and rule.get('reviewers') for rule in rules):
-            raise ValueError('production must have required reviewers configured before SQL can proceed')
+            raise ValueError('production-db must have required reviewers configured before SQL can proceed')
         return
     if sys.argv[1] != 'apply' or os.environ.get('GITHUB_REF') != 'refs/heads/main':
         raise ValueError('Only apply from main is supported')

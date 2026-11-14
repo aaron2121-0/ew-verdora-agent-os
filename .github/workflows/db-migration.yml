@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # REQUIRED: owner configures required reviewers; YAML cannot enforce that setting.
-    environment: production
+    environment: production-db
     steps:
       - uses: actions/checkout@v4
         with:
