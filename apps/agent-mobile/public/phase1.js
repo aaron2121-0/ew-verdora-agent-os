@@ -348,6 +348,33 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
 
+  function renderRepeatCustomerAssist(){
+    const host=element("section",{className:"section-block ai-coach-panel ai-assist-surface",attrs:{"data-ai-assist":"repeat-customer"}});
+    host.append(element("h2",{className:"section-title",text:tr("aiRepeatTitle")}),
+      element("p",{className:"screen-subtitle",text:tr("aiRepeatHint")}));
+    const run=element("button",{className:"btn btn-secondary btn-large",text:tr("aiRepeatButton"),attrs:{type:"button"}});
+    const out=element("div",{className:"follow-list"});
+    run.addEventListener("click",async()=>{
+      setButtonLoading(run,true,tr("loading"));aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"repeat_customer"});ok=true;out.replaceChildren();
+        const rows=Array.isArray(j.customers)?j.customers:[];
+        if(!rows.length){out.append(element("p",{className:"ai-priority-why",text:tr("aiRepeatEmpty")}));return}
+        rows.forEach(x=>{
+          const msg=String(x.message||"");
+          const card=createAICard({title:String(x.customer_label||tr("customerDetails")),text:msg,provider:j.provider||"template",cached:false,tr}).card;
+          if(x.why)card.append(element("p",{className:"ai-priority-why",text:String(x.why)}));
+          const actions=element("div",{className:"follow-actions"}),copy=element("button",{className:"btn btn-secondary",text:tr("copyText"),attrs:{type:"button"}}),wa=element("button",{className:"btn btn-whatsapp",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+          copy.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(msg);toast(tr("copied"),{tone:"success"})}catch{toast(tr("errorRequestFailed"),{tone:"danger"})}});
+          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer"));
+          actions.append(copy,wa);card.append(actions);out.append(card);
+        });
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{setButtonLoading(run,false,tr("aiRepeatButton"));aiEnd(ok)}
+    });
+    host.append(run,out);return host;
+  }
+
   function renderTodayPriorityAssist(){
     const host=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
     host.append(element("h2",{className:"section-title",text:tr("aiTodayFirstTitle")}),
@@ -407,6 +434,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     page.append(greet);
     page.append(renderEarningActions());
     page.append(renderTodayPriorityAssist());
+    page.append(renderRepeatCustomerAssist());
     page.append(renderAIWeekly());
     page.append(handbook.journey());
 
