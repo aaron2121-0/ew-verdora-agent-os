@@ -650,6 +650,43 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     sec.append(said,row);
     return sec;
   }
+
+  function renderObjectionHelper(){
+    const sec=element("section",{className:"ai-coach-panel ai-assist-surface",attrs:{"data-ai":"objection-helper"}});
+    sec.append(element("h3",{text:tr("aiObjectionTitle")}),element("p",{className:"muted",text:tr("aiObjectionHint")}));
+    const quick=element("div",{className:"ai-outcome-row"});
+    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"1800","aria-label":tr("aiObjectionPaste")}});
+    input.placeholder=tr("aiObjectionPaste");
+    [[tr("aiObjectionExpensive"),getLang()==="zh"?"太贵了":"It's too expensive"],
+     [tr("aiObjectionThink"),getLang()==="zh"?"我再想想":"I'll think about it"],
+     [tr("aiObjectionSame"),getLang()==="zh"?"我要跟参考图一样":"I want it exactly like the reference"]].forEach(([label,text])=>{
+       const b=element("button",{className:"btn btn-secondary btn-small",text:label,attrs:{type:"button"}});
+       b.addEventListener("click",()=>{input.value=text;input.focus()});quick.append(b);
+    });
+    const ask=element("button",{className:"btn btn-primary",text:tr("aiObjectionAsk"),attrs:{type:"button"}});
+    const out=element("div",{className:"ai-objection-results"});
+    ask.addEventListener("click",async()=>{
+      const customerMessage=input.value.trim();if(!customerMessage)return;
+      setButtonLoading(ask,true,tr("loading"));aiStart();let ok=false;
+      try{
+        const j=await api.ai({action:"objection_helper",customer_message:customerMessage});ok=true;
+        out.replaceChildren();
+        (j.replies||[]).forEach(r=>{
+          const actions=element("div",{className:"ai-message-actions"});
+          actions.append(aiCopyButton(String(r.message||"")));
+          const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(r.message||"")),"_blank","noopener,noreferrer"));
+          actions.append(wa);
+          const card=createAICard({title:String(r.label||tr("aiObjectionOption")),text:String(r.message||""),provider:j.provider||"template",cached:false,tr,actions}).card;
+          if(r.why)card.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+String(r.why)}));
+          out.append(card);
+        });
+      }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+      finally{setButtonLoading(ask,false,tr("aiObjectionAsk"));aiEnd(ok)}
+    });
+    sec.append(quick,input,ask,out);return sec;
+  }
+
   function renderAILostReview(lead){
     const sec=element("section",{className:"ai-coach-panel",attrs:{"data-ai":"lost-review"}});
     const btn=iconButton("sparkles",tr("aiLostReviewBtn"),"btn btn-primary");
@@ -986,6 +1023,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
 
     if(String(lead.status||"")==="lost")body.append(renderAILostReview(lead));
     else if(!["won","archived"].includes(String(lead.status||"")))body.append(renderAIOutcome(lead));
+    if(!["won","archived"].includes(String(lead.status||"")))body.append(renderObjectionHelper());
     const coach=element("section",{className:"ai-coach-panel"});
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
