@@ -27,7 +27,9 @@ function ensureOverlay() {
   overlay = document.createElement("div");
   overlay.className = "lm-swap";
   overlay.setAttribute("aria-hidden", "true");
-  overlay.innerHTML = '<div class="lm-swap-logo"></div>';
+  const slot = document.createElement("div");
+  slot.className = "lm-swap-logo";
+  overlay.appendChild(slot);
   document.body.appendChild(overlay);
   return overlay;
 }
