@@ -1,5 +1,8 @@
 // Approved vendor runtime: no ai-demos, no demo business copy.
 import "./ew-verdora-content/motion/i18n.js";
+import "./ew-verdora-content/motion/coach.js";
+import "./ew-verdora-content/motion/gallery.js";
+import "./ew-verdora-content/motion/kyc.js";
 import "./ew-verdora-content/motion/feedback.js";
 import "./ew-verdora-content/motion/celebrate.js";
 import "./ew-verdora-content/motion/home-today.js";

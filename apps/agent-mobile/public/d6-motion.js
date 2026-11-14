@@ -79,11 +79,10 @@ export function mountD6Gallery(items,{lang="en"}={}){
   host.querySelectorAll(".vd-gallery-slide").forEach((slide,i)=>{
     const placeholder=slide.querySelector(".vd-gallery-placeholder");
     if(!placeholder)return;
-    placeholder.replaceChildren();
     const img=document.createElement("img");
     img.src=records[i].d6Photo;img.alt=String(records[i].title_en||records[i].title||"EW VERDORA portfolio");
     img.loading=i===0?"eager":"lazy";img.decoding="async";img.className="d6-gallery-photo";
-    placeholder.append(img);
+    placeholder.prepend(img);
   });
   host.querySelector("[d-zm]")?.remove(); // Vendor's zoom still displays a demo placeholder.
   trackMotion("d6-approved-gallery",instance);

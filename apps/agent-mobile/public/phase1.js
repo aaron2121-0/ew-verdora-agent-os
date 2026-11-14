@@ -9,6 +9,7 @@ import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
 import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
 import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
+import {mountD6TodayCoach,mountD6Gallery,styleD6AIMessage,triggerD6Celebration} from "./d6-motion.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -193,7 +194,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     const vm=vendorMotion();
-    if(old&&old!==target&&vm?.runSharedSwap){
+    if(old&&old!==target&&vm?.runSharedSwap&&!reduced){
       vm.runSharedSwap(old,swap,()=>target);
     }else if(document.startViewTransition&&!reduced){
       document.startViewTransition(swap);
@@ -308,19 +309,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       let done=false;try{done=localStorage.getItem(key)==="1"}catch{}
       if(!done){
         try{localStorage.setItem(key,"1")}catch{}
-        const layer=document.getElementById("celebrationLayer");
-        if(layer){
-          clear(layer);layer.classList.remove("hidden");
-          for(let i=0;i<14;i++){
-            const p=element("span",{className:"celebration-particle"});
-            p.style.setProperty("--x",String((i%7-3)*18)+"px");
-            p.style.setProperty("--r",String((i*47)%180)+"deg");
-            p.style.setProperty("--d",String((i%5)*35)+"ms");
-            layer.append(p);
-          }
-          setTimeout(()=>{layer.classList.add("hidden");clear(layer)},900);
-        }
-        vibrate([12,25,12]);
+        triggerD6Celebration("course",document.getElementById("celebrationLayer"));
+         vibrate([12,25,12]);
       }
     }
     lastAllDone=all;
@@ -349,12 +339,17 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderTodayPriorityAssist(){
-    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
+    const slot=element("section",{className:"section-block ai-coach-panel vc-shell d6-coach-live",attrs:{"data-ai-assist":"today-priority"}});
     slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
     import("./ai-assist-today-first.js").then(m=>{
       const node=m.renderTodayFirst({element,createAICard,api,getLang,setButtonLoading,aiStart,aiEnd,toast});
+      node.classList.add("vc-shell","d6-coach-live");
       slot.replaceWith(node);
-    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    }).catch(()=>{
+      const fallback=mountD6TodayCoach({phase1:getData()?.phase1||{},getLang,onMessage:(lead,holder)=>aiNextMessage(lead,"followup",holder),onOpenLead:openLeadDetail});
+      if(fallback)slot.replaceWith(fallback);
+      else slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")}));
+    });
     return slot;
   }
 
@@ -588,7 +583,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
       actions.append(aiCopyButton(msg),wa);
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
-      box.append(out.card);
+      box.append(styleD6AIMessage(out.card));
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
       if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
@@ -962,6 +957,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
+    const d=getData()||{};
+    const approvedGallery=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
+    const gallery=mountD6Gallery(approvedGallery,{lang:getLang()});
+    if(gallery)page.append(gallery);
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
     const list=element("div",{className:"kit-list"});
