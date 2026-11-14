@@ -589,7 +589,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       actions.append(aiCopyButton(msg),wa);
       const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
       const followupAt=new Date(Date.now()+hours*3600000);
-      const schedule=element("button",{className:"btn btn-secondary btn-small",text:(getLang()==="zh"?"设时间·":"Set·")+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:(getLang()==="zh"?"设·":"Set·")+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
       schedule.addEventListener("click",async()=>{
         schedule.disabled=true;
         try{
