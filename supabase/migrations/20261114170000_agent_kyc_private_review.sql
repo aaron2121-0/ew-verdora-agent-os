@@ -1,4 +1,26 @@
 -- Agent identity verification (KYC). No client-side access to raw identity records.
+-- KYC opt-in switch: default OFF, not externally exposed.
+create table if not exists private.app_settings (
+  setting_key text primary key,
+  enabled boolean not null default false
+);
+alter table private.app_settings enable row level security;
+revoke all on private.app_settings from public,anon,authenticated;
+grant select on private.app_settings to service_role;
+insert into private.app_settings(setting_key,enabled)
+values ('AGENT_KYC_REQUIRED',false)
+on conflict(setting_key) do nothing;
+
+-- Called only from service-role Edge functions; no user-facing access.
+create or replace function public.agent_kyc_required_internal()
+returns boolean language sql stable security definer set search_path=''
+as $
+ select coalesce((select enabled from private.app_settings
+                  where setting_key='AGENT_KYC_REQUIRED'),false);
+$;
+revoke all on function public.agent_kyc_required_internal() from public,anon,authenticated;
+grant execute on function public.agent_kyc_required_internal() to service_role;
+
 -- Prerequisite BEFORE enabling registration:
 -- create two separate random 32+ byte secrets in Supabase Vault named
 -- agent_kyc_encryption_key and agent_kyc_hash_key. Never commit their values.
@@ -176,10 +198,11 @@ begin
  join public.agents a on a.id=k.agent_id where a.user_id=p_user_id;
  if not found then
    return jsonb_build_object('status',null,'reject_reason',null,'ic_last4',null,
-     'kyc_required',true,'delete_requested',false);
+     'kyc_required',public.agent_kyc_required_internal(),'delete_requested',false);
  end if;
  return jsonb_build_object('status',v.status::text,'reject_reason',v.reject_reason,
-   'ic_last4',v.ic_last4,'kyc_required',v.status<>'approved',
+   'ic_last4',v.ic_last4,'kyc_required',
+    (public.agent_kyc_required_internal() and v.status<>'approved'),
    'delete_requested',v.delete_requested_at is not null);
 end $$;
 
@@ -269,7 +292,7 @@ as $$
 declare v_rows jsonb;
 begin
  if not exists(select 1 from private.user_roles
-  where user_id=p_user_id and role in('owner','admin'))
+  where user_id=p_user_id and role='owner')
  then raise exception 'forbidden' using errcode='42501'; end if;
  if p_status not in ('all','draft','submitted','approved','rejected')
  then raise exception 'kyc_invalid_status'; end if;
@@ -292,7 +315,7 @@ as $$
 declare v_k private.agent_kyc; v_key text; v_ic text;
 begin
  if not exists(select 1 from private.user_roles
-  where user_id=p_user_id and role in('owner','admin'))
+  where user_id=p_user_id and role='owner')
  then raise exception 'forbidden' using errcode='42501'; end if;
  select * into v_k from private.agent_kyc where agent_id=p_agent_id;
  if v_k.agent_id is null then raise exception 'kyc_profile_missing'; end if;
@@ -324,7 +347,7 @@ as $$
 declare v_new text;
 begin
  if not exists(select 1 from private.user_roles
-  where user_id=p_user_id and role in('owner','admin'))
+  where user_id=p_user_id and role='owner')
  then raise exception 'forbidden' using errcode='42501'; end if;
  if p_decision not in ('approve','reject') then raise exception 'kyc_invalid_decision'; end if;
  if p_decision='reject' and length(trim(coalesce(p_reason,'')))<3
@@ -356,7 +379,7 @@ create or replace function public.owner_kyc_delete_ready_internal(
 as $
 begin
  if not exists(select 1 from private.user_roles
-  where user_id=p_user_id and role in('owner','admin'))
+  where user_id=p_user_id and role='owner')
  then raise exception 'forbidden' using errcode='42501'; end if;
  if not exists(select 1 from private.agent_kyc
   where agent_id=p_agent_id and delete_requested_at is not null)
@@ -372,7 +395,7 @@ create or replace function public.owner_kyc_delete_internal(
 as $$
 begin
  if not exists(select 1 from private.user_roles
-  where user_id=p_user_id and role in('owner','admin'))
+  where user_id=p_user_id and role='owner')
  then raise exception 'forbidden' using errcode='42501'; end if;
  if not exists(select 1 from private.agent_kyc
    where agent_id=p_agent_id and delete_requested_at is not null)
@@ -381,7 +404,8 @@ begin
  delete from private.agent_kyc where agent_id=p_agent_id;
  -- A deleted approval must never continue allowing sales.
  update public.agents set status='trainee',certified_at=null,updated_at=now()
- where id=p_agent_id and status='active';
+ where id=p_agent_id and status='active'
+   and public.agent_kyc_required_internal();
  insert into private.audit_events(actor_user_id,actor_type,action,entity_type,entity_id)
  values(p_user_id,'owner','kyc_deleted','agent',p_agent_id::text);
 end $$;
@@ -396,6 +420,7 @@ declare
  v_serious int;
  v_exam_passed boolean;
  v_kyc_approved boolean;
+ v_kyc_required boolean;
  v_status text;
 begin
  select count(*) into v_remaining
@@ -409,10 +434,11 @@ begin
    and status not in('resolved','dismissed');
  select exists(select 1 from public.training_exam_attempts
    where agent_id=p_agent_id and status='completed' and passed=true) into v_exam_passed;
+ v_kyc_required:=public.agent_kyc_required_internal();
  select exists(select 1 from private.agent_kyc where agent_id=p_agent_id
    and status='approved') into v_kyc_approved;
  if v_remaining=0 and v_open_recovery=0 and v_serious=0
-    and v_exam_passed and v_kyc_approved then
+    and v_exam_passed and (not v_kyc_required or v_kyc_approved) then
   update public.agents set status='active',
    certified_at=coalesce(certified_at,now()),last_active_at=now(),updated_at=now()
   where id=p_agent_id and status in('trainee','certified','recovery','restricted')
@@ -425,7 +451,7 @@ begin
  return jsonb_build_object(
   'remaining_required',v_remaining,'open_recovery_tasks',v_open_recovery,
   'open_serious_violations',v_serious,'exam_passed',v_exam_passed,
-  'kyc_approved',v_kyc_approved,'agent_status',v_status
+  'kyc_required',v_kyc_required,'kyc_approved',v_kyc_approved,'agent_status',v_status
  );
 end $$;
 
