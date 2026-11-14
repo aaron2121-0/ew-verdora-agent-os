@@ -904,6 +904,29 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     input.placeholder=tr("aiCoachInput");coach.append(input);
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
     coach.append(ask);
+    const translateWrap=element("div",{className:"ai-outcome-row"});
+    [["zh","aiLangChinese"],["en","aiLangEnglish"],["ms","aiLangMalay"]].forEach(([code,key])=>{
+      const b=element("button",{className:"btn btn-secondary btn-small",text:tr(key),attrs:{type:"button"}});
+      b.addEventListener("click",async()=>{
+        const customerMessage=input.value.trim();if(!customerMessage){toast(tr("aiTranslateNeedText"),{tone:"danger"});return}
+        translateWrap.querySelectorAll("button").forEach(x=>x.disabled=true);aiStart();let ok=false;
+        try{
+          const j=await api.ai({action:"translate_reply",lead_id:lead.id,customer_message:customerMessage,target_language:code});ok=true;
+          coach.querySelector(".ai-translate-output")?.remove();
+          const x=j.content||{};const wrap=element("div",{className:"ai-translate-output"});
+          wrap.append(createAICard({title:tr("aiTranslationTitle"),text:String(x.translation||""),provider:j.provider||"template",cached:false,tr}).card);
+          const actions=element("div",{className:"ai-message-actions"});actions.append(aiCopyButton(String(x.reply||"")));
+          const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(x.reply||"")),"_blank","noopener,noreferrer"));
+          actions.append(wa);
+          wrap.append(createAICard({title:tr("aiReplyTitle"),text:String(x.reply||""),provider:j.provider||"template",cached:false,tr,actions}).card);
+          coach.append(wrap);
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+        finally{translateWrap.querySelectorAll("button").forEach(x=>x.disabled=false);aiEnd(ok)}
+      });
+      translateWrap.append(b);
+    });
+    coach.append(element("p",{className:"muted",text:tr("aiTranslateHint")}),translateWrap);
     ask.addEventListener("click",async()=>{
       const customerMessage=input.value.trim();if(!customerMessage)return;
       ask.disabled=true;aiStart();let coachOk=false;
