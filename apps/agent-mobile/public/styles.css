@@ -525,3 +525,4 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 :root[data-theme="dark"] .auth-wrap{--bg-opacity:.055}
 :root[data-theme="dark"] .today-shell{--bg-opacity:.04}
 @media (prefers-reduced-motion:reduce){.auth-wrap,.today-shell{scroll-behavior:auto}}
+\n/* AI assist accessibility surfaces */\n.ai-assist-surface,.ai-assist-surface *{font-size:16px}\n.ai-assist-surface button,.ai-assist-surface .btn,.ai-assist-surface input,.ai-assist-surface select,.ai-assist-surface textarea{min-height:48px;font-size:16px}\n
