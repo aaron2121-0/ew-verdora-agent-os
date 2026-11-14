@@ -23,3 +23,9 @@ test("today-first UI is plain-language, bilingual, and safe DOM",()=>{
   assert.match(copy,/今天先联系谁/);
   assert.match(copy,/Who to contact first today/);
 });
+
+test("AI assist quota exhaustion uses template fallback instead of an error",()=>{
+  assert.match(ai,/const assistActions=\[/);
+  assert.match(ai,/const callAssistAI=aiQuotaAllowed\?callAI:async\(\)=>null/);
+  assert.match(ai,/if\(assistActions\.includes\(action\)\) aiQuotaAllowed=false/);
+});
