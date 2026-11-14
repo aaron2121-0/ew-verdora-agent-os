@@ -144,6 +144,15 @@ Deno.serve(async (req) => {
       grant.path,bytes,{contentType:mime,upsert:false,cacheControl:"0"}
     );
     if(putError)return reply({error:"kyc_upload_failed"},500);
+    // A deletion request might race an in-flight upload. Delete this object
+    // rather than leave a new orphan after the Owner has purged the prefix.
+    const {data:afterUpload,error:afterUploadErr}=await admin.rpc(
+      "agent_kyc_status_internal",{p_user_id:uid}
+    );
+    if(afterUploadErr || afterUpload?.delete_requested || !afterUpload?.status){
+      await admin.storage.from("agent-kyc").remove([grant.path]);
+      return reply({error:"kyc_upload_revoked"},409);
+    }
     return reply({ok:true,uploaded:true});
   }
 
