@@ -349,31 +349,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderTodayPriorityAssist(){
-    const host=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
-    host.append(element("h2",{className:"section-title",text:tr("aiTodayFirstTitle")}),
-      element("p",{className:"screen-subtitle",text:tr("aiTodayFirstSubtitle")}));
-    const run=element("button",{className:"btn btn-primary btn-large",text:tr("aiTodayFirstButton"),attrs:{type:"button"}});
-    const out=element("div",{className:"follow-list"});
-    run.addEventListener("click",async()=>{
-      setButtonLoading(run,true,tr("loading")); aiStart(); let ok=false;
-      try{
-        const j=await api.ai({action:"today_priority"});ok=true;out.replaceChildren();
-        const rows=Array.isArray(j.customers)?j.customers:[];
-        if(!rows.length){out.append(element("p",{className:"ai-priority-why",text:tr("aiTodayFirstEmpty")}));return}
-        rows.forEach((x,index)=>{
-          const card=createAICard({title:(index+1)+". "+(x.customer_label||tr("customerDetails")),text:x.message||"",provider:j.provider||"template",cached:false,tr}).card;
-          card.append(element("p",{className:"ai-priority-why",text:x.why||""}));
-          const actions=element("div",{className:"follow-actions"});
-          const copy=element("button",{className:"btn btn-secondary",text:tr("copyText"),attrs:{type:"button"}});
-          copy.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(String(x.message||""));toast(tr("copied"),{tone:"success"})}catch{toast(tr("errorRequestFailed"),{tone:"danger"})}});
-          const wa=element("button",{className:"btn btn-whatsapp",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-          wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(String(x.message||"")),"_blank","noopener,noreferrer"));
-          actions.append(copy,wa);card.append(actions);out.append(card);
-        });
-      }catch(e){out.replaceChildren(element("p",{className:"notice",text:api.friendlyError(e?.message)}))}
-      finally{setButtonLoading(run,false,tr("aiTodayFirstButton"));aiEnd(ok)}
-    });
-    host.append(run,out);return host;
+    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
+    slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
+    import("./ai-assist-today-first.js").then(m=>{
+      const node=m.renderTodayFirst({element,createAICard,api,getLang,setButtonLoading,aiStart,aiEnd,toast});
+      slot.replaceWith(node);
+    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    return slot;
   }
 
   function renderToday(){
