@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 const ai=fs.readFileSync(new URL("../../../supabase/functions/agent-ai/index.ts",import.meta.url),"utf8");
 const ui=fs.readFileSync(new URL("../public/phase1.js",import.meta.url),"utf8");
-const i18n=fs.readFileSync(new URL("../public/i18n.js",import.meta.url),"utf8");
+const copy=fs.readFileSync(new URL("../../../content/handbook/ai_assist_copy.json",import.meta.url),"utf8");
 const migration=fs.readFileSync(new URL("../../../supabase/migrations/20261114213000_ai_assist_today_first.sql",import.meta.url),"utf8");
 
 test("today_first is quota-limited and agent-scoped",()=>{
@@ -20,6 +20,6 @@ test("today-first UI is plain-language, bilingual, and safe DOM",()=>{
   assert.match(ui,/createAICard/);
   assert.match(ui,/element\("button"/);
   assert.doesNotMatch(ui,/innerHTML\s*=/);
-  assert.match(i18n,/今天先联系谁/);
-  assert.match(i18n,/Who to contact first today/);
+  assert.match(copy,/今天先联系谁/);
+  assert.match(copy,/Who to contact first today/);
 });
