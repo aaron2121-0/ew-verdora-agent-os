@@ -50,7 +50,7 @@ export const I18N={
     aiDailyFocus:"Today's focus",aiDailyFollowup:"Review follow-ups",aiDailyViewTasks:"View today's plan",
     aiStatsTitle:"Your activity",
     themeLight:"Light",themeDark:"Dark",themeToggle:"Switch appearance",
-    aiCoachTitle:"AI customer reply coach",aiCoachInput:"Paste what the customer said…",aiCoachAsk:"Help me reply",
+    aiCoachTitle:"AI customer reply coach",aiObjExpensive:"Too expensive",aiObjThink:"Needs time",aiObjExact:"Wants same design",aiObjOption:"Reply {n}",aiCoachInput:"Paste what the customer said…",aiCoachAsk:"Help me reply",
     aiChanceHigh:"High opportunity",aiChanceMedium:"Medium opportunity",aiChanceLow:"Lower opportunity",aiNextAction:"Suggested next step",aiBestFollowup:"Suggested follow-up time",
     aiProvider:"AI",
     aiNextTitle:"AI next message",aiWriteFollowup:"AI write follow-up",aiCopySend:"Copy",aiOpenWhatsApp:"Open WhatsApp",aiWhy:"Why this works",aiNextFollowupIn:"Follow up again in about {hours}h",aiSetFollowup:"Set follow-up · {time}",aiFollowupExact:"Suggested next follow-up: {time}",aiFollowupSet:"Next follow-up saved.",
