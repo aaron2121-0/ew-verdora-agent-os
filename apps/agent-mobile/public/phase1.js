@@ -347,6 +347,17 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     return row;
   }
 
+
+  function renderTodayPriorityAssist(){
+    const slot=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"today-priority"}});
+    slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
+    import("./ai-assist-today-first.js").then(m=>{
+      const node=m.renderTodayFirst({element,createAICard,api,getLang,setButtonLoading,aiStart,aiEnd,toast});
+      slot.replaceWith(node);
+    }).catch(()=>slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")})));
+    return slot;
+  }
+
   function renderToday(){
     const host=document.getElementById("todayPage");if(!host)return;
     clear(host);
@@ -378,6 +389,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     greet.append(gLeft,badges);
     page.append(greet);
     page.append(renderEarningActions());
+    page.append(renderTodayPriorityAssist());
     page.append(renderAIWeekly());
     page.append(handbook.journey());
 

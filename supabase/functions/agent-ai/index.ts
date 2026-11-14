@@ -439,7 +439,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse"].includes(action)?action:null;
+  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -554,6 +554,64 @@ Deno.serve(async req=>{
   }
 
 
+
+
+  if(action==="today_priority"){
+    const intelRes=await admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
+    if(intelRes.error){console.error("TODAY_PRIORITY_INTEL",intelRes.error.code||"");return reply({error:"request_failed"},500);}
+    const intel=Array.isArray(intelRes.data)?intelRes.data:[];
+    const ids=intel.map(x=>String(x.lead_id||"")).filter(x=>/^[0-9a-f-]{36}$/i.test(x)).slice(0,20);
+    if(!ids.length)return reply({ok:true,provider:"fallback",customers:[]});
+    const leadsRes=await admin.from("leads")
+      .select("id,customer_label,occasion,sales_category,status,source,delivery_date,next_followup_at,created_at")
+      .eq("agent_id",agent.id).in("id",ids);
+    if(leadsRes.error){console.error("TODAY_PRIORITY_LEADS",leadsRes.error.code||"");return reply({error:"request_failed"},500);}
+    const byId=new Map((leadsRes.data||[]).map(x=>[String(x.id),x]));
+    const ranked=intel
+      .map(x=>({intel:x,lead:byId.get(String(x.lead_id))}))
+      .filter(x=>x.lead&&!["won","lost","archived"].includes(String(x.lead.status||"")))
+      .sort((a,b)=>(Number(b.intel.lead_score)||0)-(Number(a.intel.lead_score)||0))
+      .slice(0,3);
+    if(!ranked.length)return reply({ok:true,provider:"fallback",customers:[]});
+    const fallbackCustomers=ranked.map(({lead,intel})=>({
+      lead_id:lead.id,
+      customer_label:lead.customer_label||"",
+      message:lang==="zh"
+        ?("Hi "+(lead.customer_label||"")+"～想跟进一下之前聊的花礼。你这边日期和需求有确定了吗？我可以继续帮你确认下一步。")
+        :("Hi "+(lead.customer_label||"")+"! Just following up on the flowers we discussed. Have the date and requirements been confirmed? I can help with the next step."),
+      why:lang==="zh"?"这个客人今天比较值得先跟进。":"This customer is worth following up with first today.",
+      suggested_time:intel.best_followup_time||lead.next_followup_at||null
+    }));
+    const modelInput=ranked.map(({lead,intel})=>({
+      lead_id:lead.id,customer_label:lead.customer_label||null,
+      occasion:lead.occasion||lead.sales_category||null,status:lead.status,source:lead.source,
+      delivery_date:lead.delivery_date||null,next_followup_at:lead.next_followup_at||null,
+      opportunity:Number(intel.lead_score)||0,next_best_action:intel.next_best_action||null,
+      best_followup_time:intel.best_followup_time||null
+    }));
+    const raw=await callAI(
+      "You are EW VERDORA's daily selling assistant for one Agent in Kuching. Return ONLY JSON {customers:[up to 3 objects with lead_id:string,message:string,why:string]}. Keep the supplied order. message is the exact WhatsApp message the Agent may choose to copy, maximum 55 words, warm and natural, one easy question, no hashtags. why is one short plain-language sentence for the Agent. Never mention lead scores or internal system terms. Never invent price, discount, availability, exact-copy promise, urgency, personal payment, supplier, cost or margin. Language: "+lang+"."+RULES+profileBrief(prof),
+      JSON.stringify(modelInput),true
+    );
+    const p=parseJson(raw||"");
+    const allowed=new Set(ranked.map(x=>String(x.lead.id)));
+    const valid=p&&Array.isArray(p.customers)&&p.customers.length>0&&p.customers.length<=3&&
+      p.customers.every(x=>allowed.has(String(x.lead_id))&&typeof x.message==="string"&&typeof x.why==="string"&&
+        !containsSensitiveOutput(x.message+" "+x.why)&&!containsMarketingPolicyViolation(x.message));
+    if(!valid)return reply({ok:true,provider:"fallback",customers:fallbackCustomers});
+    const modelById=new Map(p.customers.map(x=>[String(x.lead_id),x]));
+    const customers=ranked.map(({lead,intel},idx)=>{
+      const x=modelById.get(String(lead.id));
+      const fb=fallbackCustomers[idx];
+      return {
+        lead_id:lead.id,customer_label:lead.customer_label||"",
+        message:String(x?.message||fb.message).slice(0,700),
+        why:String(x?.why||fb.why).slice(0,240),
+        suggested_time:intel.best_followup_time||lead.next_followup_at||null
+      };
+    });
+    return reply({ok:true,provider:"gemini",customers});
+  }
 
   if(action==="lead_intake_parse"){
     const customerText=String(body.customer_text||"").trim().slice(0,4000);
