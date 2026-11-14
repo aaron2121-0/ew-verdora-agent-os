@@ -982,9 +982,18 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
     const d=getData()||{};
+    const galleryHost=element("div",{className:"d6-gallery-host"});
+    page.append(galleryHost);
     const galleryData=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
-    const gallery=mountD6Gallery(galleryData,{lang:getLang()});
-    if(gallery)page.append(gallery);
+    // D2 portfolio_list is authoritative. Never replace a failed request with vendor examples.
+    if(Array.isArray(galleryData))galleryHost.replaceChildren(mountD6Gallery(galleryData,{lang:getLang()}));
+    else {
+      galleryHost.replaceChildren(mountD6Gallery([],{lang:getLang()}));
+      api.agent({action:"portfolio_list"}).then(response=>{
+        if(!galleryHost.isConnected)return;
+        galleryHost.replaceChildren(mountD6Gallery(response,{lang:getLang()}));
+      }).catch(()=>{}); // Remain in explicit empty state when D2 is unavailable.
+    }
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
     const list=element("div",{className:"kit-list"});
