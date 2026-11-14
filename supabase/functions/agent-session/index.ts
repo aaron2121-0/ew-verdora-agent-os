@@ -1,6 +1,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { validateAgentKyc, KYC_MIME_TYPES, KYC_MAX_BYTES, matchesKycImage } from "../_shared/agent-kyc-validate.mjs";
+import { validateAgentKyc, KYC_MIME_TYPES, KYC_MAX_BYTES, matchesKycImage, registerAgentWithKycGate } from "../_shared/agent-kyc-validate.mjs";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -118,6 +118,10 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await userClient.auth.getUser(token);
   if (userError || !userData.user) return reply({ error: "invalid_session" }, 401);
   const uid = userData.user.id;
+  // Shared DB flag, also used by the certification SQL; never silently bypass it.
+  const {data:kycRequired,error:kycFlagError}=await admin.rpc("agent_kyc_required_internal");
+  if(kycFlagError||typeof kycRequired!=="boolean")
+    return reply({error:"kyc_feature_config_unavailable"},503);
 
   // Custom, one-use signed upload endpoint. Supabase Storage's own signed
   // upload URLs last 2 hours, and cannot meet our required 60-second TTL.
@@ -161,31 +165,24 @@ Deno.serve(async (req) => {
   const action = body.action || "dashboard";
 
   if (action === "register") {
-    const valid=validateAgentKyc(body);
-    if(!valid.ok)return reply({error:valid.error},422);
-    const language=body.language==="zh"?"zh":"en";
-    const {data,error}=await admin.rpc("agent_kyc_register_internal",{
-      p_user_id:uid,p_display_name:valid.preferred_name,p_language:language,
-      p_legal_name:valid.legal_name,p_preferred_name:valid.preferred_name,
-      p_ic_number:valid.ic_number,p_phone_whatsapp:valid.phone_whatsapp,
-      p_area:valid.area,p_consent:true,p_consent_version:valid.consent_version
+    const result=await registerAgentWithKycGate({
+      body,uid,admin,kycRequired,cleanName:clean,
+      safeLegacyError:safeErr,safeKycError:kycErr
     });
-    if(error)return reply({error:kycErr(error)},kycErr(error)==="kyc_duplicate_ic"?409:422);
-    const {data:agent}=await admin.from("agents").select("id,agent_code").eq("id",data).single();
-    return reply({ok:true,agent_id:data,agent_code:agent?.agent_code||null,kyc_status:"draft"});
+    return reply(result.payload,result.status);
   }
 
   const { data: agent, error: agentError } = await admin.from("agents")
     .select("id,agent_code,display_name,status,tier,commission_rate,performance_score,preferred_language,primary_channel")
     .eq("user_id", uid).maybeSingle();
   if (agentError) return reply({ error: safeErr(agentError) }, 400);
-  if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: true, user: { email: userData.user.email } });
+  if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: kycRequired, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
   if(action==="kyc_status"){
     const {data,error}=await admin.rpc("agent_kyc_status_internal",{p_user_id:uid});
     if(error)return reply({error:kycErr(error)},400);
-    return reply({ok:true,...data});
+    return reply({ok:true,...data,kyc_required:kycRequired && data?.kyc_required!==false});
   }
   if(action==="kyc_upload_url"){
     if(!KYC_MIME_TYPES.includes(body.content_type))return reply({error:"kyc_invalid_upload"},422);
@@ -386,7 +383,9 @@ Deno.serve(async (req) => {
     .eq("agent_id", agent.id).order("created_at",{ascending:false}).limit(20);
   const phase1Req = admin.rpc("agent_phase1_overview_internal", { p_agent_id: agent.id, p_date: today });
   const intelligenceReq = admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
-  const kycReq = admin.rpc("agent_kyc_status_internal",{p_user_id:uid});
+  const kycReq = kycRequired
+    ?admin.rpc("agent_kyc_status_internal",{p_user_id:uid})
+    :Promise.resolve({data:{status:null,kyc_required:false},error:null});
 
   const [missionRes, progressRes, trainingRes, kitsRes, playbooksRes, campaignRes, commRes, leadsRes, quoteRequestsRes, phase1Res, intelligenceRes, kycRes] = await Promise.all([missionReq, progressReq, trainingReq, kitsReq, playbooksReq, campaignReq, commReq, leadsReq, quoteRequestsReq, phase1Req, intelligenceReq, kycReq]);
   const err = missionRes.error || progressRes.error || trainingRes.error || kitsRes.error || playbooksRes.error || campaignRes.error || commRes.error || leadsRes.error || quoteRequestsRes.error || phase1Res.error || intelligenceRes.error || kycRes.error;
@@ -395,7 +394,7 @@ Deno.serve(async (req) => {
   return reply({
     ok: true,
     needs_registration: false,
-    kyc_required: kycRes.data?.kyc_required !== false,
+    kyc_required: kycRequired && kycRes.data?.kyc_required !== false,
     kyc_status: kycRes.data?.status || null,
     agent,
     mission: missionRes.data,
