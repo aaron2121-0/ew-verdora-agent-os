@@ -37,7 +37,7 @@ function kycError(e){
  const m=String(e?.message||"");
  return new Set(["forbidden","kyc_profile_missing","kyc_not_submitted",
    "kyc_invalid_status","kyc_invalid_decision","kyc_reject_reason_required",
-   "kyc_configuration_missing","kyc_delete_request_required"]).has(m)?m:"kyc_operation_failed";
+   "kyc_configuration_missing","kyc_delete_request_required","kyc_reject_reason_invalid"]).has(m)?m:"kyc_operation_failed";
 }
 const kycUUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const url=Deno.env.get("SUPABASE_URL")||"";
@@ -207,6 +207,8 @@ Deno.serve(async req=>{
     if(!kycUUID.test(id))return reply({error:"kyc_invalid_agent"},422);
     if(!["approve","reject"].includes(decision))return reply({error:"kyc_invalid_decision"},422);
     if(decision==="reject" && reason.length<3)return reply({error:"kyc_reject_reason_required"},422);
+    if(decision==="reject" && (/[0-9]{6}-?[0-9]{2}-?[0-9]{4}/.test(reason) || /agent-kyc|https?:/i.test(reason)))
+      return reply({error:"kyc_reject_reason_invalid"},422);
     const {data,error}=await admin.rpc("owner_kyc_review_internal",{
       p_user_id:uid,p_agent_id:id,p_decision:decision,p_reason:reason||null
     });
