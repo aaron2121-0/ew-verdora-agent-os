@@ -59,10 +59,55 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
+
+  // [D1] Owner-only bank payout confirmation. Never infer a transfer from the button click.
+  if(action==="commission_payable_list"){
+    const {data:commissions,error:ce}=await admin.from("commissions")
+      .select("id,agent_id,order_id,amount,status,payable_at")
+      .eq("status","payable").order("payable_at",{ascending:true}).limit(500);
+    if(ce)return reply({error:"commission_list_unavailable"},500);
+    const rows=commissions||[];
+    const agentIds=[...new Set(rows.map(c=>c.agent_id))];
+    const orderIds=[...new Set(rows.map(c=>c.order_id).filter(Boolean))];
+    const [ar,orr]=await Promise.all([
+      agentIds.length?admin.from("agents").select("id,display_name,agent_code").in("id",agentIds):Promise.resolve({data:[],error:null}),
+      orderIds.length?admin.from("orders").select("id,order_code").in("id",orderIds):Promise.resolve({data:[],error:null})
+    ]);
+    if(ar.error||orr.error)return reply({error:"commission_list_unavailable"},500);
+    const names=new Map((ar.data||[]).map(a=>[a.id,a]));
+    const codes=new Map((orr.data||[]).map(o=>[o.id,o.order_code]));
+    return reply({ok:true,commissions:rows.map(c=>({
+      ...c,agent_name:names.get(c.agent_id)?.display_name||names.get(c.agent_id)?.agent_code||"Agent",
+      agent_code:names.get(c.agent_id)?.agent_code||"",order_code:codes.get(c.order_id)||"—"
+    }))});
+  }
+  if(action==="commission_mark_paid"){
+    if(b.confirm!==true||b.transfer_checked!==true)
+      return reply({error:"confirmation_required"},422);
+    const ids=b.commission_ids;
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!Array.isArray(ids)||ids.length<1||ids.length>100
+       ||ids.some(x=>typeof x!=="string"||!uuid.test(x))
+       ||new Set(ids).size!==ids.length)return reply({error:"invalid_commission_selection"},422);
+    const reference=String(b.payment_reference||"").trim().toUpperCase();
+    if(!/^[A-Z0-9][A-Z0-9_/-]{4,79}$/.test(reference))
+      return reply({error:"invalid_payment_reference"},422);
+    // One atomic RPC locks every selected commission, pays only 'payable', and audits.
+    const {data:result,error}=await admin.rpc("owner_mark_commissions_paid_internal",{
+      p_user_id:uid,p_commission_ids:ids,p_payment_reference:reference
+    });
+    if(error){
+      const known=["commission_not_payable","commissions_not_found","mixed_agent_selection",
+        "invalid_commission_selection","invalid_payment_reference","forbidden"];
+      const code=known.find(x=>String(error.message||"").includes(x))||"commission_payout_failed";
+      return reply({error:code},code==="forbidden"?403:409);
+    }
+    return reply(result||{ok:true});
+  }
 
   // [D2] Private image library; only the authenticated Owner can upload and review.
   if(action==="portfolio_upload_url"){

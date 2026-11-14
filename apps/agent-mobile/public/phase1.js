@@ -8,7 +8,8 @@ import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
 import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
-import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
+import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy,loadVendorMotion} from "./motion-vendor.js";
+import {mountD6TodayCoach,mountD6Gallery,styleD6AIMessage,triggerD6Celebration,loadD6Css} from "./d6-motion.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -67,6 +68,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   let generatedKitCode=null;
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let lastAllDone=false;
+  let lastEarnedToday=null;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
 
@@ -192,8 +194,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       target.classList.add("active");
     };
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if(old&&old!==target&&!reduced){
+      loadD6Css("transitions");
+      void loadVendorMotion("transitions").catch(()=>{});
+    }
     const vm=vendorMotion();
-    if(old&&old!==target&&vm?.runSharedSwap){
+    if(old&&old!==target&&vm?.runSharedSwap&&!reduced){
       vm.runSharedSwap(old,swap,()=>target);
     }else if(document.startViewTransition&&!reduced){
       document.startViewTransition(swap);
@@ -308,19 +314,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       let done=false;try{done=localStorage.getItem(key)==="1"}catch{}
       if(!done){
         try{localStorage.setItem(key,"1")}catch{}
-        const layer=document.getElementById("celebrationLayer");
-        if(layer){
-          clear(layer);layer.classList.remove("hidden");
-          for(let i=0;i<14;i++){
-            const p=element("span",{className:"celebration-particle"});
-            p.style.setProperty("--x",String((i%7-3)*18)+"px");
-            p.style.setProperty("--r",String((i*47)%180)+"deg");
-            p.style.setProperty("--d",String((i%5)*35)+"ms");
-            layer.append(p);
-          }
-          setTimeout(()=>{layer.classList.add("hidden");clear(layer)},900);
-        }
-        vibrate([12,25,12]);
+        triggerD6Celebration("course",document.getElementById("celebrationLayer"));
+         vibrate([12,25,12]);
       }
     }
     lastAllDone=all;
@@ -347,10 +342,33 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     return row;
   }
 
+
+  function renderTodayPriorityAssist(){
+    loadD6Css("d6");
+    loadD6Css("coach");
+    const slot=element("section",{className:"section-block ai-coach-panel vc-shell d6-coach-live",attrs:{"data-ai-assist":"today-priority"}});
+    slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
+    import("./ai-assist-today-first.js").then(m=>{
+      const node=m.renderTodayFirst({element,createAICard,api,getLang,setButtonLoading,aiStart,aiEnd,toast});
+      node.classList.add("vc-shell","d6-coach-live");
+      slot.replaceWith(node);
+    }).catch(()=>{
+      const fallback=mountD6TodayCoach({phase1:getData()?.phase1||{},getLang,onMessage:(lead,holder)=>aiNextMessage(lead,"followup",holder),onOpenLead:openLeadDetail});
+      if(fallback)slot.replaceWith(fallback);
+      else slot.replaceChildren(element("p",{className:"notice",text:api.friendlyError("request_failed")}));
+    });
+    return slot;
+  }
+
   function renderToday(){
     const host=document.getElementById("todayPage");if(!host)return;
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
+    if(m.today_earned!=null&&Number.isFinite(Number(m.today_earned))){
+      const earnedNow=Number(m.today_earned);
+      if(lastEarnedToday!==null&&earnedNow>lastEarnedToday)triggerD6Celebration("sale");
+      lastEarnedToday=earnedNow;
+    }
     const page=element("div",{className:"page-shell today-shell"});
     import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
@@ -378,6 +396,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     greet.append(gLeft,badges);
     page.append(greet);
     page.append(renderEarningActions());
+    page.append(renderTodayPriorityAssist());
     page.append(renderAIWeekly());
     page.append(handbook.journey());
 
@@ -409,6 +428,27 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       requestAnimationFrame(()=>countTo(n,Number(value||0),{duration:650,formatter:x=>"RM "+Math.round(x).toLocaleString("en-MY")}));
     });
     moneyCard.append(moneyHead,grid);
+    // [D1] Show a human-readable payout status, scoped to the signed-in Agent.
+    const recentCommissions=Array.isArray(getData()?.commissions)?getData().commissions.slice(0,8):[];
+    if(recentCommissions.length){
+      const history=element("div",{className:"commission-status-list"});
+      history.append(element("strong",{text:getLang()==="zh"?"我的佣金进度":"My commission payments"}));
+      for(const entry of recentCommissions){
+        const status=String(entry.status||"");
+        const name=status==="pending"||status==="earned"
+          ?(getLang()==="zh"?"处理中":"Processing")
+          :status==="payable"?(getLang()==="zh"?"可领取":"Ready to withdraw")
+          :status==="paid"?(getLang()==="zh"?"已付":"Paid")
+          :commissionStatusLabel(status,tr);
+        const paymentDate=status==="paid"&&entry.paid_at
+          ?" · "+formatKuchingDateTime(entry.paid_at,getLang()):"";
+        const line=element("div",{className:"commission-status-row"});
+        line.append(element("span",{text:name+paymentDate}),
+          element("strong",{text:money(entry.amount)}));
+        history.append(line);
+      }
+      moneyCard.append(history);
+    }
 
     const tierWrap=element("div",{className:"tier-progress"});
     const tierTop=element("div",{className:"tier-progress-top"});
@@ -573,12 +613,23 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       waiting.remove();
       const actions=element("div",{className:"ai-message-actions"});
       const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
+      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer")});
       actions.append(aiCopyButton(msg),wa);
+      const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
+      const followupAt=new Date(Date.now()+hours*3600000),at=followupAt.toISOString();
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:"⏱ "+formatKuchingDateTime(at,getLang()),attrs:{type:"button"}});
+      schedule.addEventListener("click",async()=>{
+        schedule.disabled=true;
+        try{
+          await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:at});
+          await onRefresh();
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
+      });
+      actions.append(schedule);
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
-      box.append(out.card);
+      box.append(styleD6AIMessage(out.card));
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
-      if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
+      import("./ai-assist-objection.js").then(m=>m.t(box,api,getLang,createAICard));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
@@ -906,6 +957,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
     input.placeholder=tr("aiCoachInput");coach.append(input);
+    import("./ai-assist-objection.js").then(m=>m.mountObjectionHelper({coach,input,element,createAICard,api,getLang,aiStart,aiEnd,toast})).catch(()=>{});
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
     coach.append(ask);
     ask.addEventListener("click",async()=>{
@@ -950,83 +1002,19 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
-    // [D2] Agents can browse only Owner-approved photographs, via 60-minute signed links.
-    const gallery=element("section",{className:"portfolio-gallery"});
-    const galleryTitle=element("h2",{text:getLang()==="zh"?"EW VERDORA 真实作品":"EW VERDORA real work"});
-    const galleryHelp=element("p",{className:"muted",text:getLang()==="zh"
-      ?"先选作品，再复制说明或直接分享给客人。":"Choose a photo, copy its caption or share it with a customer."});
-    const galleryBtn=iconButton("images",getLang()==="zh"?"看作品图库":"Browse gallery","btn btn-primary");
-    const galleryBody=element("div",{className:"portfolio-gallery-body"});
-    gallery.append(galleryTitle,galleryHelp,galleryBtn,galleryBody);
-    page.append(gallery);
-    galleryBtn.addEventListener("click",async()=>{
-      galleryBtn.disabled=true;clear(galleryBody);
-      galleryBody.append(element("p",{text:getLang()==="zh"?"正在读取作品…":"Loading photos…"}));
-      try{
-        const {photos=[]}=await api.agent({action:"portfolio_list"});
-        clear(galleryBody);
-        if(!photos.length){galleryBody.append(element("p",{text:getLang()==="zh"
-          ?"还没有核准的作品，迟点再来看。":"No approved photos yet. Check back later."}));return}
-        const lineNames={condolence:"帛事花圈",opening:"开张花篮",bouquet:"花束",wedding_event:"婚礼活动",wholesale:"批发"};
-        const selector=element("select",{attrs:{"aria-label":getLang()==="zh"?"选择作品类型":"Choose flower category"}});
-        const opt=element("option",{text:getLang()==="zh"?"全部作品":"All photos",attrs:{value:"all"}});
-        selector.append(opt);
-        for(const [code,label] of Object.entries(lineNames)){
-          if(!photos.some(p=>p.product_line===code))continue;
-          selector.append(element("option",{text:getLang()==="zh"?label:code.replace("_"," "),attrs:{value:code}}));
-        }
-        const collection=element("div",{className:"portfolio-gallery-grid"});
-        const display=()=>{
-          clear(collection);
-          for(const photo of photos.filter(p=>selector.value==="all"||p.product_line===selector.value)){
-            let imgUrl="";
-            try{
-              const u=new URL(photo.image_url||"");
-              if(u.protocol==="https:"&&u.hostname.endsWith(".supabase.co"))imgUrl=u.href;
-            }catch{}
-            if(!imgUrl)continue;
-            const tile=element("article",{className:"portfolio-gallery-item"});
-            const img=element("img",{attrs:{src:imgUrl,alt:"EW VERDORA real floral work",loading:"lazy",referrerpolicy:"no-referrer"}});
-            tile.append(img);
-            const caption=getLang()==="zh"?photo.caption_zh:photo.caption_en;
-            tile.append(element("p",{text:caption||""}));
-            const copy=iconButton("copy",getLang()==="zh"?"复制说明":"Copy caption","btn btn-secondary");
-            copy.addEventListener("click",async()=>{
-              try{await navigator.clipboard.writeText(caption||"");toast(tr("copied"),{tone:"success"})}
-              catch{toast(tr("errorRequestFailed"),{tone:"danger"})}
-            });
-            const share=iconButton("share2",getLang()==="zh"?"分享给客人":"Share photo","btn btn-primary");
-            share.addEventListener("click",async()=>{
-              try{
-                // Share the actual image bytes, not an expiring signed URL.
-                const resp=await fetch(imgUrl,{cache:"no-store"});
-                if(!resp.ok)throw Error("image_unavailable");
-                const blob=await resp.blob();
-                const ext=blob.type==="image/png"?"png":blob.type==="image/webp"?"webp":"jpg";
-                const file=new File([blob],"ew-verdora-work."+ext,{type:blob.type||"image/jpeg"});
-                if(navigator.share&&navigator.canShare?.({files:[file]})){
-                  try{await navigator.share({files:[file],title:"EW VERDORA",text:caption||""});return}
-                  catch(e){if(e?.name==="AbortError")return}
-                }
-                const url=URL.createObjectURL(blob);
-                const a=document.createElement("a");a.href=url;a.download=file.name;
-                document.body.append(a);a.click();a.remove();
-                setTimeout(()=>URL.revokeObjectURL(url),30000);
-              }catch{
-                // Browser/CORS fallback: open the private signed image for manual saving.
-                window.open(imgUrl,"_blank","noopener,noreferrer");
-              }
-            });
-            const actions=element("div",{className:"portfolio-gallery-actions"});
-            actions.append(copy,share);tile.append(actions);collection.append(tile);
-          }
-        };
-        selector.addEventListener("change",display);
-        galleryBody.append(selector,collection);display();
-      }catch{clear(galleryBody);galleryBody.append(element("p",{text:getLang()==="zh"
-        ?"暂时无法打开作品，按多一次试试。":"Cannot open photos right now. Try again."}))}
-      finally{galleryBtn.disabled=false}
-    });
+    const d=getData()||{};
+    const galleryHost=element("div",{className:"d6-gallery-host"});
+    page.append(galleryHost);
+    const galleryData=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
+    // D2 portfolio_list is authoritative. Never replace a failed request with vendor examples.
+    if(Array.isArray(galleryData))galleryHost.replaceChildren(mountD6Gallery(galleryData,{lang:getLang()}));
+    else {
+      galleryHost.replaceChildren(mountD6Gallery([],{lang:getLang()}));
+      api.agent({action:"portfolio_list"}).then(response=>{
+        if(!galleryHost.isConnected)return;
+        galleryHost.replaceChildren(mountD6Gallery(response,{lang:getLang()}));
+      }).catch(()=>{}); // Remain in explicit empty state when D2 is unavailable.
+    }
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
     const list=element("div",{className:"kit-list"});
