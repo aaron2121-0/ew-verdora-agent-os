@@ -1042,6 +1042,23 @@ I18N.en.handbookSubtitle="Approved product lines, photos and scripts";
 I18N.zh.handbookTitle="产品手册";
 I18N.zh.handbookSubtitle="五大业务线 · 核准作品 · 客户话术";
 
+Object.assign(I18N.en,{
+  identitySettings:"Identity details",identityStartTitle:"Complete identity verification to start taking orders",
+  identityStartBody:"About 2 minutes. We only ask for what is needed to confirm who receives the commission.",identityStart:"Start",
+  identityWaitingTitle:"Sent · waiting for review",identityWaitingBody:"The Owner usually finishes checking within 1 day. We will let you know when it is done.",
+  identityVerifiedTitle:"Identity verified ✓",identityVerifiedBody:"Your identity has been confirmed.",
+  identityFixTitle:"Please update your details",identityFixBody:"The Owner needs one more change before the identity check can be completed.",
+  identityOwnerReason:"What to fix: {reason}",identityFixAction:"Retake / edit details"
+});
+Object.assign(I18N.zh,{
+  identitySettings:"身份资料",identityStartTitle:"完成身份验证，就能开始接单",
+  identityStartBody:"大约 2 分钟。只收确认本人和佣金付款需要的资料。",identityStart:"开始",
+  identityWaitingTitle:"已送出，等待审核",identityWaitingBody:"老板通常 1 天内会审核完，好了会通知你。",
+  identityVerifiedTitle:"身份已验证 ✓",identityVerifiedBody:"身份已经确认完成。",
+  identityFixTitle:"需要补资料",identityFixBody:"老板需要你改一点资料，改好再送一次就可以。",
+  identityOwnerReason:"要修改：{reason}",identityFixAction:"重新拍 / 修改资料"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){
