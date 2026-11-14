@@ -273,7 +273,7 @@ Deno.serve(async req=>{
     const [qr,orr]=await Promise.all([
       admin.from("quotes").select("id,lead_id,agent_id,selling_price,status,valid_until,created_at")
         .in("status",["approved","sent","accepted"]).order("created_at",{ascending:false}).limit(100),
-      admin.from("orders").select("*")
+      admin.from("orders").select("id,order_code,quote_id,agent_id,status,commissionable_revenue,delivery_fee,payment_status,completed_at,created_at")
         .order("created_at",{ascending:false}).limit(100)
     ]);
     if(qr.error||orr.error)return reply({error:"order_queue_unavailable"},400);
@@ -281,18 +281,24 @@ Deno.serve(async req=>{
     const available=(qr.data||[]).filter(q=>!existing.has(q.id) && (!q.valid_until||new Date(q.valid_until)>new Date()));
     const agentIds=[...new Set([...available.map(q=>q.agent_id),...orders.map(o=>o.agent_id)])];
     const leadIds=[...new Set(available.map(q=>q.lead_id))];
-    const [ar,lr]=await Promise.all([
+    const completedIds=orders.filter(o=>o.status==="completed").map(o=>o.id);
+    const [ar,lr,cr]=await Promise.all([
       agentIds.length?admin.from("agents").select("id,agent_code,display_name").in("id",agentIds):Promise.resolve({data:[],error:null}),
-      leadIds.length?admin.from("leads").select("id,customer_label").in("id",leadIds):Promise.resolve({data:[],error:null})
+      leadIds.length?admin.from("leads").select("id,customer_label").in("id",leadIds):Promise.resolve({data:[],error:null}),
+      completedIds.length?admin.from("commissions").select("order_id,amount,status,payable_at").in("order_id",completedIds):Promise.resolve({data:[],error:null})
     ]);
-    if(ar.error||lr.error)return reply({error:"order_queue_unavailable"},400);
+    if(ar.error||lr.error||cr.error)return reply({error:"order_queue_unavailable"},400);
+    const commissionMap=new Map((cr.data||[]).map(v=>[v.order_id,v]));
     const agentMap=new Map((ar.data||[]).map(v=>[v.id,v]));
     const leadMap=new Map((lr.data||[]).map(v=>[v.id,v]));
     return reply({ok:true,eligible_quotes:available.map(q=>({
       ...q,agent_name:agentMap.get(q.agent_id)?.display_name||agentMap.get(q.agent_id)?.agent_code||"Agent",
       customer_label:leadMap.get(q.lead_id)?.customer_label||"Customer"
     })),orders:orders.map(o=>({
-      ...o,agent_name:agentMap.get(o.agent_id)?.display_name||agentMap.get(o.agent_id)?.agent_code||"Agent"
+      ...o,agent_name:agentMap.get(o.agent_id)?.display_name||agentMap.get(o.agent_id)?.agent_code||"Agent",
+      commission_amount:commissionMap.get(o.id)?.amount??null,
+      commission_status:commissionMap.get(o.id)?.status??null,
+      commission_payable_at:commissionMap.get(o.id)?.payable_at??null
     }))});
   }
   if(action==="launch_create_order"){
@@ -335,24 +341,21 @@ Deno.serve(async req=>{
     if(!uuid.test(id)||!["internal","external"].includes(b.fulfilment_type)
       ||typeof b.qc_pass!=="boolean"||typeof b.rework!=="boolean")
       return reply({error:"invalid_completion_input"},422);
-    const {data:order,error:oe}=await admin.from("orders").select("id,status,payment_status")
-      .eq("id",id).maybeSingle();
-    if(oe||!order)return reply({error:"order_not_found"},404);
-    if(order.payment_status!=="paid"||order.status==="completed")
-      return reply({error:"order_not_ready_for_completion"},409);
-    // The existing database RPC is authoritative for actual costs and commission accrual.
-    const {data:result,error}=await admin.rpc("record_completed_order_actuals_internal",{
-      p_order_id:id,p_production_cost:amounts.production_cost,
+    if(b.qc_pass!==true)return reply({error:"qc_not_passed"},409);
+    // One database transaction: walk the official order state machine to
+    // completed, record actual costs, accrue commission, and audit. Any failure
+    // rolls back everything; a second call fails with order_already_completed.
+    const {data:result,error}=await admin.rpc("owner_complete_order_internal",{
+      p_user_id:uid,p_order_id:id,p_production_cost:amounts.production_cost,
       p_payment_cost:amounts.payment_cost,p_delivery_cost:amounts.delivery_cost,
       p_refund_cost:amounts.refund_cost,p_risk_cost:amounts.risk_cost,
-      p_fulfilment_type:b.fulfilment_type,p_qc_pass:b.qc_pass,p_rework:b.rework
+      p_fulfilment_type:b.fulfilment_type,p_qc_pass:true,p_rework:b.rework
     });
-    if(error)return reply({error:publicError(error,"order_completion_failed")},400);
-    const {error:audit}=await admin.rpc("owner_audit_action_internal",{
-      p_user_id:uid,p_action:"owner_order_completed",p_entity_type:"order",p_entity_id:id,
-      p_after:{...amounts,fulfilment_type:b.fulfilment_type,qc_pass:b.qc_pass,rework:b.rework,status:"completed"}
-    });
-    if(audit)return reply({error:"order_completed_audit_failed",order_id:id},500);
+    if(error){
+      const m=String(error.message||"");
+      const known=["order_not_found","order_not_paid","order_already_completed","order_not_ready_for_completion","qc_not_passed","forbidden"].find(k=>m.includes(k));
+      return reply({error:known||"order_completion_failed"},known==="order_not_found"?404:409);
+    }
     return reply({ok:true,order_id:id,result});
   }
   if(action==="launch_confirm_payment"){
