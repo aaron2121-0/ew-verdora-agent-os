@@ -428,6 +428,27 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       requestAnimationFrame(()=>countTo(n,Number(value||0),{duration:650,formatter:x=>"RM "+Math.round(x).toLocaleString("en-MY")}));
     });
     moneyCard.append(moneyHead,grid);
+    // [D1] Show a human-readable payout status, scoped to the signed-in Agent.
+    const recentCommissions=Array.isArray(getData()?.commissions)?getData().commissions.slice(0,8):[];
+    if(recentCommissions.length){
+      const history=element("div",{className:"commission-status-list"});
+      history.append(element("strong",{text:getLang()==="zh"?"我的佣金进度":"My commission payments"}));
+      for(const entry of recentCommissions){
+        const status=String(entry.status||"");
+        const name=status==="pending"||status==="earned"
+          ?(getLang()==="zh"?"处理中":"Processing")
+          :status==="payable"?(getLang()==="zh"?"可领取":"Ready to withdraw")
+          :status==="paid"?(getLang()==="zh"?"已付":"Paid")
+          :commissionStatusLabel(status,tr);
+        const paymentDate=status==="paid"&&entry.paid_at
+          ?" · "+formatKuchingDateTime(entry.paid_at,getLang()):"";
+        const line=element("div",{className:"commission-status-row"});
+        line.append(element("span",{text:name+paymentDate}),
+          element("strong",{text:money(entry.amount)}));
+        history.append(line);
+      }
+      moneyCard.append(history);
+    }
 
     const tierWrap=element("div",{className:"tier-progress"});
     const tierTop=element("div",{className:"tier-progress-top"});
