@@ -26,6 +26,8 @@ test("list uses only four UI fields plus agent id and status internally",()=>{
 test("detail read is click-only, backend has all four action names",()=>{
   assert.match(kyc,/button\.addEventListener\("click",\(\)=>openKycView/);
   assert.match(kyc,/record\.photo_signed_url/);
+  assert.match(kyc,/kycActive\.photoShown=photoShown/);
+  assert.match(kyc,/decision==="approve"&&!selected\.photoShown/);
   for(const action of ["kyc_list","kyc_view","kyc_review","kyc_delete"])
     assert.ok(kyc.includes('action:"'+action+'"'));
   assert.match(js,/j\.role!=="owner"/);
