@@ -75,3 +75,4 @@ test("bundle includes identity code and reviewed onboarding copy",()=>{
   assert.match(build,/content\/onboarding\/kyc_copy\.json/);
   assert.match(build,/version:"0\.9\.0"/);
 });
+
