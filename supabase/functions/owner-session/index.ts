@@ -106,7 +106,7 @@ Deno.serve(async req=>{
   }
   if(action==="handbook_bulk_approve"){
     const id=String(b.batch_id||"");
-    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if(!uuid.test(id))return reply({error:"invalid_handbook_batch"},422);
     if(b.confirm!==true)return reply({error:"confirmation_required"},400);
     const {data,error}=await admin.rpc("handbook_review_batch_internal",{
