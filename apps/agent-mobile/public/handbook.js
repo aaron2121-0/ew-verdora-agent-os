@@ -392,7 +392,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     hydrateJourney();
     const wrap=element("section",{className:"journey-card",attrs:{"aria-label":t(getLang,"My onboarding progress","我的上手进度")}});
     const header=element("div",{className:"journey-header"});
-    const ring=element("div",{className:"journey-ring",attrs:{role:"progressbar","aria-valuemin":"0","aria-valuemax":"7","aria-valuenow":String(state.done)}});
+    const ring=element("div",{className:"journey-ring",attrs:{role:"progressbar","aria-label":t(getLang,"Onboarding progress","上手进度"),"aria-valuemin":"0","aria-valuemax":"7","aria-valuenow":String(state.done)}});
     ring.style.setProperty("--progress",String(state.done/7));ring.append(element("strong",{text:state.done+"/7"}));
     const heading=element("div");
     heading.append(element("h2",{text:t(getLang,"My onboarding progress","我的上手进度")}));
@@ -442,7 +442,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
   function showWelcome(){
     const key="ew_onboarding_v1_"+userKey();
     if(safeStore(key)==="1")return;
-    const {backdrop,close}=simpleModal("onboarding-layer");
+    const {backdrop,close}=simpleModal("onboarding-layer");backdrop.setAttribute("aria-label",t(getLang,"Welcome to EW VERDORA","欢迎来到 EW VERDORA"));
     let index=0;
     const steps=(reviewed()?.ui?.tour||[]).slice(0,4);
     if(steps.length!==4){close();return}
@@ -452,7 +452,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     const skip=btn(t(getLang,"Skip","跳过"),finish,"btn btn-text");
     top.append(back,skip);
     const artwork=element("div",{className:"onboarding-art"});
-    const img=element("img",{attrs:{alt:"",decoding:"async"}});
+    const img=element("img",{attrs:{alt:"",decoding:"async",fetchpriority:"high"}});
     const fallback=createIcon("flower2",{size:24});fallback.classList.add("onboarding-fallback");
     artwork.append(img,fallback);
     img.addEventListener("load",()=>{fallback.classList.add("hidden");img.classList.add("is-ready")});
