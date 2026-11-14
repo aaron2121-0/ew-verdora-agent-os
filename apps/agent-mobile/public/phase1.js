@@ -756,11 +756,52 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     section.append(strip);return section;
   }
 
+
+  function renderAIIntake(){
+    const wrap=element("section",{className:"section-block ai-coach-panel",attrs:{"data-ai-assist":"lead-intake"}});
+    wrap.append(element("h2",{className:"section-title",text:tr("aiIntakeTitle")}),
+      element("p",{className:"screen-subtitle",text:tr("aiIntakeSubtitle")}));
+    const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"5",maxlength:"4000","aria-label":tr("aiIntakePlaceholder")}});
+    input.placeholder=tr("aiIntakePlaceholder");
+    const read=element("button",{className:"btn btn-primary btn-large",text:tr("aiIntakeRead"),attrs:{type:"button"}});
+    const out=element("div",{});
+    read.addEventListener("click",async()=>{
+      const text=input.value.trim(); if(!text)return;
+      setButtonLoading(read,true,tr("loading")); aiStart(); let ok=false;
+      try{
+        const j=await api.ai({action:"lead_intake_parse",customer_text:text}); ok=true;
+        const c=j.card||{}; out.replaceChildren();
+        const card=createAICard({title:tr("aiIntakeResult"),text:c.summary||"",provider:j.provider||"template",cached:false,tr});
+        const details=element("div",{className:"detail-grid"});
+        [
+          [tr("customerNameTitle"),c.customer_label||tr("aiIntakeUnknown")],
+          [tr("occasionTitle"),c.occasion||tr("aiIntakeUnknown")],
+          [tr("budgetTitle"),c.budget==null?tr("aiIntakeUnknown"):money(c.budget)],
+          [tr("deliveryDateTitle"),c.delivery_date||tr("aiIntakeUnknown")],
+          [tr("aiIntakeArea"),c.area||tr("aiIntakeUnknown")]
+        ].forEach(([k,v])=>{const row=element("div");row.append(element("span",{text:k}),element("strong",{text:String(v)}));details.append(row)});
+        const create=element("button",{className:"btn btn-primary btn-large",text:tr("aiIntakeCreate"),attrs:{type:"button"}});
+        create.addEventListener("click",async()=>{
+          setButtonLoading(create,true,tr("saving"));
+          try{
+            await api.agent({action:"create_lead",source:"whatsapp",customer_label:c.customer_label||"",occasion:c.occasion||"general",budget:c.budget,delivery_date:c.delivery_date||null});
+            toast(tr("aiIntakeCreated"),{tone:"success"}); input.value=""; out.replaceChildren(); await onRefresh();
+          }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"})}
+          finally{setButtonLoading(create,false,tr("aiIntakeCreate"))}
+        });
+        card.card.append(details,create); out.append(card.card);
+      }catch(e){out.replaceChildren(element("p",{className:"notice",text:api.friendlyError(e?.message)}))}
+      finally{setButtonLoading(read,false,tr("aiIntakeRead"));aiEnd(ok)}
+    });
+    wrap.append(input,read,out); return wrap;
+  }
+
   function renderCustomers(){
     const host=document.getElementById("customersPage");if(!host)return;
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("customersTitle"),tr("customersSubtitle")));
+    page.append(renderAIIntake());
     const allRows=getData()?.phase1?.recent_leads||[];
     if(!allRows.length){
       const copy=emptyCopy("customers");
