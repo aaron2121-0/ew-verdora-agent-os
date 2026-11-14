@@ -79,7 +79,7 @@ Deno.serve(async req=>{
         admin.rpc("owner_dashboard_internal",{p_user_id:uid}),
         admin.from("agents").select("id,status").eq("is_demo",false).limit(500),
         admin.from("training_modules").select("id").eq("required",true).eq("active",true).limit(100),
-        admin.from("training_progress").select("agent_id,module_id,status").eq("status","passed").limit(5000),
+        admin.from("training_progress").select("agent_id,module_id,status").limit(5000),
         admin.from("commissions").select("amount").eq("status","payable").limit(1000),
         admin.rpc("owner_list_exceptions_internal",{p_user_id:uid,p_limit:100}),
         admin.from("quote_requests").select("id",{count:"exact",head:true}).eq("status","manual_review")
@@ -89,9 +89,10 @@ Deno.serve(async req=>{
       const d=dashboard.data||{};
       const activeIds=new Set((ar.data||[]).map(x=>x.id));
       const requiredIds=new Set((modules.data||[]).map(x=>x.id));
-      const passed=(progress.data||[]).filter(p=>activeIds.has(p.agent_id)&&requiredIds.has(p.module_id));
+      const allProgress=(progress.data||[]).filter(p=>activeIds.has(p.agent_id)&&requiredIds.has(p.module_id));
+      const passed=allProgress.filter(p=>p.status==="passed");
       const passedIds=new Set(passed.map(x=>x.agent_id+"-"+x.module_id));
-      const startedIds=new Set(passed.map(x=>x.agent_id));
+      const startedIds=new Set(allProgress.filter(p=>["in_progress","passed","failed"].includes(p.status)).map(x=>x.agent_id));
       const agents=ar.data||[];
       const pending=commissions.data||[];
       const snapshot={
