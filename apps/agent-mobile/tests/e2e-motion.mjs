@@ -21,7 +21,13 @@ const server=createServer(async(req,res)=>{
  const json=(value)=>{res.writeHead(200,{"content-type":"application/json","access-control-allow-origin":"*","access-control-allow-headers":"*"});res.end(JSON.stringify(value))};
  if(req.method==="OPTIONS"){res.writeHead(204,{"access-control-allow-origin":"*","access-control-allow-headers":"*"});res.end();return}
  if(u.pathname==="/config")return json({url:"http://127.0.0.1:"+server.address().port,key:"e2e-key"});
- if(u.pathname==="/functions/v1/agent-auth")return json({access_token:"e2e-token",refresh_token:"e2e-refresh"});
+ if(u.pathname==="/functions/v1/agent-auth"){
+  let body={};
+  try{body=JSON.parse(await new Promise(resolve=>{let b="";req.on("data",v=>b+=v);req.on("end",()=>resolve(b))}))}catch{}
+  if(body.action==="google_signup_route")return json({ok:true,route:"home"});
+  if(body.action==="google_captcha_verify")return json({ok:true,proof:"a".repeat(64)});
+  return json({access_token:"e2e-token",refresh_token:"e2e-refresh"});
+ }
  if(u.pathname.startsWith("/functions/v1/")){
   let body={};try{body=JSON.parse(await new Promise(resolve=>{let b="";req.on("data",v=>b+=v);req.on("end",()=>resolve(b))}))}catch{}
   if(u.pathname.endsWith("/agent-ai")){
