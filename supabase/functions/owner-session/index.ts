@@ -59,10 +59,178 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","kyc_list","kyc_view","kyc_review","kyc_delete","owner_daily_brief"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
+
+  // [D1] Owner-only bank payout confirmation. Never infer a transfer from the button click.
+  if(action==="commission_payable_list"){
+    const {data:commissions,error:ce}=await admin.from("commissions")
+      .select("id,agent_id,order_id,amount,status,payable_at")
+      .eq("status","payable").order("payable_at",{ascending:true}).limit(500);
+    if(ce)return reply({error:"commission_list_unavailable"},500);
+    const rows=commissions||[];
+    const agentIds=[...new Set(rows.map(c=>c.agent_id))];
+    const orderIds=[...new Set(rows.map(c=>c.order_id).filter(Boolean))];
+    const [ar,orr]=await Promise.all([
+      agentIds.length?admin.from("agents").select("id,display_name,agent_code").in("id",agentIds):Promise.resolve({data:[],error:null}),
+      orderIds.length?admin.from("orders").select("id,order_code").in("id",orderIds):Promise.resolve({data:[],error:null})
+    ]);
+    if(ar.error||orr.error)return reply({error:"commission_list_unavailable"},500);
+    const names=new Map((ar.data||[]).map(a=>[a.id,a]));
+    const codes=new Map((orr.data||[]).map(o=>[o.id,o.order_code]));
+    return reply({ok:true,commissions:rows.map(c=>({
+      ...c,agent_name:names.get(c.agent_id)?.display_name||names.get(c.agent_id)?.agent_code||"Agent",
+      agent_code:names.get(c.agent_id)?.agent_code||"",order_code:codes.get(c.order_id)||"—"
+    }))});
+  }
+  if(action==="commission_mark_paid"){
+    if(b.confirm!==true||b.transfer_checked!==true)
+      return reply({error:"confirmation_required"},422);
+    const ids=b.commission_ids;
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!Array.isArray(ids)||ids.length<1||ids.length>100
+       ||ids.some(x=>typeof x!=="string"||!uuid.test(x))
+       ||new Set(ids).size!==ids.length)return reply({error:"invalid_commission_selection"},422);
+    const reference=String(b.payment_reference||"").trim().toUpperCase();
+    if(!/^[A-Z0-9][A-Z0-9_/-]{4,79}$/.test(reference))
+      return reply({error:"invalid_payment_reference"},422);
+    // One atomic RPC locks every selected commission, pays only 'payable', and audits.
+    const {data:result,error}=await admin.rpc("owner_mark_commissions_paid_internal",{
+      p_user_id:uid,p_commission_ids:ids,p_payment_reference:reference
+    });
+    if(error){
+      const known=["commission_not_payable","commissions_not_found","mixed_agent_selection",
+        "invalid_commission_selection","invalid_payment_reference","forbidden"];
+      const code=known.find(x=>String(error.message||"").includes(x))||"commission_payout_failed";
+      return reply({error:code},code==="forbidden"?403:409);
+    }
+    return reply(result||{ok:true});
+  }
+
+  // [D2] Private image library; only the authenticated Owner can upload and review.
+  if(action==="portfolio_upload_url"){
+    const mime=String(b.mime_type||"").toLowerCase();
+    const types={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"};
+    if(!types[mime]||!Number.isInteger(b.file_size)||b.file_size<1||b.file_size>5242880)
+      return reply({error:"invalid_portfolio_file"},422);
+    const path=uid+"/"+crypto.randomUUID()+"."+types[mime];
+    const {data:upload,error:ue}=await admin.storage.from("portfolio").createSignedUploadUrl(path);
+    if(ue||!upload?.token)return reply({error:"portfolio_upload_unavailable"},500);
+    const {data:photo,error:pe}=await admin.from("portfolio_photos")
+      .insert({source:"upload",source_id:path,storage_path:path,product_line:"unknown",
+        caption_en:"",caption_zh:"",status:"pending_review"})
+      .select("id").single();
+    if(pe)return reply({error:"portfolio_record_unavailable"},500);
+    return reply({ok:true,id:photo.id,path,upload_token:upload.token,bucket:"portfolio"});
+  }
+  if(action==="portfolio_list"){
+    const {data:rows,error}=await admin.from("portfolio_photos")
+      .select("id,source,product_line,storage_path,caption_en,caption_zh,ai_confidence,status,sort,created_at,approved_at")
+      .order("created_at",{ascending:false}).limit(120);
+    if(error)return reply({error:"portfolio_list_unavailable"},500);
+    const images=await Promise.all((rows||[]).map(async row=>{
+      const {data:link,error:le}=await admin.storage.from("portfolio")
+        .createSignedUrl(row.storage_path,3600);
+      return {...row,image_url:le?null:link?.signedUrl||null};
+    }));
+    return reply({ok:true,photos:images});
+  }
+  if(action==="portfolio_review"){
+    const id=String(b.id||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const decision=String(b.decision||"");
+    if(!uuid.test(id)||!["analyse","approve","reject","edit"].includes(decision))
+      return reply({error:"invalid_portfolio_review"},422);
+    const {data:photo,error:pe}=await admin.from("portfolio_photos")
+      .select("id,source,storage_path,status,caption_en,caption_zh,product_line").eq("id",id).maybeSingle();
+    if(pe||!photo)return reply({error:"portfolio_not_found"},404);
+    if(photo.source!=="upload"||!photo.storage_path.startsWith(uid+"/"))
+      return reply({error:"portfolio_not_owned"},403);
+    if(decision==="analyse"){
+      if(photo.status!=="pending_review")return reply({error:"portfolio_already_reviewed"},409);
+      const {data:file,error:fe}=await admin.storage.from("portfolio").download(photo.storage_path);
+      if(fe||!file)return reply({error:"portfolio_file_missing"},404);
+      if(file.size<1||file.size>5242880)return reply({error:"invalid_portfolio_file"},422);
+      const ext=photo.storage_path.split(".").pop()?.toLowerCase();
+      const mime=ext==="jpg"?"image/jpeg":ext==="png"?"image/png":ext==="webp"?"image/webp":"";
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      const valid=(ext==="jpg"&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255)
+        ||(ext==="png"&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71)
+        ||(ext==="webp"&&String.fromCharCode(...bytes.slice(0,4))==="RIFF"
+           &&String.fromCharCode(...bytes.slice(8,12))==="WEBP");
+      if(!valid||!mime)return reply({error:"invalid_portfolio_file"},422);
+      const key=Deno.env.get("GEMINI_API_KEY")||"";
+      const model=(Deno.env.get("GEMINI_MODEL")||"gemini-flash-latest").replace(/[^a-zA-Z0-9.\-]/g,"");
+      let caption=null;
+      if(key){
+        const {error:limitError}=await admin.rpc("owner_reserve_portfolio_caption_internal",{p_user_id:uid});
+        if(limitError)return reply({error:String(limitError.message||"").includes("daily_limit")
+          ?"portfolio_caption_daily_limit":"portfolio_ai_unavailable"},429);
+        let encoded="";
+        for(let i=0;i<bytes.length;i+=32768)encoded+=String.fromCharCode(...bytes.subarray(i,i+32768));
+        const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),10000);
+        try{
+          const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+            method:"POST",signal:ctl.signal,
+            headers:{"Content-Type":"application/json","x-goog-api-key":key},
+            body:JSON.stringify({
+              systemInstruction:{parts:[{text:"You write factual captions for EW VERDORA photographs. Never invent flower type, price, availability, customer details, exact replicas, discounts, testimonials, suppliers or business guarantees. Do not include prices, contact details, or identifying people. Return ONLY a JSON object: product_line (condolence, opening, bouquet, wedding_event, wholesale, unknown), caption_zh (natural Malaysian Chinese, <=130 characters), caption_en (natural English, <=240 characters), confidence (0..1). Base all claims only on visible image details. If uncertain use unknown."}]},
+              contents:[{role:"user",parts:[{text:"Describe this real floral work for an Owner approval queue, with safe Chinese and English captions."},{inline_data:{mime_type:mime,data:btoa(encoded)}}]}],
+              generationConfig:{responseMimeType:"application/json",temperature:0.3,maxOutputTokens:400}
+            })
+          });
+          if(response.ok){
+            const result=await response.json();
+            const raw=(result?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||"").join("");
+            const parsed=JSON.parse(raw);
+            const lines=new Set(["condolence","opening","bouquet","wedding_event","wholesale","unknown"]);
+            const en=String(parsed.caption_en||"").slice(0,240),zh=String(parsed.caption_zh||"").slice(0,130);
+            const policyRisk=/\bRM\s*\d|\b(price|discount|cost|supplier|guaranteed|identical)\b|价钱|价格|折扣|成本|一模一样|一定有货|\b\+?60\d{8,11}\b|@/i;
+            if(lines.has(parsed.product_line)&&en.length>8&&zh.length>5
+               &&!policyRisk.test(en+" "+zh)){
+              caption={product_line:parsed.product_line,caption_en:en,caption_zh:zh,
+                ai_confidence:Math.min(1,Math.max(0,Number(parsed.confidence)||0))};
+            }
+          }
+        }catch(e){console.error("portfolio_caption_unavailable",String(e).slice(0,80))}
+        finally{clearTimeout(timer)}
+      }
+      if(!caption)caption={product_line:"unknown",
+        caption_zh:"EW VERDORA 真实花艺作品，具体款式和可订情况请先确认。",
+        caption_en:"An EW VERDORA floral design reference. Please confirm current options before ordering.",
+        ai_confidence:null};
+      const {error:saveErr}=await admin.from("portfolio_photos").update(caption)
+        .eq("id",id).eq("status","pending_review");
+      if(saveErr)return reply({error:"portfolio_save_failed"},500);
+      return reply({ok:true,photo:{id,...caption,status:"pending_review"},
+        provider:key&&caption.ai_confidence!==null?"gemini":"template"});
+    }
+    const lines=new Set(["condolence","opening","bouquet","wedding_event","wholesale","unknown"]);
+    if(decision==="edit"||decision==="approve"){
+      const updates={};
+      if(b.caption_en!==undefined)updates.caption_en=String(b.caption_en||"").trim().slice(0,240);
+      if(b.caption_zh!==undefined)updates.caption_zh=String(b.caption_zh||"").trim().slice(0,130);
+      if(b.product_line!==undefined){
+        if(!lines.has(b.product_line))return reply({error:"invalid_product_line"},422);
+        updates.product_line=b.product_line;
+      }
+      const en=updates.caption_en??photo.caption_en,zh=updates.caption_zh??photo.caption_zh;
+      if(!en||!zh||/\bRM\s*\d|\b(price|discount|cost)\b|价钱|价格|折扣/i.test(en+" "+zh))
+        return reply({error:"portfolio_caption_requires_review"},422);
+      if(decision==="edit")updates.status="pending_review";
+      else{updates.status="approved";updates.approved_by=uid;updates.approved_at=new Date().toISOString()}
+      const {data:saved,error:se}=await admin.from("portfolio_photos")
+        .update(updates).eq("id",id).select("id,status,caption_en,caption_zh,product_line").single();
+      if(se)return reply({error:"portfolio_save_failed"},500);
+      return reply({ok:true,photo:saved});
+    }
+    const {error:re}=await admin.from("portfolio_photos").update({status:"hidden",approved_by:null,approved_at:null})
+      .eq("id",id);
+    if(re)return reply({error:"portfolio_save_failed"},500);
+    return reply({ok:true,photo:{id,status:"hidden"}});
+  }
 
   // [D4] Cached daily Owner summary: personal customer details never sent to Gemini.
   if(action==="owner_daily_brief"){

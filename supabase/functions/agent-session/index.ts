@@ -179,6 +179,23 @@ Deno.serve(async (req) => {
   if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: kycRequired, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
+  // [D2] Registered Agents can view ONLY Owner-approved real portfolio photos.
+  if(action==="portfolio_list"){
+    const {data:photos,error}=await admin.from("portfolio_photos")
+      .select("id,product_line,storage_path,caption_en,caption_zh,sort,approved_at")
+      .eq("status","approved").order("sort",{ascending:true})
+      .order("approved_at",{ascending:false}).limit(80);
+    if(error)return reply({error:"portfolio_unavailable"},500);
+    const list=await Promise.all((photos||[]).map(async photo=>{
+      const {data:signed,error:se}=await admin.storage.from("portfolio")
+        .createSignedUrl(photo.storage_path,3600);
+      if(se||!signed?.signedUrl)return null;
+      return {id:photo.id,product_line:photo.product_line,
+        caption_en:photo.caption_en,caption_zh:photo.caption_zh,image_url:signed.signedUrl};
+    }));
+    return reply({ok:true,photos:list.filter(Boolean)});
+  }
+
   if(action==="kyc_status"){
     const {data,error}=await admin.rpc("agent_kyc_status_internal",{p_user_id:uid});
     if(error)return reply({error:kycErr(error)},400);
