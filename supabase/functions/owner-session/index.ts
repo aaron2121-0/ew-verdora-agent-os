@@ -59,7 +59,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief","owner_agent_reminder"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
@@ -334,6 +334,73 @@ Deno.serve(async req=>{
     }catch{
       return reply({error:"daily_brief_data_unavailable"},503);
     }
+  }
+
+  // [D5] Only Owner prepares a training reminder. Never send messages automatically.
+  if(action==="owner_agent_reminder"){
+    const id=String(b.agent_id||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if(!uuid.test(id))return reply({error:"invalid_agent_id"},422);
+    const [a,m,pr]=await Promise.all([
+      admin.from("agents").select("id,display_name,status").eq("id",id).eq("is_demo",false).maybeSingle(),
+      admin.from("training_modules").select("id").eq("required",true).eq("active",true),
+      admin.from("training_progress").select("module_id,status").eq("agent_id",id)
+    ]);
+    if(a.error||m.error||pr.error)return reply({error:"training_reminder_unavailable"},500);
+    if(!a.data)return reply({error:"agent_not_found"},404);
+    const required=new Set((m.data||[]).map(x=>x.id));
+    const passed=new Set((pr.data||[]).filter(x=>x.status==="passed"&&required.has(x.module_id)).map(x=>x.module_id));
+    const total=required.size,done=passed.size,remaining=Math.max(0,total-done);
+    if(!total)return reply({error:"training_not_ready"},409);
+    const started=(pr.data||[]).some(x=>["in_progress","passed","failed"].includes(x.status));
+    const fallback={zh:remaining
+      ?"今天有空的话，先打开 EW VERDORA Agent 的「学习」完成一课就好 😊"
+      :"你的必修课都完成了，下一步可以看看认证考试和帐号资格 😊",
+      en:remaining
+      ?"When you have a moment today, open Learning in EW VERDORA Agent and try one lesson 😊"
+      :"Your required lessons are complete! You can check the certification exam and account eligibility next 😊"};
+    let advice=fallback,provider="template";
+    const key=Deno.env.get("GEMINI_API_KEY")||"";
+    const model=(Deno.env.get("GEMINI_MODEL")||"gemini-flash-latest").replace(/[^a-zA-Z0-9.\-]/g,"");
+    if(key){
+      const {data:permitted,error:limitError}=await admin.rpc("owner_reserve_agent_reminder_internal",{p_user_id:uid});
+      if(!limitError&&permitted===true){
+        const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
+        try{
+          const response=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+            method:"POST",signal:ctl.signal,
+            headers:{"Content-Type":"application/json","x-goog-api-key":key},
+            body:JSON.stringify({
+              systemInstruction:{parts:[{text:"Write a single genuinely friendly WhatsApp sentence from Owner to an EW VERDORA Agent. No pressure or blame. Return JSON with keys zh (natural Malaysia Chinese) and en (plain English). Do not write quantities, prices, names, phone numbers, IC, personal details, commissions, exam guarantees, or guarantees of order access. Simply suggest starting or continuing one lesson in the app, or checking the certification process if lessons are complete. No extra text."}]},
+              contents:[{role:"user",parts:[{text:JSON.stringify({started,remaining,total,restricted:a.data.status==="restricted"})}]}],
+              generationConfig:{responseMimeType:"application/json",temperature:0.45,maxOutputTokens:170}
+            })
+          });
+          if(response.ok){
+            const raw=(await response.json())?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("")||"";
+            const parsed=JSON.parse(raw);
+            const zh=String(parsed.zh||"").trim(),en=String(parsed.en||"").trim();
+            if(zh.length>=10&&zh.length<=110&&en.length>=14&&en.length<=170
+              &&!/[0-9０-９]|RM|@|\\+60|一模一样|保证接单|guaranteed|price|cost|supplier|commission/i.test(zh+" "+en)){
+              advice={zh,en};provider="gemini";
+            }
+          }
+        }catch{ /* Friendly human-readable fallback remains available. */ }
+        finally{clearTimeout(timer)}
+      }
+    }
+    const introZh=remaining
+      ?(started?"嗨，你已经完成 "+done+"/"+total+" 课，还剩 "+remaining+" 课。":"嗨，必修课共 "+total+" 课，你还没开始。")
+      :"嗨，你已经完成全部 "+total+" 课。";
+    const introEn=remaining
+      ?(started?"Hi, you have finished "+done+"/"+total+" lessons, with "+remaining+" to go.":"Hi, you have "+total+" required lessons and have not started yet.")
+      :"Hi, you have completed all "+total+" required lessons.";
+    const restrictionZh=a.data.status==="restricted"?"账号状态还需要 Owner 另外处理。":"";
+    const restrictionEn=a.data.status==="restricted"?"Your account access needs a separate Owner review.":"";
+    return reply({ok:true,agent_name:a.data.display_name||"Agent",passed:done,required:total,
+      reminder_zh:[introZh,advice.zh,restrictionZh].filter(Boolean).join(" "),
+      reminder_en:[introEn,advice.en,restrictionEn].filter(Boolean).join(" "),
+      provider});
   }
 
   if(action==="signup_setting_get"){
@@ -632,7 +699,7 @@ Deno.serve(async req=>{
       if(e.passed)exams.set(e.agent_id,{...e,passed:true});
     }
     return reply({ok:true,required_count:required.size,agents:(agents||[]).map(a=>({
-      agent_code:a.agent_code,display_name:a.display_name,status:a.status,
+      id:a.id,agent_code:a.agent_code,display_name:a.display_name,status:a.status,
       passed_modules:passed.get(a.id)||0,exam_passed:exams.get(a.id)?.passed===true,
       exam_status:exams.get(a.id)?.status||"not_started",certified_at:a.certified_at||null
     }))});
