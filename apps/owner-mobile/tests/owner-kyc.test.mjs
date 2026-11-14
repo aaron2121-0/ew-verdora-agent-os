@@ -67,3 +67,15 @@ test("rejection requires a reason and deletion requires two confirmations",()=>{
   assert.match(kyc,/confirm:true/);
   assert.match(kyc,/deleteRequested:Boolean\(record\.delete_requested_at\)/);
 });
+
+test("latest launch cards survive KYC integration",()=>{
+  for(const marker of ["launchOrdersCard","launchProgressCard","refreshLaunchPanels","launch_complete_order"])
+    assert.ok(source.includes(marker),marker+" must be preserved");
+});
+test("Owner sees plain-language rejection reasons and pending count",()=>{
+  assert.match(source,/身份审核（读取中）/);
+  assert.match(source,/人等你看/);
+  assert.match(source,/照片有点模糊/);
+  assert.match(source,/资料和身份证对不上/);
+  assert.match(source,/照片没有拍完整/);
+});
