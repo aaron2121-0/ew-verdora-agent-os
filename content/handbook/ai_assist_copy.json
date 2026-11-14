@@ -1,0 +1,142 @@
+{
+  "aiTodayFirstTitle": {
+    "en": "Who to contact first today",
+    "zh": "今天先联系谁"
+  },
+  "aiTodayFirstHint": {
+    "en": "I picked the customers most worth contacting now and wrote the first message for you.",
+    "zh": "我已经帮你排好现在最值得先联系的客人，也写好第一句。"
+  },
+  "aiTodayFirstLoading": {
+    "en": "Choosing today's first customers…",
+    "zh": "正在帮你排今天先联系谁…"
+  },
+  "aiTodayFirstEmpty": {
+    "en": "No customer needs attention right now. You can focus on finding new enquiries.",
+    "zh": "现在没有客人需要马上跟进，可以先去找新的询问。"
+  },
+  "customer": {
+    "en": "Customer",
+    "zh": "客人"
+  },
+  "aiConversationTitle": {
+    "en": "Turn a chat into a customer",
+    "zh": "贴对话，帮我整理成客人"
+  },
+  "aiConversationHint": {
+    "en": "Paste the WhatsApp conversation. I’ll pull out the useful details, then you check them before saving.",
+    "zh": "把 WhatsApp 对话贴进来。我先抓重点，你确认没问题才保存。"
+  },
+  "aiConversationPaste": {
+    "en": "Paste the customer conversation here…",
+    "zh": "把客人的对话贴在这里…"
+  },
+  "aiConversationAnalyse": {
+    "en": "Organise this chat",
+    "zh": "帮我整理"
+  },
+  "aiConversationReview": {
+    "en": "Check before saving",
+    "zh": "保存前确认一下"
+  },
+  "aiConversationReviewHint": {
+    "en": "I only suggest the details. Edit anything that is not right.",
+    "zh": "这些只是建议，有不对可以直接改。"
+  },
+  "aiConversationArea": {
+    "en": "Delivery area",
+    "zh": "送货地区"
+  },
+  "aiConversationAreaNote": {
+    "en": "Area mentioned",
+    "zh": "对话提到的地区"
+  },
+  "aiConversationCreate": {
+    "en": "Save as customer",
+    "zh": "保存这个客人"
+  },
+  "aiConversationCreated": {
+    "en": "Customer saved.",
+    "zh": "客人已经保存。"
+  },
+  "aiObjectionTitle": {
+    "en": "Customer said this — what do I reply?",
+    "zh": "客人这样说，我怎么回？"
+  },
+  "aiObjectionHint": {
+    "en": "Tap a common situation or paste the customer's words. I'll give you 3 safe replies to choose from.",
+    "zh": "点一个常见情况，或者贴客人的原话。我给你 3 种安全回法，你选一条就好。"
+  },
+  "aiObjectionPaste": {
+    "en": "Paste what the customer said…",
+    "zh": "把客人的原话贴这里…"
+  },
+  "aiObjectionExpensive": {
+    "en": "Too expensive",
+    "zh": "太贵"
+  },
+  "aiObjectionThink": {
+    "en": "I'll think",
+    "zh": "再想想"
+  },
+  "aiObjectionSame": {
+    "en": "Want the same",
+    "zh": "要一样的"
+  },
+  "aiObjectionAsk": {
+    "en": "Give me 3 replies",
+    "zh": "给我 3 种回法"
+  },
+  "aiObjectionOption": {
+    "en": "Reply option",
+    "zh": "可以这样回"
+  },
+  "aiFollowupScheduleTitle": {
+    "en": "When should I contact this customer again?",
+    "zh": "这个客人下次几时找？"
+  },
+  "aiFollowupScheduleHint": {
+    "en": "I’ll suggest a sensible time. You choose whether to save it.",
+    "zh": "我先建议一个时间，你确认了才会保存。"
+  },
+  "aiFollowupSuggestBtn": {
+    "en": "Suggest a follow-up time",
+    "zh": "帮我排下次联系"
+  },
+  "aiFollowupSuggested": {
+    "en": "Suggested next contact",
+    "zh": "建议下次联系"
+  },
+  "aiFollowupConfirmBtn": {
+    "en": "Save this reminder",
+    "zh": "保存这个提醒"
+  },
+  "aiFollowupScheduled": {
+    "en": "Follow-up reminder saved.",
+    "zh": "下次联系时间已经保存。"
+  },
+  "aiRepeatTitle": {
+    "en": "Previous customers you can check in with",
+    "zh": "旧客可以再问一问"
+  },
+  "aiRepeatHint": {
+    "en": "These are real customers who bought before. I wrote a light check-in — use it only if it feels appropriate.",
+    "zh": "这些都是真的买过的客人。我写了一句轻轻问候，适合才发，不要硬推。"
+  },
+  "aiRepeatLoading": {
+    "en": "Looking through your previous customers…",
+    "zh": "正在看你以前成交过的客人…"
+  },
+  "aiRepeatEmpty": {
+    "en": "No previous customer is ready for a check-in yet.",
+    "zh": "现在还没有适合重新联系的旧客。"
+  },
+  "aiMicroTipTitle": {
+    "en": "One quick tip before you do this",
+    "zh": "做之前，提醒你一句"
+  },
+  "aiMicroTipLoading": {
+    "en": "Getting one useful tip for this step…",
+    "zh": "正在看这一步最需要注意什么…"
+  }
+}
