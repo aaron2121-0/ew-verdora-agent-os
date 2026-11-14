@@ -339,23 +339,15 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
       if(busy||!photoBlob){message.textContent=tr("identityPhotoMissingError");return}
       busy=true;setButtonLoading(use,true,tr("identitySendingPhoto"));
       try{
-        let sent=false,lastStatus=0;
-        for(let attempt=0;attempt<2&&!sent;attempt+=1){
+        objectPath="";
+        let lastStatus=0;
+        for(let attempt=0;attempt<2&&!objectPath;attempt+=1){
           const grant=await api({action:"kyc_upload_url",content_type:"image/jpeg"});
           const response=await rawUpload(grant.upload_url,photoBlob,"image/jpeg");
           lastStatus=response?.status||0;
-          sent=Boolean(response?.ok);
-          if(!sent&&attempt===0)continue;
+          if(response?.ok)objectPath=String(grant.object_path||"");
         }
-        if(!sent)throw new Error(lastStatus===0?"network_error":"photo_upload_failed");
-        const grant=await api({action:"kyc_upload_url",content_type:"image/jpeg"});
-        const response=await rawUpload(grant.upload_url,photoBlob,"image/jpeg");
-        if(!response?.ok){
-          const fresh=await api({action:"kyc_upload_url",content_type:"image/jpeg"});
-          const retry=await rawUpload(fresh.upload_url,photoBlob,"image/jpeg");
-          if(!retry?.ok)throw new Error("photo_upload_failed");
-          objectPath=String(fresh.object_path||"");
-        }else objectPath=String(grant.object_path||"");
+        if(!objectPath)throw new Error(lastStatus===0?"network_error":"photo_upload_failed");
         photoBlob=null;releasePreview();image.removeAttribute("src");
         toast(tr("identityPhotoReady"),{tone:"success"});vibrate(10);
         step=4;renderStep();
