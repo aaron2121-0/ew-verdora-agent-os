@@ -7,7 +7,7 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
+const names=["index.html","styles.css","app.js","brand-loader.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 // Bundle only the actual Claude-reviewed JSON from the repository.
 // No duplicate or rewritten onboarding/microcopy strings in frontend code.
@@ -39,6 +39,21 @@ function gatherMotion(directory){
  }
 }
 gatherMotion(contentRoot);
+
+const motionPackRoot=path.join(root,"vendor","motion-pack-v1");
+const motionPackAll=["brand-bg.js","brand-bg.css","ai-orb.js","ai-orb.css","icons/logo.svg"];
+for(const name of motionPackAll){
+ const source=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
+ if(/\beval\s*\(/.test(source))throw new Error("motion-pack-v1 eval is not allowed: "+name);
+ if(/\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(/.test(source))throw new Error("motion-pack-v1 external network code is not allowed: "+name);
+}
+const motionPackRuntime=["brand-bg.js","brand-bg.css","icons/logo.svg"];
+const motionPackAssets=motionPackRuntime.map(name=>{
+ const target="vendor/motion-pack-v1/"+name;
+ files[target]=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
+ return target;
+});
+files["styles.css"]+="\n"+files["vendor/motion-pack-v1/brand-bg.css"];
 
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
@@ -73,7 +88,7 @@ const gzip=text=>zlib.gzipSync(Buffer.from(text,"utf8"),{level:9}).toString("bas
 const CSP=[
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "font-src 'self'",
@@ -86,7 +101,7 @@ const CSP=[
 
 const encoded={"/":gzip(files["index.html"]),"/index.html":gzip(files["index.html"])};
 const types={"/":"text/html; charset=utf-8","/index.html":"text/html; charset=utf-8"};
-for(const name of [...names.slice(1),...optionalAssets,...reviewedAssets,"vendor/supabase-2.119.0.js"]){
+for(const name of [...names.slice(1),...optionalAssets,...reviewedAssets,...motionPackAssets,"vendor/supabase-2.119.0.js"]){
   encoded["/"+name]=gzip(files[name]);
   types["/"+name]=name.endsWith(".html")?"text/html; charset=utf-8":name.endsWith(".css")?"text/css; charset=utf-8":
     name.endsWith(".svg")?"image/svg+xml":name.endsWith(".json")?"application/json":
@@ -125,13 +140,21 @@ export default {fetch(req){
 
 const outDir=path.join(root,"dist");
 fs.mkdirSync(outDir,{recursive:true});
+if(Buffer.byteLength(output,"utf8")>900*1024)throw new Error("Railway bundle exceeds 900KB");
 fs.writeFileSync(path.join(outDir,"railway-function.ts"),output);
 const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
-const initialJsNames=jsNames.filter(n=>n!=="kyc.js");
+const lazyBrandJs="vendor/motion-pack-v1/brand-bg.js";
+const lazyBrandLoader="brand-loader.js";
+const lazyAssistJs=new Set(["ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js"]);
+const initialJsNames=jsNames.filter(n=>n!=="kyc.js"&&n!==lazyBrandJs&&n!==lazyBrandLoader&&!lazyAssistJs.has(n));
 const jsBytes=initialJsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 const kycJsBytes=zlib.gzipSync(Buffer.from(files["kyc.js"]||""),{level:9}).length;
+const brandJsBytes=zlib.gzipSync(Buffer.from(files[lazyBrandJs]||""),{level:9}).length;
+const brandLoaderBytes=zlib.gzipSync(Buffer.from(files[lazyBrandLoader]||""),{level:9}).length;
 console.log("JS_GZIP_BREAKDOWN "+initialJsNames.map(n=>[n,zlib.gzipSync(Buffer.from(files[n]),{level:9}).length]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+":"+x[1]).join(","));
-// AI-assist adds customer-facing workflows while staying far below the product bundle cap.\nif(jsBytes>170*1024)throw new Error(`Initial JS gzip budget exceeded: ${jsBytes} bytes`);
+if(jsBytes>150*1024)throw new Error(`Initial JS gzip budget exceeded: ${jsBytes} bytes`);
 if(kycJsBytes>16*1024)throw new Error(`KYC lazy JS gzip budget exceeded: ${kycJsBytes} bytes`);
-console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
+if(brandJsBytes>4*1024)throw new Error(`Brand background lazy JS gzip budget exceeded: ${brandJsBytes} bytes`);
+if(brandLoaderBytes>2*1024)throw new Error(`Brand loader lazy JS gzip budget exceeded: ${brandLoaderBytes} bytes`);
+console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; brand lazy JS gzip ${brandJsBytes} bytes; brand loader gzip ${brandLoaderBytes} bytes; font raw ${inter.length+noto.length} bytes`);
 console.log("BUNDLE_SHA256 "+createHash("sha256").update(output,"utf8").digest("hex"));
