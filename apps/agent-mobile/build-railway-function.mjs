@@ -7,8 +7,8 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","brand-loader.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","d6-motion.js","d6-motion.css","ew-verdora-content/motion/coach.js","ew-verdora-content/motion/coach.css","ew-verdora-content/motion/gallery.js","ew-verdora-content/motion/gallery.css","ew-verdora-content/motion/kyc.js","ew-verdora-content/motion/kyc.css","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
-const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
+const names=["index.html","styles.css","app.js","brand-loader.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","manifest.json","pwa-install.js","service-worker.js","icons/brand-192.png","icons/brand-512.png","motion-vendor.js","d6-motion.js","d6-motion.css","ew-verdora-content/motion/coach.js","ew-verdora-content/motion/coach.css","ew-verdora-content/motion/gallery.js","ew-verdora-content/motion/gallery.css","ew-verdora-content/motion/kyc.js","ew-verdora-content/motion/kyc.css","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
+const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),/\.png$/i.test(name)?undefined:"utf8")]));
 // Bundle only the actual Claude-reviewed JSON from the repository.
 // No duplicate or rewritten onboarding/microcopy strings in frontend code.
 const reviewedRoot=path.resolve(root,"..","..","content","handbook");
@@ -135,7 +135,7 @@ export default {fetch(req){
   const compressed=/\\bgzip\\b/.test(req.headers.get("accept-encoding")||"");
   const body=bodyFor(u.pathname,compressed);
   if(body===null)return new Response("Not found",{status:404,headers:headers({"content-type":"text/plain; charset=utf-8"})});
-  return new Response(body,{headers:headers({"content-type":TYPES[u.pathname]||"application/octet-stream","cache-control":u.pathname==="/"||u.pathname==="/index.html"?"no-store":"public, max-age=300","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})})});
+  return new Response(body,{headers:headers({"content-type":TYPES[u.pathname]||"application/octet-stream","cache-control":u.pathname==="/"||u.pathname==="/index.html"||u.pathname==="/service-worker.js"||u.pathname==="/manifest.json"?"no-store":"public, max-age=300","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})})});
 }};`;
 
 const outDir=path.join(root,"dist");
@@ -145,7 +145,7 @@ fs.writeFileSync(path.join(outDir,"railway-function.ts"),output);
 const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const lazyBrandJs="vendor/motion-pack-v1/brand-bg.js";
 const lazyBrandLoader="brand-loader.js";
-const lazyAssistJs=new Set(["ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js"]);
+const lazyAssistJs=new Set(["ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js","pwa-install.js","service-worker.js"]);
 const lazyMotionJs=new Set(["ew-verdora-content/motion/coach.js","ew-verdora-content/motion/gallery.js","ew-verdora-content/motion/kyc.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/feedback.js"]);
 const initialJsNames=jsNames.filter(n=>n!=="kyc.js"&&n!==lazyBrandJs&&n!==lazyBrandLoader&&!lazyAssistJs.has(n)&&!lazyMotionJs.has(n));
 const jsBytes=initialJsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
