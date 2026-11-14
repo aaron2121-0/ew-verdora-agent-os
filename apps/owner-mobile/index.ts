@@ -173,8 +173,38 @@ async function refreshLaunchPanels(){
       "<input class='launch-payment-ref' maxlength='80' placeholder='Bank transaction reference / 银行交易参考号' aria-label='Bank reference'>"+
       "<label class='muted'><input class='launch-bank-checked' type='checkbox' style='width:auto;min-height:auto'> 我已在银行记录核对真实收款及金额 / I checked bank evidence</label>"+
       "<button type='button' class='btn primary launch-confirm-payment'>Confirm payment / 确认已收款</button>"+
-      "<div class='muted launch-pmsg'></div></div>":"")+"</div>";
+      "<div class='muted launch-pmsg'></div></div>":"")+
+      (o.status==="completed"?"<div class='muted'>Commission accrued / 已入账佣金：RM "+(o.commission_amount==null?"—":Number(o.commission_amount).toFixed(2))+(o.commission_status?" · "+es(o.commission_status):"")+"</div>":"")+
+      (o.payment_status==="paid"&&o.status!=="completed"?
+        "<div class='form launch-completion' style='margin-top:10px'>"+
+        [["production_cost","Production cost / 制作成本"],["delivery_cost","Delivery cost / 配送成本"],["payment_cost","Payment cost / 支付手续费"],["refund_cost","Refund cost / 退款成本"],["risk_cost","Risk cost / 风险成本"]].map(([key,label])=>
+          "<label class='muted'>"+es(label)+" (RM)<input class='completion-"+key+"' type='number' min='0' max='100000' step='0.01' value='0'></label>").join("")+
+        "<label class='muted'>Fulfilment / 制作方式<select class='completion-type'><option value='internal'>Internal / 内部制作</option><option value='external'>External / 外部制作</option></select></label>"+
+        "<label class='muted'><input type='checkbox' class='completion-qc' style='width:auto;min-height:auto'> QC passed (required) / 品质检查通过（必须）</label>"+
+        "<label class='muted'><input type='checkbox' class='completion-rework' style='width:auto;min-height:auto'> Rework / 返工</label>"+
+        "<button type='button' class='btn primary launch-complete-order'>Complete order / 完成订单</button>"+
+        "<div class='muted launch-cmsg'></div></div>":"")+"</div>";
   }).join(""):"<div class='muted item'>No orders / 暂无订单。</div>";
+  document.querySelectorAll(".launch-complete-order").forEach(btn=>btn.onclick=async()=>{
+    const wrap=btn.closest(".launch-pay"),id=wrap.dataset.order,form=wrap.querySelector(".launch-completion");
+    const msg=wrap.querySelector(".launch-cmsg");
+    const payload={action:"launch_complete_order",order_id:id,fulfilment_type:form.querySelector(".completion-type").value,
+      qc_pass:form.querySelector(".completion-qc").checked,rework:form.querySelector(".completion-rework").checked};
+    for(const key of ["production_cost","delivery_cost","payment_cost","refund_cost","risk_cost"]){
+      const raw=form.querySelector(".completion-"+key).value;
+      const value=Number(raw);
+      if(raw.trim()===""||!Number.isFinite(value)||value<0||value>100000){
+        msg.textContent="Enter valid costs between RM 0 and RM 100,000. / 请输入有效成本。";return;
+      }
+      payload[key]=value;
+    }
+    if(!payload.qc_pass){msg.textContent="QC must pass before completion. / 品质检查通过后才能完成订单。";return}
+    if(!confirm("Complete this paid order and accrue commission? / 确认完成已付款订单并入账佣金？"))return;
+    btn.disabled=true;
+    try{await call({...payload,confirm:true});await refresh()}
+    catch(e){msg.textContent=friendlyError(e.message)}
+    finally{btn.disabled=false}
+  });
   const orderMap=new Map(orders.map(o=>[o.id,o]));
   document.querySelectorAll(".launch-confirm-payment").forEach(btn=>btn.onclick=async()=>{
     const wrap=btn.closest(".launch-pay"),id=wrap.dataset.order,o=orderMap.get(id);

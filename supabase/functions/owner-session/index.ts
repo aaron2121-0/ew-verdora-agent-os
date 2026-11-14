@@ -49,7 +49,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
@@ -273,7 +273,7 @@ Deno.serve(async req=>{
     const [qr,orr]=await Promise.all([
       admin.from("quotes").select("id,lead_id,agent_id,selling_price,status,valid_until,created_at")
         .in("status",["approved","sent","accepted"]).order("created_at",{ascending:false}).limit(100),
-      admin.from("orders").select("id,order_code,quote_id,agent_id,status,commissionable_revenue,delivery_fee,payment_status,created_at")
+      admin.from("orders").select("id,order_code,quote_id,agent_id,status,commissionable_revenue,delivery_fee,payment_status,completed_at,created_at")
         .order("created_at",{ascending:false}).limit(100)
     ]);
     if(qr.error||orr.error)return reply({error:"order_queue_unavailable"},400);
@@ -281,18 +281,24 @@ Deno.serve(async req=>{
     const available=(qr.data||[]).filter(q=>!existing.has(q.id) && (!q.valid_until||new Date(q.valid_until)>new Date()));
     const agentIds=[...new Set([...available.map(q=>q.agent_id),...orders.map(o=>o.agent_id)])];
     const leadIds=[...new Set(available.map(q=>q.lead_id))];
-    const [ar,lr]=await Promise.all([
+    const completedIds=orders.filter(o=>o.status==="completed").map(o=>o.id);
+    const [ar,lr,cr]=await Promise.all([
       agentIds.length?admin.from("agents").select("id,agent_code,display_name").in("id",agentIds):Promise.resolve({data:[],error:null}),
-      leadIds.length?admin.from("leads").select("id,customer_label").in("id",leadIds):Promise.resolve({data:[],error:null})
+      leadIds.length?admin.from("leads").select("id,customer_label").in("id",leadIds):Promise.resolve({data:[],error:null}),
+      completedIds.length?admin.from("commissions").select("order_id,amount,status,payable_at").in("order_id",completedIds):Promise.resolve({data:[],error:null})
     ]);
-    if(ar.error||lr.error)return reply({error:"order_queue_unavailable"},400);
+    if(ar.error||lr.error||cr.error)return reply({error:"order_queue_unavailable"},400);
+    const commissionMap=new Map((cr.data||[]).map(v=>[v.order_id,v]));
     const agentMap=new Map((ar.data||[]).map(v=>[v.id,v]));
     const leadMap=new Map((lr.data||[]).map(v=>[v.id,v]));
     return reply({ok:true,eligible_quotes:available.map(q=>({
       ...q,agent_name:agentMap.get(q.agent_id)?.display_name||agentMap.get(q.agent_id)?.agent_code||"Agent",
       customer_label:leadMap.get(q.lead_id)?.customer_label||"Customer"
     })),orders:orders.map(o=>({
-      ...o,agent_name:agentMap.get(o.agent_id)?.display_name||agentMap.get(o.agent_id)?.agent_code||"Agent"
+      ...o,agent_name:agentMap.get(o.agent_id)?.display_name||agentMap.get(o.agent_id)?.agent_code||"Agent",
+      commission_amount:commissionMap.get(o.id)?.amount??null,
+      commission_status:commissionMap.get(o.id)?.status??null,
+      commission_payable_at:commissionMap.get(o.id)?.payable_at??null
     }))});
   }
   if(action==="launch_create_order"){
@@ -318,6 +324,39 @@ Deno.serve(async req=>{
     return reply({ok:true,order:{id:order.id,order_code:order.order_code,status:order.status,
       payment_status:order.payment_status,commissionable_revenue:order.commissionable_revenue,
       delivery_fee:order.delivery_fee}});
+  }
+
+  if(action==="launch_complete_order"){
+    if(b.confirm!==true)return reply({error:"confirmation_required"},400);
+    const id=String(b.order_id||"");
+    const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const costs=["production_cost","delivery_cost","payment_cost","refund_cost","risk_cost"];
+    const amounts={};
+    for(const key of costs){
+      const value=b[key]===undefined?0:b[key];
+      if(typeof value!=="number"||!Number.isFinite(value)||value<0||value>100000)
+        return reply({error:"invalid_"+key},422);
+      amounts[key]=value;
+    }
+    if(!uuid.test(id)||!["internal","external"].includes(b.fulfilment_type)
+      ||typeof b.qc_pass!=="boolean"||typeof b.rework!=="boolean")
+      return reply({error:"invalid_completion_input"},422);
+    if(b.qc_pass!==true)return reply({error:"qc_not_passed"},409);
+    // One database transaction: walk the official order state machine to
+    // completed, record actual costs, accrue commission, and audit. Any failure
+    // rolls back everything; a second call fails with order_already_completed.
+    const {data:result,error}=await admin.rpc("owner_complete_order_internal",{
+      p_user_id:uid,p_order_id:id,p_production_cost:amounts.production_cost,
+      p_payment_cost:amounts.payment_cost,p_delivery_cost:amounts.delivery_cost,
+      p_refund_cost:amounts.refund_cost,p_risk_cost:amounts.risk_cost,
+      p_fulfilment_type:b.fulfilment_type,p_qc_pass:true,p_rework:b.rework
+    });
+    if(error){
+      const m=String(error.message||"");
+      const known=["order_not_found","order_not_paid","order_already_completed","order_not_ready_for_completion","qc_not_passed","forbidden"].find(k=>m.includes(k));
+      return reply({error:known||"order_completion_failed"},known==="order_not_found"?404:409);
+    }
+    return reply({ok:true,order_id:id,result});
   }
   if(action==="launch_confirm_payment"){
     if(b.confirm!==true||b.bank_evidence_checked!==true)
