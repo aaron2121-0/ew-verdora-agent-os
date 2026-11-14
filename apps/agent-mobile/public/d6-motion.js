@@ -1,6 +1,14 @@
 // D6 live-data adapters. Vendor prototype defaults are intentionally never mounted.
 import {vendorMotion,trackMotion,loadVendorMotion} from "./motion-vendor.js";
 const isReduced=()=>Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches);
+export function loadD6Css(name){
+  if(!["coach","gallery","kyc"].includes(name))return;
+  const href="/ew-verdora-content/motion/"+name+".css";
+  if(document.querySelector('link[data-d6-css="'+name+'"]'))return;
+  const link=document.createElement("link");
+  link.rel="stylesheet";link.href=href;link.dataset.d6Css=name;
+  document.head.append(link);
+}
 const loc=(lang,zh,en)=>lang==="zh"?"zh"===lang?zh:en:en;
 function node(tag,content,cls){
   const el=document.createElement(tag);
@@ -9,6 +17,7 @@ function node(tag,content,cls){
   return el;
 }
 export function mountD6TodayCoach({phase1={},getLang,onMessage,onOpenLead}={}){
+  loadD6Css("coach");
   const rows=Array.isArray(phase1?.due_followups)?phase1.due_followups.filter(x=>x&&x.id):[];
   if(!rows.length)return null;
   const lang=getLang?.()==="zh"?"zh":"en";
@@ -61,6 +70,7 @@ export function mountD6Gallery(items,{lang="en"}={}){
   const records=source.filter(x=>x&&(x.approved===true||x.is_approved===true||["approved","published"].includes(String(x.status||"").toLowerCase())))
     .map(x=>({...x,d6Photo:photoUrl(x.approved_photo_url||x.photo_url||x.image_url||x.imageUrl||"")})).filter(x=>x.d6Photo);
   if(!records.length)return null; // Never show demo images or unapproved work.
+  loadD6Css("gallery");
   const section=node("section","","d6-gallery-real");
   section.append(node("h2",loc(lang,"作品图库","Approved portfolio"),"section-title"));
   const host=node("div","");section.append(host);
@@ -90,9 +100,10 @@ export function mountD6Gallery(items,{lang="en"}={}){
   }).catch(()=>section.remove());
   return section;
 }
-export function decorateD6KycCard(card){card?.classList.add("vk-card","d6-kyc-card");return card}
+export function decorateD6KycCard(card){loadD6Css("kyc");card?.classList.add("vk-card","d6-kyc-card");return card}
 export function decorateD6KycStep(host,step,lang="en"){
   if(!host)return;
+  loadD6Css("kyc");
   void Promise.all([loadVendorMotion("feedback"),loadVendorMotion("kyc")]).catch(()=>{});
   // Real consent/details/photo/submit steps differ from the vendor's 3-step demo.
   const bar=node("div","","vk-stp d6-kyc-steps");

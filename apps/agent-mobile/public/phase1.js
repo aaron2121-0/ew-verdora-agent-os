@@ -9,7 +9,7 @@ import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
 import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
 import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy,loadVendorMotion} from "./motion-vendor.js";
-import {mountD6TodayCoach,mountD6Gallery,styleD6AIMessage,triggerD6Celebration} from "./d6-motion.js";
+import {mountD6TodayCoach,mountD6Gallery,styleD6AIMessage,triggerD6Celebration,loadD6Css} from "./d6-motion.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -341,6 +341,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
 
   function renderTodayPriorityAssist(){
+    loadD6Css("coach");
     const slot=element("section",{className:"section-block ai-coach-panel vc-shell d6-coach-live",attrs:{"data-ai-assist":"today-priority"}});
     slot.append(element("p",{className:"ai-chat-thinking",text:tr("loading")}));
     import("./ai-assist-today-first.js").then(m=>{
