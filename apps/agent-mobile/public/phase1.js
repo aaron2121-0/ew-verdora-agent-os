@@ -359,11 +359,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const host=document.getElementById("todayPage");if(!host)return;
     clear(host);
     const D=getData()||{},a=D.agent||{},p=D.phase1||{},tp=p.tier_progress||{},m=p.money||{};
-    const earned=m.today_earned;
-    if(earned!=null&&Number.isFinite(Number(earned))){
-      const current=Number(earned);
-      if(lastEarnedToday!==null&&current>lastEarnedToday)triggerD6Celebration("sale");
-      lastEarnedToday=current;
+    if(m.today_earned!=null&&Number.isFinite(Number(m.today_earned))){
+      const earnedNow=Number(m.today_earned);
+      if(lastEarnedToday!==null&&earnedNow>lastEarnedToday)triggerD6Celebration("sale");
+      lastEarnedToday=earnedNow;
     }
     const page=element("div",{className:"page-shell today-shell"});
     import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
@@ -590,10 +589,21 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
       wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
       actions.append(aiCopyButton(msg),wa);
+      const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
+      const followupAt=new Date(Date.now()+hours*3600000);
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:"⏱ "+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
+      schedule.addEventListener("click",async()=>{
+        schedule.disabled=true;
+        try{
+          await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:followupAt.toISOString()});
+          schedule.textContent="✓";
+          await onRefresh();
+        }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
+      });
+      actions.append(schedule);
       const out=createAICard({title:tr("aiNextTitle"),text:msg,provider:j.provider||"template",cached:false,tr,actions});
       box.append(styleD6AIMessage(out.card));
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
-      if(c.next_followup_hours)box.append(element("small",{className:"muted",text:tr("aiNextFollowupIn",{hours:Math.round(Number(c.next_followup_hours))})}));
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
@@ -921,6 +931,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
     input.placeholder=tr("aiCoachInput");coach.append(input);
+    import("./ai-assist-objection.js").then(m=>m.mountObjectionHelper({coach,input,element,createAICard,api,getLang,aiStart,aiEnd,toast})).catch(()=>{});
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
     coach.append(ask);
     ask.addEventListener("click",async()=>{
@@ -966,8 +977,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
     const d=getData()||{};
-    const approvedGallery=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
-    const gallery=mountD6Gallery(approvedGallery,{lang:getLang()});
+    const galleryData=d.portfolio_gallery||d.approved_gallery||d.gallery?.items||d.portfolio?.items||d.phase1?.portfolio_items;
+    const gallery=mountD6Gallery(galleryData,{lang:getLang()});
     if(gallery)page.append(gallery);
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}

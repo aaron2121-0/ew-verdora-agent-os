@@ -23,7 +23,7 @@ export function applyReviewedMotionCopy(ui){
   words.homeReset=lang==="zh"?"重置今日完成状态":"Reset today's checks";
  }
 }
-// Load heavyweight visual modules only on their real screens, never on first paint.
+// Heavy visual modules load only when their screen needs them.
 const lazyMotion={
   coach:()=>import("./ew-verdora-content/motion/coach.js"),
   gallery:()=>import("./ew-verdora-content/motion/gallery.js"),

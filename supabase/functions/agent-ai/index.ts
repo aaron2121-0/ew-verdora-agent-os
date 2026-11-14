@@ -277,6 +277,41 @@ function fallbackLostReview(lang,reason){
 }
 
 
+
+function fallbackObjectionReplies(lang,type){
+  const zh=lang==="zh";
+  const map={
+    expensive:zh?[
+      "了解 😊 如果你想控制预算，我可以先帮你看一个调整方向，再按 EW VERDORA 官方报价确认。",
+      "可以的。你可以告诉我最想保留的是整体感觉、花量还是尺寸，我帮你先抓重点，不会私自改价。",
+      "没问题～预算这边我先记着。要不要我帮你看一个更适合这个预算的方向？"
+    ]:[
+      "I understand 😊 If you'd like to keep the budget lower, I can first help check an adjusted direction and then confirm through the official EW VERDORA quote.",
+      "Sure. Tell me what matters most — overall feel, flower volume or size — and I’ll help narrow the brief without changing the price privately.",
+      "No problem. I’ve noted the budget. Would you like me to help check a direction that fits it better?"
+    ],
+    think:zh?[
+      "可以～你慢慢想。你现在主要是在考虑预算、款式还是日期？我可以针对那一点帮你确认。",
+      "没问题，不急。要不要我先把你最在意的一个点整理清楚，之后比较容易决定？",
+      "可以的。我先不催你，如果方便的话告诉我你卡在哪一点，我再帮你看。"
+    ]:[
+      "Of course — take your time. Are you mainly deciding on budget, style or date? I can help clarify that one point.",
+      "No rush. Would it help if I narrow down the one thing that matters most before you decide?",
+      "Sure. I won’t pressure you — if you tell me what you’re unsure about, I can help check it."
+    ],
+    exact:zh?[
+      "可以参考这张图的整体风格来安排，但我不能承诺 100% 一样；花材和细节要按当天供应与正式报价确认。",
+      "我可以帮你把最重要的元素抓出来，再走 EW VERDORA 正式确认；这样会比直接答应一模一样更准确。",
+      "这张可以当参考图。你最在意的是花型、尺寸还是整体感觉？我先帮你确认重点。"
+    ]:[
+      "We can use the reference for the overall style, but I can’t promise a 100% exact copy. Flowers and details must be confirmed based on availability and the official quote.",
+      "I can help identify the most important elements and confirm them through EW VERDORA rather than promise an exact replica.",
+      "We can use this as a reference. Is the flower type, size or overall feel most important to you?"
+    ]
+  };
+  return map[type]||map.think;
+}
+
 function fallbackLeadIntake(lang,text){
   const zh=lang==="zh", t=String(text||"");
   const low=t.toLowerCase();
@@ -439,7 +474,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority"].includes(action)?action:null;
+  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse","today_priority","objection_replies"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -555,6 +590,24 @@ Deno.serve(async req=>{
 
 
 
+
+
+  if(action==="objection_replies"){
+    const type=String(body.objection||"").toLowerCase();
+    if(!["expensive","think","exact"].includes(type))return reply({error:"invalid_objection"},400);
+    const customerText=String(body.customer_message||"").trim().slice(0,2000);
+    const fallback=fallbackObjectionReplies(lang,type);
+    const raw=await callAI(
+      "You are EW VERDORA's objection reply assistant for one Agent in Kuching. Return ONLY JSON {replies:[exactly 3 strings]}. Give three clearly different but compliant WhatsApp replies: 1) warm, 2) concise, 3) question-led. Each reply max 55 words. Never invent or change price, never offer an unauthorised discount, never promise exact replication or flower availability, never use fake scarcity, never ask for payment to a personal account, never reveal suppliers/cost/margin. For 'exact', explicitly avoid 100% same promises. For 'expensive', offer approved scope/brief alternatives without changing price. Language: "+lang+"."+RULES+profileBrief(prof),
+      JSON.stringify({objection:type,customer_message:customerText||null}),
+      true
+    );
+    const p=parseJson(raw||"");
+    const valid=p&&Array.isArray(p.replies)&&p.replies.length===3&&p.replies.every(x=>typeof x==="string"&&x.trim()&&
+      !containsSensitiveOutput(x)&&!containsMarketingPolicyViolation(x)&&!detectPolicyRisk(x));
+    const replies=valid?p.replies.map(x=>String(x).trim().slice(0,700)):fallback;
+    return reply({ok:true,provider:valid?"gemini":"fallback",objection:type,replies});
+  }
 
   if(action==="today_priority"){
     const intelRes=await admin.rpc("agent_lead_intelligence_internal",{p_agent_id:agent.id,p_limit:50});
