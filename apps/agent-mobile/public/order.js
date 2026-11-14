@@ -245,9 +245,7 @@ export function createOrderWizard({getData,getLang,getUserId,tr,api,onNavigate,o
     });
     card.append(times);
 
-    const quoteTip=element("div",{className:"ai-coach-panel"});
-    quoteTip.append(element("small",{className:"muted",text:tr("aiWhy")}),element("p",{className:"ai-priority-why",text:tr("aiQuoteMicroTip")}));
-    card.append(quoteTip);
+    import("./ai-assist-micro.js").then(m=>m.mountQuoteTip({card,getLang}));
 
     card.append(fieldTitle(tr("referenceTitle"),tr("referenceOptional")));
     const ref=element("div",{className:"reference-picker"+(referenceFile?" has-file":"")});
