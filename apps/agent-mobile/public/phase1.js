@@ -8,7 +8,7 @@ import {createTrainingUI} from "./training.js";
 import {buildUnlockChecklist,getUnlockProgress} from "./unlock.js";
 import {createHandbookExperience} from "./handbook.js";
 import {dailyActions,emptyCopy,localized,reviewed} from "./approved-content.js";
-import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";
+import {vendorMotion,trackMotion,setMotionLanguage,applyReviewedMotionCopy} from "./motion-vendor.js";\nimport {createKycUI} from "./kyc-ui.js";
 
 const NAV=[
   ["today","house","navToday"],
@@ -85,7 +85,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     if(!document.getElementById("lockSheet")?.classList.contains("hidden"))renderLockChecklist();
   }});
 
-  const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate,onJourneyChange:()=>{if(active==="today")renderToday()}});
+  const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate,onJourneyChange:()=>{if(active==="today")renderToday()}});\n  const kyc=createKycUI({getData,getLang,api,onRefresh});
 
   function langText(value){
     const key=categoryKey(value);
@@ -364,7 +364,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       try{await onRefresh()}finally{refresh.classList.remove("spinning")}
     });
     live.append(left,refresh);
-    page.append(live);
+    page.append(live);\n    const kycBanner=kyc.banner();if(kycBanner)page.append(kycBanner);
 
     const greet=element("div",{className:"greeting-row"});
     const greetingKey={morning:"greetingMorning",afternoon:"greetingAfternoon",evening:"greetingEvening",night:"greetingNight"}[greetingPeriod()];
@@ -1029,7 +1029,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     order.onLanguageChange();
     performance.onLanguageChange();
     training.onLanguageChange();
-    handbook.onLanguageChange?.();
+    handbook.onLanguageChange?.();\n    kyc.onLanguageChange();
     if(active==="handbook")handbook.reRender();
   }
 
@@ -1042,12 +1042,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     setupSheets();
     setupNav();
     await order.init();
-    await handbook.initContent();
+    await handbook.initContent();\n    await kyc.init();
     renderAll();
     handbook.showWelcome();
     navigate("today");
     refreshUnlockSummary();
   }
 
-  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training};
+  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training,kyc};
 }
