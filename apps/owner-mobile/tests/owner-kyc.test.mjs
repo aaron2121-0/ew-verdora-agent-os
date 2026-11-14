@@ -25,6 +25,7 @@ test("list uses only four UI fields plus agent id and status internally",()=>{
 });
 test("detail read is click-only, backend has all four action names",()=>{
   assert.match(kyc,/button\.addEventListener\("click",\(\)=>openKycView/);
+  assert.match(kyc,/record\.photo_signed_url/);
   for(const action of ["kyc_list","kyc_view","kyc_review","kyc_delete"])
     assert.ok(kyc.includes('action:"'+action+'"'));
   assert.match(js,/j\.role!=="owner"/);
@@ -56,8 +57,9 @@ test("photo URL is strictly restricted to signed, private Supabase bucket",()=>{
 });
 test("rejection requires a reason and deletion requires two confirmations",()=>{
   assert.match(kyc,/code==="other"&&!note/);
-  assert.match(kyc,/reject_reason:reason/);
+  assert.match(kyc,/,decision,reason\}/);
   assert.match(kyc,/if\(!confirm\(/);
   assert.match(kyc,/prompt\("输入 DELETE/);
   assert.match(kyc,/confirm:true/);
+  assert.match(kyc,/deleteRequested:Boolean\(record\.delete_requested_at\)/);
 });
