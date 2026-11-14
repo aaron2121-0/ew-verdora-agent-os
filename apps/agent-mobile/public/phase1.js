@@ -950,6 +950,76 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     clear(host);
     const page=element("div",{className:"page-shell"});
     page.append(screenHeader(tr("sellingTitle"),tr("sellingSubtitle"),{back:true}));
+    // [D2] Agents can browse only Owner-approved photographs, via 60-minute signed links.
+    const gallery=element("section",{className:"portfolio-gallery"});
+    const galleryTitle=element("h2",{text:getLang()==="zh"?"EW VERDORA 真实作品":"EW VERDORA real work"});
+    const galleryHelp=element("p",{className:"muted",text:getLang()==="zh"
+      ?"先选作品，再复制说明或直接分享给客人。":"Choose a photo, copy its caption or share it with a customer."});
+    const galleryBtn=iconButton("images",getLang()==="zh"?"看作品图库":"Browse gallery","btn btn-primary");
+    const galleryBody=element("div",{className:"portfolio-gallery-body"});
+    gallery.append(galleryTitle,galleryHelp,galleryBtn,galleryBody);
+    page.append(gallery);
+    galleryBtn.addEventListener("click",async()=>{
+      galleryBtn.disabled=true;clear(galleryBody);
+      galleryBody.append(element("p",{text:getLang()==="zh"?"正在读取作品…":"Loading photos…"}));
+      try{
+        const {photos=[]}=await api.agent({action:"portfolio_list"});
+        clear(galleryBody);
+        if(!photos.length){galleryBody.append(element("p",{text:getLang()==="zh"
+          ?"还没有核准的作品，迟点再来看。":"No approved photos yet. Check back later."}));return}
+        const lineNames={condolence:"帛事花圈",opening:"开张花篮",bouquet:"花束",wedding_event:"婚礼活动",wholesale:"批发"};
+        const selector=element("select",{attrs:{"aria-label":getLang()==="zh"?"选择作品类型":"Choose flower category"}});
+        const opt=element("option",{text:getLang()==="zh"?"全部作品":"All photos",attrs:{value:"all"}});
+        selector.append(opt);
+        for(const [code,label] of Object.entries(lineNames)){
+          if(!photos.some(p=>p.product_line===code))continue;
+          selector.append(element("option",{text:getLang()==="zh"?label:code.replace("_"," "),attrs:{value:code}}));
+        }
+        const collection=element("div",{className:"portfolio-gallery-grid"});
+        const display=()=>{
+          clear(collection);
+          for(const photo of photos.filter(p=>selector.value==="all"||p.product_line===selector.value)){
+            let imgUrl="";
+            try{
+              const u=new URL(photo.image_url||"");
+              if(u.protocol==="https:"&&u.hostname.endsWith(".supabase.co"))imgUrl=u.href;
+            }catch{}
+            if(!imgUrl)continue;
+            const tile=element("article",{className:"portfolio-gallery-item"});
+            const img=element("img",{attrs:{src:imgUrl,alt:"EW VERDORA real floral work",loading:"lazy",referrerpolicy:"no-referrer"}});
+            tile.append(img);
+            const caption=getLang()==="zh"?photo.caption_zh:photo.caption_en;
+            tile.append(element("p",{text:caption||""}));
+            const copy=iconButton("copy",getLang()==="zh"?"复制说明":"Copy caption","btn btn-secondary");
+            copy.addEventListener("click",async()=>{
+              try{await navigator.clipboard.writeText(caption||"");toast(tr("copied"),{tone:"success"})}
+              catch{toast(tr("errorRequestFailed"),{tone:"danger"})}
+            });
+            const share=iconButton("share2",getLang()==="zh"?"分享给客人":"Share photo","btn btn-primary");
+            share.addEventListener("click",async()=>{
+              if(navigator.share){
+                try{await navigator.share({title:"EW VERDORA",text:caption||"",url:imgUrl});return}
+                catch(e){if(e?.name==="AbortError")return}
+              }
+              // If Web Share is unavailable, save this approved image to the phone.
+              try{
+                const resp=await fetch(imgUrl,{cache:"no-store"});
+                if(!resp.ok)throw Error("image_unavailable");
+                const blob=await resp.blob(),url=URL.createObjectURL(blob);
+                const a=document.createElement("a");a.href=url;a.download="ew-verdora-work."+String(blob.type==="image/png"?"png":blob.type==="image/webp"?"webp":"jpg");
+                document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+              }catch{window.open(imgUrl,"_blank","noopener,noreferrer")}
+            });
+            const actions=element("div",{className:"portfolio-gallery-actions"});
+            actions.append(copy,share);tile.append(actions);collection.append(tile);
+          }
+        };
+        selector.addEventListener("change",display);
+        galleryBody.append(selector,collection);display();
+      }catch{clear(galleryBody);galleryBody.append(element("p",{text:getLang()==="zh"
+        ?"暂时无法打开作品，按多一次试试。":"Cannot open photos right now. Try again."}))}
+      finally{galleryBtn.disabled=false}
+    });
     const kits=getData()?.selling_kits||[];
     if(!kits.length){page.append(emptyState({icon:"megaphone",title:tr("noItems")}));host.append(page);return}
     const list=element("div",{className:"kit-list"});
