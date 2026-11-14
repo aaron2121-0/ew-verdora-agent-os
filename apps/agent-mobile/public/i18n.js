@@ -40,6 +40,8 @@ export const I18N={
     aiCoachTitle:"AI customer reply coach",aiCoachInput:"Paste what the customer said…",aiCoachAsk:"Help me reply",
     aiChanceHigh:"High opportunity",aiChanceMedium:"Medium opportunity",aiChanceLow:"Lower opportunity",aiNextAction:"Suggested next step",aiBestFollowup:"Suggested follow-up time",
     aiProvider:"AI",
+    aiTodayContactsTitle:"今天先联系谁",aiTodayContactsHint:"按一下，系统会排好现在最值得联系的 3 位客人，也把话写好。",aiTodayContactsButton:"排好今天 3 位客人",aiTodayContactsEmpty:"现在没有需要马上联系的客人。",aiTodayRank:"第 {rank} 个先联系",aiTodayMessage:"可以这样发",
+    aiTodayContactsTitle:"Who to contact first today",aiTodayContactsHint:"Tap once. Your best three customers to contact now will be prepared with a message.",aiTodayContactsButton:"Prepare today’s 3 contacts",aiTodayContactsEmpty:"No customer needs attention right now.",aiTodayRank:"Contact {rank}",aiTodayMessage:"Message to send",
     aiNextTitle:"AI next message",aiWriteFollowup:"AI write follow-up",aiCopySend:"Copy",aiOpenWhatsApp:"Open WhatsApp",aiWhy:"Why this works",aiNextFollowupIn:"Follow up again in about {hours}h",
     aiOutcomeTitle:"How did the customer respond?",aiOutcomeHint:"Tap one — AI writes your next WhatsApp message.",
     aiOutcomeNoReply:"No reply",aiOutcomeReplied:"Replied",aiOutcomeInterested:"Interested",aiOutcomeWantsQuote:"Wants a quote",
