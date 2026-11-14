@@ -73,7 +73,7 @@ test("Edge routes keep KYC off AI and use bound, one-use upload tokens",()=>{
   assert.match(owner,/owner_kyc_view_internal/);
   assert.match(owner,/createSignedUrl\(data\.ic_front_path,60\)/);
   assert.match(owner,/owner_kyc_delete_ready_internal/);
-  assert.match(ai,/preferred_name:String\(preferredName/);
+  assert.match(ai,/preferred_name:String\(p\.preferred_name/);
   assert.match(ai,/text:redact\(instructions\)/);
   assert.doesNotMatch(ai,/from\(["']agent_kyc["']\)/);
 });
