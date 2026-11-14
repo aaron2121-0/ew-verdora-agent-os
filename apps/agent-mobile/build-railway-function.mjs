@@ -146,7 +146,7 @@ const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const lazyBrandJs="vendor/motion-pack-v1/brand-bg.js";
 const lazyBrandLoader="brand-loader.js";
 const lazyAssistJs=new Set(["ai-assist-intake.js","ai-assist-today-first.js","ai-assist-objection.js"]);
-const lazyMotionJs=new Set(["ew-verdora-content/motion/coach.js","ew-verdora-content/motion/gallery.js","ew-verdora-content/motion/kyc.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/feedback.js"]);
+const lazyMotionJs=new Set(["ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/feedback.js"]);
 const initialJsNames=jsNames.filter(n=>n!=="kyc.js"&&n!==lazyBrandJs&&n!==lazyBrandLoader&&!lazyAssistJs.has(n)&&!lazyMotionJs.has(n));
 const jsBytes=initialJsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 const kycJsBytes=zlib.gzipSync(Buffer.from(files["kyc.js"]||""),{level:9}).length;
