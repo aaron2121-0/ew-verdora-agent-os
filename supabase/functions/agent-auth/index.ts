@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const ALLOWED_ORIGIN = "https://agent-mobile-production.up.railway.app";
 const cors = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-  "Access-Control-Allow-Headers": "content-type, apikey, authorization",
+  "Access-Control-Allow-Headers": "content-type, apikey",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json",
   "Cache-Control": "no-store",
@@ -52,69 +52,14 @@ Deno.serve(async (req) => {
 
   let body:any = {};
   try { body = await req.json(); } catch {}
-  const admin = createClient(url, sec, { auth:{ persistSession:false, autoRefreshToken:false } });
-  const publicClient = createClient(url, pub, { auth:{ persistSession:false, autoRefreshToken:false } });
-
-  // This check is mandatory before OUR Google button initiates OAuth.
-  // Supabase Auth's built-in captchaToken option does not apply to signInWithOAuth.
-  if (body.action === "google_captcha_verify") {
-    const token = typeof body.token === "string" ? body.token : "";
-    const secret = Deno.env.get("TURNSTILE_SECRET_KEY") || "";
-    if (!secret) return reply({ error:"captcha_unavailable" }, 503);
-    if (!token || token.length > 2048) return reply({ error:"captcha_required" }, 400);
-    try {
-      const form = new FormData();
-      form.append("secret", secret);
-      form.append("response", token);
-      const verification = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{
-        method:"POST",body:form,signal:AbortSignal.timeout(8000)
-      });
-      if (!verification.ok) return reply({ error:"captcha_unavailable" }, 503);
-      const result = await verification.json();
-      if (result.success !== true || result.hostname !== "agent-mobile-production.up.railway.app"
-          || result.action !== "google_signup") {
-        return reply({ error:"captcha_failed" }, 400);
-      }
-      const raw=new Uint8Array(32);crypto.getRandomValues(raw);
-      const nonce=[...raw].map(n=>n.toString(16).padStart(2,"0")).join("");
-      const {error:saveError}=await admin.rpc("agent_signup_challenge_create_internal",{
-        p_nonce_hash:await sha256Hex(nonce)
-      });
-      if(saveError)return reply({error:"captcha_unavailable"},503);
-      return reply({ ok:true,proof:nonce });
-    } catch {
-      return reply({ error:"captcha_unavailable" }, 503);
-    }
-  }
-
-  if (body.action === "google_signup_route") {
-    const auth = req.headers.get("Authorization") || "";
-    if (!auth.startsWith("Bearer ")) return reply({ error:"authentication_required" }, 401);
-    const { data:verified, error:authError } = await publicClient.auth.getUser(auth.slice(7));
-    if (authError || !verified.user) return reply({ error:"invalid_session" }, 401);
-    const lookup=()=>admin.rpc("agent_signup_route_internal",{p_user_id:verified.user.id});
-    let {data,error}=await lookup();
-    if(error || !data || typeof data.route!=="string")return reply({error:"signup_route_failed"},503);
-    // Only a user who just completed a one-use challenge may enter open Google registration.
-    // An existing Agent, Owner, or invited identity never needs this proof.
-    if(data.route==="captcha_required" && typeof body.proof==="string"
-       && /^[a-f0-9]{64}$/.test(body.proof)){
-      const {data:consumed,error:consumeError}=await admin.rpc("agent_signup_challenge_consume_internal",{
-        p_user_id:verified.user.id,p_nonce_hash:await sha256Hex(body.proof)
-      });
-      if(!consumeError && consumed===true){
-        ({data,error}=await lookup());
-        if(error || !data || typeof data.route!=="string")return reply({error:"signup_route_failed"},503);
-      }
-    }
-    return reply({ok:true,route:data.route});
-  }
-
   if (body.action !== "invite_session") return reply({ error:"unknown_action" }, 400);
 
   const email = String(body.email || "").trim().toLowerCase();
   const code = String(body.code || "").trim();
   if (!validEmail(email) || !validCode(code)) return reply({ error:"invalid_or_expired_access_link" }, 400);
+
+  const admin = createClient(url, sec, { auth:{ persistSession:false, autoRefreshToken:false } });
+  const publicClient = createClient(url, pub, { auth:{ persistSession:false, autoRefreshToken:false } });
 
   const codeHash = await sha256Hex(code);
 
