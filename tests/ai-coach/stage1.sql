@@ -40,9 +40,21 @@ begin
     perform private.coach_complete_task_internal(a,task,'replied','test');
   end loop;
 
-  out:=private.coach_build_plan_internal(a,d);
+  -- 2/3 prior-week completion gives Agent B four tasks.
+  insert into private.coach_daily_plans(agent_id,plan_date) values(b,d-1);
+  for i in 1..3 loop
+    insert into private.coach_tasks(
+      agent_id,plan_date,kind,priority,title_en,title_zh,why_en,why_zh
+    ) values(b,d-1,'practice',i,'Practice','练习','Build skill','积累能力');
+  end loop;
+  for task in select id from private.coach_tasks
+    where agent_id=b and plan_date=d-1 order by priority limit 2 loop
+    perform public.coach_complete_task_internal(b,task,'replied','test');
+  end loop;
+
+  out:=public.coach_build_plan_internal(a,d);
   if (out->>'existing')::boolean is true then raise exception 'fresh plan incorrectly marked existing'; end if;
-  perform private.coach_build_plan_internal(b,d);
+  perform public.coach_build_plan_internal(b,d);
   perform private.coach_build_plan_internal(locked,d);
   out:=private.coach_build_plan_internal(demo,d);
   if out->>'skipped'<>'demo' then raise exception 'demo should be skipped'; end if;
@@ -52,7 +64,7 @@ begin
   select count(*) into total from private.coach_tasks where agent_id=a and plan_date=d;
   if total<>5 then raise exception 'high-completion agent should get five tasks, got %',total; end if;
   select count(*) into total from private.coach_tasks where agent_id=b and plan_date=d;
-  if total<>3 then raise exception 'new agent should get three tasks, got %',total; end if;
+  if total<>4 then raise exception 'medium-completion agent should get four tasks, got %',total; end if;
 
   if exists(select 1 from private.coach_tasks where agent_id=a and lead_id=lead_b)
     or exists(select 1 from private.coach_tasks where agent_id=b and lead_id=lead_a)
@@ -65,7 +77,7 @@ begin
 
   -- Re-running same date must not create tasks, even if their state changes.
   select count(*) into total from private.coach_tasks where agent_id=a and plan_date=d;
-  out:=private.coach_build_plan_internal(a,d);
+  out:=public.coach_build_plan_internal(a,d);
   if (out->>'existing')::boolean is not true then raise exception 'idempotent plan flag absent'; end if;
   if (select count(*) from private.coach_tasks where agent_id=a and plan_date=d)<>total
     then raise exception 'repeat plan duplicated tasks'; end if;
@@ -77,16 +89,16 @@ begin
   select id into task from private.coach_tasks
     where agent_id=a and plan_date=d and kind='follow_up' limit 1;
   if task is null then raise exception 'expected follow-up on A due lead'; end if;
-  perform private.coach_complete_task_internal(a,task,'interested','customer asked for details');
+  perform public.coach_complete_task_internal(a,task,'interested','customer asked for details');
   select level into level_before from private.agent_skill_state
     where agent_id=a and skill='follow_up';
-  out:=private.coach_complete_task_internal(a,task,'interested','again');
+  out:=public.coach_complete_task_internal(a,task,'interested','again');
   if out->>'already_done'<>'true' then raise exception 'complete must be idempotent'; end if;
   if (select level from private.agent_skill_state
     where agent_id=a and skill='follow_up')<>level_before
     then raise exception 'duplicate done updated skills'; end if;
   begin
-    perform private.coach_complete_task_internal(b,task,'replied','cross-agent');
+    perform public.coach_complete_task_internal(b,task,'replied','cross-agent');
     raise exception 'should not complete another agent task';
   exception when others then
     if SQLERRM='should not complete another agent task' then raise; end if;
@@ -98,6 +110,8 @@ begin
     then raise exception 'review not persisted'; end if;
 
   if has_function_privilege('anon','private.coach_build_plan_internal(uuid,date)','EXECUTE')
+     or has_function_privilege('anon','public.coach_build_plan_internal(uuid,date)','EXECUTE')
+     or has_function_privilege('authenticated','public.coach_complete_task_internal(uuid,uuid,text,text)','EXECUTE')
      or has_function_privilege('authenticated','private.coach_complete_task_internal(uuid,uuid,text,text)','EXECUTE')
      or has_table_privilege('authenticated','private.coach_tasks','SELECT')
     then raise exception 'function/table security grants incorrect'; end if;
@@ -105,7 +119,7 @@ begin
       where oid='private.coach_tasks'::regclass) then
     raise exception 'RLS not enabled';
   end if;
-  raise notice 'PASS: isolation, demo skip, idempotence, adaptive count, lock, skills, review, grants';
+  raise notice 'PASS: isolation, demo skip, idempotence, adaptive 3/4/5 counts, lock, skills, review, grants';
 end;
 $test$;
 rollback;
