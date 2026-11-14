@@ -89,6 +89,8 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
   const handbook=createHandbookExperience({getData,getLang,getUserId,api,onRefresh,onNavigate:navigate,onJourneyChange:()=>{if(active==="today")renderToday()}});
 
+  let todayCoach=null;
+
   function langText(value){
     const key=categoryKey(value);
     return key?tr(key):String(value||"—");
@@ -372,34 +374,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const page=element("div",{className:"page-shell today-shell"});
     import("./brand-loader.js").then(m=>m.mountBrandBg(page,{placement:"tr",seed:20261115})).catch(()=>{});
     const identityTop=typeof renderTodayTop==="function"?renderTodayTop():null;
+
+
+    if(todayCoach)page.append(todayCoach.render());
     if(identityTop)page.append(identityTop);
-
-    const live=element("div",{className:"today-live"});
-    const left=element("span",{className:"live-chip"});
-    left.append(element("i"),element("span",{text:tr("kuchingLive")}));
-    const refresh=iconButton("refreshCw",tr("refreshNow"),"btn btn-text btn-small");
-    refresh.addEventListener("click",async()=>{
-      refresh.classList.add("spinning");
-      try{await onRefresh()}finally{refresh.classList.remove("spinning")}
-    });
-    live.append(left,refresh);
-    page.append(live);
-
-    const greet=element("div",{className:"greeting-row"});
-    const greetingKey={morning:"greetingMorning",afternoon:"greetingAfternoon",evening:"greetingEvening",night:"greetingNight"}[greetingPeriod()];
-    const gLeft=element("div");
-    gLeft.append(element("h1",{className:"greeting",text:tr(greetingKey)+", "+(a.display_name||a.agent_code||"")}),
-      element("div",{className:"status-line",text:statusLabel(a.status)}));
-    const badges=element("div",{className:"greeting-badges"});
-    badges.append(element("span",{className:"badge badge-gold",text:tr(tierKey(a.tier))}),
-      element("span",{className:"badge badge-"+statusTone(a.status),text:statusLabel(a.status)}));
-    greet.append(gLeft,badges);
-    page.append(greet);
-    page.append(renderEarningActions());
-    page.append(renderTodayPriorityAssist());
-    page.append(renderAIWeekly());
-    page.append(handbook.journey());
-
     if(isLocked()){
       const lock=element("div",{className:"lock-banner"});
       const ico=element("div",{className:"lock-banner-icon"});ico.append(createIcon("lock",{size:22}));
@@ -464,33 +442,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       tierWrap.append(tierTop);
     }
     moneyCard.append(tierWrap);
-    page.append(moneyCard);
-
-    const daily=document.createElement("div");daily.id="aiDailyBrief";daily.dataset.priorityCard="brief";page.append(daily);
-    if(aiGreeting){daily.append(renderDailyBrief(aiGreeting))}
-    else if(!aiGreetingLoading){const placeholder=element("p",{className:"ai-chat-thinking",text:tr("aiDailyLoading")});daily.append(placeholder);loadDailyGreeting()}
-    page.append(renderQuickActions());
-    if(Number(D?.today_progress?.orders||0)===0){
-      const copy=emptyCopy("orders");
-      if(copy){
-        const empty=element("section",{className:"handbook-empty-orders"});
-        empty.append(element("strong",{text:localized(copy,"title",getLang())}),
-          element("p",{text:localized(copy,"body",getLang())}));
-        const go=iconButton("phoneCall",localized(copy,"cta",getLang()),"btn btn-secondary");
-        go.addEventListener("click",()=>navigate("today",{scrollTo:"dueFollowups"}));
-        empty.append(go);page.append(empty);
-      }
-    }
-    const priorities=element("div",{className:"ai-priority-list"});
-    for(const [name,card] of [["followup",renderDueFollowups()],["campaign",renderCampaigns()]]){
-      card.dataset.priorityCard=name;
-      const why=element("p",{className:"ai-priority-why",attrs:{"data-priority-why":""}});
-      card.prepend(why);priorities.append(card);
-    }
-    page.append(priorities);
+    // Keep the existing payout/account tools accessible without crowding the
+    // five focused coach steps. All values still come from the dashboard.
+    const tools=element("details",{className:"tc-account-tools"});
+    tools.append(element("summary",{text:getLang()==="zh"?"账户、佣金与常用工具":"Account, commissions and tools"}),moneyCard,renderQuickActions(),handbook.journey());
+    page.append(tools);
     host.append(page);
-    prioritizeCards(D,priorities,tr);
-    stagger(page.querySelectorAll(".quick-tile,.task-row,.follow-card,.campaign-banner"),{step:34,max:8});
   }
 
   function renderDailyBrief(response){
@@ -1108,6 +1065,9 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
   }
 
   async function init(){
+    const {createTodayCoach}=await import("./today-coach.js");
+    todayCoach=createTodayCoach({getData,getLang,getUserId,api,onRefresh,
+      onOpenLead:openLeadDetail,onLocked:showLock,isLocked,onNavigate:navigate});
     setupSheets();
     setupNav();
     await order.init();
