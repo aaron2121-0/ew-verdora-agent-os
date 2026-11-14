@@ -55,7 +55,12 @@ insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
 values ('agent-kyc','agent-kyc',false,5242880,array['image/jpeg','image/png','image/webp'])
 on conflict(id) do update set
  public=false,file_size_limit=5242880,allowed_mime_types=excluded.allowed_mime_types;
--- Do not add storage.objects policies for anon/authenticated.
+-- A RESTRICTIVE policy denies client access even if another broad Storage
+-- policy is added later. service_role bypasses RLS for the trusted Edge backend.
+create policy agent_kyc_deny_client_objects on storage.objects
+  as restrictive for all to anon,authenticated
+  using (bucket_id <> 'agent-kyc')
+  with check (bucket_id <> 'agent-kyc');
 
 -- Only service_role can call these public RPC entry points. All function
 -- callers are Edge Functions which separately verify their caller's JWT.
