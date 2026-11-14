@@ -276,6 +276,30 @@ function fallbackLostReview(lang,reason){
   return {summary:x[0],next_time:x[1],model_message:x[2],avoid:zh?"不要私自降价、假稀缺或要求私人收款。":"Do not privately discount, create fake scarcity or ask for personal payment."};
 }
 
+
+function fallbackLeadIntake(lang,text){
+  const zh=lang==="zh", t=String(text||"");
+  const low=t.toLowerCase();
+  const occasion=
+    /condol|funeral|sympathy|帛事|慰问|丧|白事/.test(low)?"condolence":
+    /opening|grand opening|开张|开业/.test(low)?"opening":
+    /wedding|婚礼|结婚/.test(low)?"wedding":
+    /birthday|生日/.test(low)?"birthday":
+    /anniversary|周年|纪念日/.test(low)?"anniversary":
+    /graduat|毕业/.test(low)?"graduation":"general";
+  const budgetMatch=t.match(/(?:RM|MYR)\s*([0-9]{2,6}(?:\.[0-9]{1,2})?)/i);
+  const areaMatch=t.match(/\b(Kuching|Samarahan|Tabuan Jaya|Petra Jaya|Batu Kawa|Matang|Satok|Padawan|Siburan)\b/i);
+  return {
+    customer_label:"",
+    occasion,
+    budget:budgetMatch?Number(budgetMatch[1]):null,
+    delivery_date:null,
+    area:areaMatch?areaMatch[1]:null,
+    summary:zh?"我先抓到可以确认的资料；日期或称呼不清楚的地方留空，避免乱猜。":"I pulled only the details I can confirm. Unclear name/date fields are left blank instead of guessed.",
+    missing:["customer_label","delivery_date"].filter(k=>k==="customer_label"||k==="delivery_date")
+  };
+}
+
 function containsSensitiveOutput(text){
   return /(production cost|maximum buy cost|\bmbc\b|supplier|external florist|company margin|profit margin|内部成本|最高采购|供应商|外部花店|公司利润率)/i.test(String(text||""));
 }
@@ -415,7 +439,7 @@ Deno.serve(async req=>{
     if(cached) return reply({ok:true,cached:true,provider:cached.provider,plan:cached.payload,week_start:weekStart});
   }
 
-  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review"].includes(action)?action:null;
+  const quotaAction=["next_message","coach","daily_content","roleplay_score","roleplay_generate","chat","daily_greeting","platform_post","weekly_plan","profile_setup","lost_review","lead_intake_parse"].includes(action)?action:null;
   if(quotaAction){
     const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
     if(quota.error){ console.error("AI_QUOTA",quota.error.code||""); return reply({error:"quota_check_failed"},500); }
@@ -529,6 +553,38 @@ Deno.serve(async req=>{
       score:scored,feedback:scored.feedback,model_answer:scored.model_answer});
   }
 
+
+
+  if(action==="lead_intake_parse"){
+    const customerText=String(body.customer_text||"").trim().slice(0,4000);
+    if(!customerText) return reply({error:"customer_text_required"},400);
+    const fallback=fallbackLeadIntake(lang,customerText);
+    const aiText=await callAI(
+      "You help one EW VERDORA Agent turn a pasted customer chat into a customer card. Return ONLY JSON with fields customer_label:string, occasion:string, budget:number|null, delivery_date:string|null (YYYY-MM-DD only when the date is unambiguous in Kuching time), area:string|null, summary:string, missing:string[]. Allowed occasion values: birthday, anniversary, condolence, opening, proposal, graduation, corporate, wedding, general. Extract only what the customer actually said; never guess price, budget, date, name, availability or promises. Customer phone/email/NRIC are already redacted and must never appear in output. Keep summary short and practical. Language: "+lang+"."+RULES+profileBrief(prof),
+      customerText,
+      true
+    );
+    const p=parseJson(aiText||"");
+    const occasions=new Set(["birthday","anniversary","condolence","opening","proposal","graduation","corporate","wedding","general"]);
+    const valid=p && typeof p.customer_label==="string" && occasions.has(String(p.occasion||"general")) &&
+      (p.budget===null||p.budget===undefined||(Number.isFinite(Number(p.budget))&&Number(p.budget)>=0&&Number(p.budget)<=1000000)) &&
+      (p.delivery_date===null||p.delivery_date===undefined||/^\d{4}-\d{2}-\d{2}$/.test(String(p.delivery_date))) &&
+      typeof p.summary==="string" && Array.isArray(p.missing);
+    let card=valid?{
+      customer_label:String(p.customer_label||"").slice(0,120),
+      occasion:String(p.occasion||"general"),
+      budget:p.budget==null?null:Number(p.budget),
+      delivery_date:p.delivery_date?String(p.delivery_date):null,
+      area:p.area?String(p.area).slice(0,120):null,
+      summary:String(p.summary).slice(0,500),
+      missing:p.missing.slice(0,6).map(x=>String(x).slice(0,60))
+    }:fallback;
+    let provider=valid?"gemini":"fallback";
+    if(containsSensitiveOutput(JSON.stringify(card))||containsMarketingPolicyViolation(card.summary)){
+      card=fallback; provider="fallback";
+    }
+    return reply({ok:true,provider,card});
+  }
 
   if(action==="platform_post"){
     const platform=String(body.platform||"").toLowerCase();
