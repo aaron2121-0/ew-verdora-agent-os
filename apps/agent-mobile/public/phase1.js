@@ -589,12 +589,12 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       actions.append(aiCopyButton(msg),wa);
       const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
       const followupAt=new Date(Date.now()+hours*3600000);
-      const schedule=element("button",{className:"btn btn-secondary btn-small",text:(getLang()==="zh"?"设·":"Set·")+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
+      const schedule=element("button",{className:"btn btn-secondary btn-small",text:"⏱ "+formatKuchingDateTime(followupAt.toISOString(),getLang()),attrs:{type:"button"}});
       schedule.addEventListener("click",async()=>{
         schedule.disabled=true;
         try{
           await api.agent({action:"schedule_followup",lead_id:lead.id,followup_at:followupAt.toISOString()});
-          schedule.textContent=getLang()==="zh"?"已保存":"Saved";
+          schedule.textContent="✓";
           await onRefresh();
         }catch(e){toast(api.friendlyError(e?.message),{tone:"danger"});schedule.disabled=false}
       });
@@ -929,6 +929,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     coach.append(element("h3",{text:tr("aiCoachTitle")}));
     const input=element("textarea",{className:"ai-chat-input",attrs:{rows:"3",maxlength:"2000","aria-label":tr("aiCoachInput")}});
     input.placeholder=tr("aiCoachInput");coach.append(input);
+    import("./ai-assist-objection.js").then(m=>m.mountObjectionHelper({coach,input,element,createAICard,api,getLang,aiStart,aiEnd,toast})).catch(()=>{});
     const ask=element("button",{className:"btn btn-secondary",text:tr("aiCoachAsk"),attrs:{type:"button"}});
     coach.append(ask);
     ask.addEventListener("click",async()=>{
