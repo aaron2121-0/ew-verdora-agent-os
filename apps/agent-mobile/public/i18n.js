@@ -1124,6 +1124,20 @@ Object.assign(I18N.zh,{
   aiFollowupScheduled:"下次联系时间已经保存。"
 });
 
+
+Object.assign(I18N.en,{
+  aiRepeatTitle:"Previous customers you can check in with",
+  aiRepeatHint:"These are real customers who bought before. I wrote a light check-in — use it only if it feels appropriate.",
+  aiRepeatLoading:"Looking through your previous customers…",
+  aiRepeatEmpty:"No previous customer is ready for a check-in yet."
+});
+Object.assign(I18N.zh,{
+  aiRepeatTitle:"旧客可以再问一问",
+  aiRepeatHint:"这些都是真的买过的客人。我写了一句轻轻问候，适合才发，不要硬推。",
+  aiRepeatLoading:"正在看你以前成交过的客人…",
+  aiRepeatEmpty:"现在还没有适合重新联系的旧客。"
+});
+
 const fallback="en";
 export function normaliseLanguage(value){return value==="zh"?"zh":"en"}
 export function getStoredLanguage(){

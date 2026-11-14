@@ -67,6 +67,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
   let generatedKitCode=null;
   let aiGreeting=null,aiGreetingLoading=false,generatedProvider="template";
   let todayFirst=null,todayFirstLoading=false;
+  let repeatCustomers=null,repeatCustomersLoading=false;
   let lastAllDone=false;
   let customerSegment="all";
   let unlockSummary=null,unlockLoading=false;
@@ -377,6 +378,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     page.append(greet);
     page.append(renderEarningActions());
     page.append(renderTodayFirst());
+    page.append(renderRepeatCustomers());
     page.append(renderAIWeekly());
     page.append(handbook.journey());
 
@@ -455,6 +457,39 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh}){
     // The 3-action vendor component owns the completion celebration.
   }
 
+
+
+  function renderRepeatCustomers(){
+    const sec=element("section",{className:"section-block ai-repeat-customers ai-assist-surface",attrs:{id:"aiRepeatCustomers"}});
+    const head=element("div",{className:"section-heading-row"});
+    const left=element("div",{className:"section-heading-left"});left.append(createIcon("users",{size:20}),element("h2",{className:"section-title",text:tr("aiRepeatTitle")}));
+    head.append(left);sec.append(head,element("p",{className:"muted",text:tr("aiRepeatHint")}));
+    const body=element("div",{className:"ai-repeat-list"});sec.append(body);
+    const draw=()=>{
+      body.replaceChildren();
+      if(!repeatCustomers){body.append(element("p",{className:"ai-chat-thinking",text:tr("aiRepeatLoading")}));return}
+      const rows=Array.isArray(repeatCustomers.customers)?repeatCustomers.customers:[];
+      if(!rows.length){body.append(element("p",{className:"muted",text:tr("aiRepeatEmpty")}));return}
+      rows.forEach(row=>{
+        const msg=String(row.message||"");
+        const actions=element("div",{className:"ai-message-actions"});actions.append(aiCopyButton(msg));
+        const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
+        wa.addEventListener("click",()=>window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer"));actions.append(wa);
+        const card=createAICard({title:String(row.customer_label||tr("customer")),text:msg,provider:repeatCustomers.provider||"template",cached:false,tr,actions}).card;
+        if(row.why)card.append(element("p",{className:"ai-priority-why",text:String(row.why)}));
+        body.append(card);
+      });
+    };
+    draw();
+    if(!repeatCustomers&&!repeatCustomersLoading)loadRepeatCustomers(draw);
+    return sec;
+  }
+  async function loadRepeatCustomers(draw){
+    repeatCustomersLoading=true;aiStart();let ok=false;
+    try{repeatCustomers=await api.ai({action:"repeat_customer"});ok=true;draw()}
+    catch{repeatCustomers={customers:[]};draw()}
+    finally{repeatCustomersLoading=false;aiEnd(ok)}
+  }
 
   function renderTodayFirst(){
     const sec=element("section",{className:"section-block ai-today-first",attrs:{id:"aiTodayFirst"}});
