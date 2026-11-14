@@ -121,7 +121,7 @@ try{
   await page.locator("#lang").click();
   if(width===360&&lang==="zh"&&theme==="dark"){
    await page.locator(".ai-orb").click();
-   await page.locator(".ai-chat-input").fill("怎么跟进客户？");
+   await page.locator(".ai-chat-form .ai-chat-input").fill("怎么跟进客户？");
    await page.locator(".ai-chat-form button[type=submit]").click();
    await page.locator(".ai-message-assistant").last().waitFor({timeout:15000});
    await page.locator(".ai-message-actions:not(.hidden)").last().waitFor({timeout:15000});
