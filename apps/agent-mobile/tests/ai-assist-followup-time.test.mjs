@@ -12,7 +12,7 @@ test("AI next message can schedule its suggested follow-up",()=>{
 });
 
 test("Agent must confirm the schedule explicitly",()=>{
-  assert.match(phase,/Set follow-up/);
+  assert.match(phase,/Set · /);
   assert.match(phase,/addEventListener\("click"/);
   assert.doesNotMatch(phase,/innerHTML\s*=/);
 });
