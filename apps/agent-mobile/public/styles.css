@@ -526,3 +526,10 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 :root[data-theme="dark"] .today-shell{--bg-opacity:.04}
 @media (prefers-reduced-motion:reduce){.auth-wrap,.today-shell{scroll-behavior:auto}}
 \n/* AI assist accessibility surfaces */\n.ai-assist-surface,.ai-assist-surface *{font-size:16px}\n.ai-assist-surface button,.ai-assist-surface .btn,.ai-assist-surface input,.ai-assist-surface select,.ai-assist-surface textarea{min-height:48px;font-size:16px}\n
+/* Accessibility: readable onboarding help, status contrast and touch targets. */
+.journey-day-tasks,.journey-day-copy small,.ai-orb-suggestions button,
+.lock-banner-copy span,.journey-header p{font-size:14px;line-height:1.5}
+.greeting-badges .badge-warning{color:#6b3c00;background:#fff2cc;border-color:#b58436}
+.greeting-badges .badge-danger{color:#95291b;background:#fff0eb;border-color:#c46b5c}
+:root[data-theme="dark"] .greeting-badges .badge-warning{color:#2b1c00;background:#ffe1a5;border-color:#c89442}
+:root[data-theme="dark"] .greeting-badges .badge-danger{color:#4a0e0a;background:#f9c9c0;border-color:#d57d70}

@@ -25,9 +25,6 @@ export function applyReviewedMotionCopy(ui){
 }
 // Heavy visual modules load only when their screen needs them.
 const lazyMotion={
-  coach:()=>import("./ew-verdora-content/motion/coach.js"),
-  gallery:()=>import("./ew-verdora-content/motion/gallery.js"),
-  kyc:()=>import("./ew-verdora-content/motion/kyc.js"),
   celebrate:()=>import("./ew-verdora-content/motion/celebrate.js"),
   transitions:()=>import("./ew-verdora-content/motion/transitions.js"),
   feedback:()=>import("./ew-verdora-content/motion/feedback.js")

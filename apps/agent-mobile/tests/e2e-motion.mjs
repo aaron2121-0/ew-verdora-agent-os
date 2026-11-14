@@ -11,6 +11,7 @@ const screenshots=path.join(root,"artifacts","ui-motion");
 await fs.mkdir(screenshots,{recursive:true});
 const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2e-token\",refresh_token:\"e2e-refresh\",user:{id:\"e2e-agent\"}};return {auth:{onAuthStateChange(cb){window.__testAuthChange=cb;return {data:{subscription:{unsubscribe(){}}}}},async getSession(){return {data:{session}}},async setSession(value){session={...value,user:{id:\"e2e-agent\"}};return {error:null}},async signInWithOtp(){return {error:null}},async signOut(){session=null;return {error:null}}},storage:{from(){return {uploadToSignedUrl:async()=>({error:null})}}}}}};";
 const dashboard={agent:{id:"e2e-agent",display_name:"Test Agent",agent_code:"T001",status:"active",tier:"starter"},phase1:{can_sell:true,due_followups:[],recent_leads:[{id:"mock-lead",customer_label:"𠮷野 · 龘龖",status:"new",budget:200,source:"instagram",lead_score:78,lead_score_reason:{zh:"今天可以优先联系",en:"Prioritize today"},next_best_action:"follow_up",best_followup_time:"2026-11-13T02:00:00+08:00"}],tier_progress:{commission_rate:0.1},money:{today_earned:0,pending:0,month_earned:0},training_pending:false},selling_kits:[],campaigns:[],channel_playbooks:[],training:[]};
+let portfolioPhotos=[];
 const mockReads=new Map(),mockSeen=new Map();
 const requiredBouquet=["BOUQ-1","BOUQ-2","BOUQ-3","BOUQ-4"];
 const requiredCondolence=["COND-1","COND-2","COND-3","COND-4"];
@@ -78,7 +79,8 @@ const server=createServer(async(req,res)=>{
     related_card_code:"COND-2",quiz:{attempt_id:"e2e-attempt",completed:false,question:{
       position:2,question_en:"Fixture question two",question_zh:"测试第二题",
       options_en:["One","Two","Three","Four"],options_zh:["一","二","三","四"]}}});
- if(body.action==="dashboard")return json(dashboard);
+ if(body.action==="portfolio_list")return json({ok:true,photos:portfolioPhotos});
+  if(body.action==="dashboard")return json(dashboard);
   return json({ok:true,server_now:new Date().toISOString()});
  }
  let pathname=decodeURIComponent(u.pathname);if(pathname==="/")pathname="/index.html";
@@ -86,6 +88,7 @@ const server=createServer(async(req,res)=>{
  if(pathname.includes("..")){res.writeHead(404);res.end();return}
  try{const filename=pathname==="/styles.css"?path.join(root,"dist","styles.test.css"):
    pathname.startsWith("/content/handbook/")?path.join(root,"..","..",pathname.slice(1)):
+    pathname.startsWith("/vendor/motion-pack-v1/")?path.join(root,pathname.slice(1)):
    path.join(publicDir,pathname.slice(1));const file=await fs.readFile(filename);const compressed=/\bgzip\b/.test(req.headers["accept-encoding"]||"");res.writeHead(200,{"content-type":mime[path.extname(pathname)]||"application/octet-stream","vary":"Accept-Encoding",...(compressed?{"content-encoding":"gzip"}:{})});res.end(compressed?gzipSync(file):file)}
  catch{res.writeHead(404);res.end("Not found")}
 });
@@ -134,6 +137,58 @@ try{
   }
   assert.deepEqual(errors,[],"page errors "+width+" "+lang+" "+theme);
   await ctx.close();
+ }
+
+
+ // D6 gallery: no approved photos => exact empty state; real signed D2
+ // image_url/caption/product_line => own photo lightbox, never a vendor demo.
+ {
+  const ctx=await browser.newContext({viewport:{width:360,height:850}});
+  await ctx.addInitScript(()=>{
+    localStorage.setItem("ew_onboarding_v1_e2e-agent","1");
+    for(const p of ["today","customers","training","handbook","order","performance"])
+      localStorage.setItem("ew_page_tip_v1_e2e-agent_"+p,"1");
+  });
+  const page=await ctx.newPage(),errors=[],demoGalleryRequests=[];
+  page.on("pageerror",err=>errors.push(err.message));
+  page.on("request",req=>{if(req.url().includes("/motion/gallery.js"))demoGalleryRequests.push(req.url())});
+  await page.route("https://vuibesuahnhlafsfraeo.supabase.co/**",route=>route.fulfill({
+    status:200,contentType:"image/svg+xml",
+    body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#245744"/></svg>'
+  }));
+  const openSelling=async()=>{
+    await page.locator("#todayPage .quick-tile").nth(2).click();
+    await page.locator("#sellingPage.section.active").waitFor({timeout:15000});
+  };
+  await page.goto(origin);await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
+  await openSelling();
+  await page.locator(".d6-gallery-empty").waitFor({timeout:15000});
+  assert.equal(await page.locator(".d6-gallery-empty").textContent(),
+    "No portfolio photos yet. Photos will appear here after the owner uploads them.");
+  assert.equal(await page.locator(".d6-gallery-real img").count(),0);
+  portfolioPhotos=[{
+    id:"approved-test-only",product_line:"bouquet",
+    caption_zh:"真实核准花束说明",caption_en:"Owner-approved bouquet caption",
+    image_url:"https://vuibesuahnhlafsfraeo.supabase.co/storage/v1/object/sign/portfolio/test.jpg?token=test-signed-60min"
+  }];
+  await page.reload();await page.locator("#app:not(.hidden)").waitFor({timeout:15000});
+  await openSelling();
+  await page.locator(".d6-gallery-card").waitFor({timeout:15000});
+  assert.equal(await page.locator(".d6-gallery-card").count(),1);
+  assert.equal(await page.locator(".d6-gallery-card img").getAttribute("loading"),"lazy");
+  assert.match(await page.locator(".d6-gallery-card img").getAttribute("src"),/token=test-signed-60min/);
+  await page.locator(".d6-gallery-card").click();
+  await page.locator(".d6-photo-dialog").waitFor({timeout:5000});
+  assert.equal(await page.locator(".d6-photo-caption").textContent(),"Owner-approved bouquet caption");
+  assert.equal(await page.locator(".d6-photo-dialog img").getAttribute("src"),portfolioPhotos[0].image_url);
+  for(const phrase of ["Demo Agent","天连胜","Signature Bouquet Showcase","Ken Burns drift","MYKAD · DEMO"])
+    assert.equal(await page.getByText(phrase,{exact:false}).count(),0,"D6 demo rendered: "+phrase);
+  assert.deepEqual(demoGalleryRequests,[],"Gemini demo gallery.js must never load");
+  await page.screenshot({path:path.join(screenshots,"d6-real-approved-lightbox-360.png")});
+  await page.locator(".d6-photo-close").click();
+  assert.equal(await page.locator(".d6-photo-dialog").count(),0);
+  assert.deepEqual(errors,[],"D6 gallery page errors");
+  portfolioPhotos=[];await ctx.close();
  }
 
  // TRAINEE unlock checklist must work at both mobile widths with actual course content.
