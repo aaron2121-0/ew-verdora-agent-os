@@ -1,3 +1,5 @@
+import {sdkMock,motionDashboard} from "./motion-fixtures.mjs";
+import {assertTodayUsable} from "./today-visible.mjs";
 import assert from "node:assert/strict";
 import {createServer} from "node:http";
 import {gzipSync} from "node:zlib";
@@ -9,8 +11,8 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const publicDir=path.join(root,"public");
 const screenshots=path.join(root,"artifacts","ui-motion");
 await fs.mkdir(screenshots,{recursive:true});
-const sdkMock="window.supabase={createClient:()=>{let session={access_token:\"e2e-token\",refresh_token:\"e2e-refresh\",user:{id:\"e2e-agent\"}};return {auth:{onAuthStateChange(cb){window.__testAuthChange=cb;return {data:{subscription:{unsubscribe(){}}}}},async getSession(){return {data:{session}}},async setSession(value){session={...value,user:{id:\"e2e-agent\"}};return {error:null}},async signInWithOtp(){return {error:null}},async signOut(){session=null;return {error:null}}},storage:{from(){return {uploadToSignedUrl:async()=>({error:null})}}}}}};";
-const dashboard={agent:{id:"e2e-agent",display_name:"Test Agent",agent_code:"T001",status:"active",tier:"starter"},phase1:{can_sell:true,due_followups:[],recent_leads:[{id:"mock-lead",customer_label:"𠮷野 · 龘龖",status:"new",budget:200,source:"instagram",lead_score:78,lead_score_reason:{zh:"今天可以优先联系",en:"Prioritize today"},next_best_action:"follow_up",best_followup_time:"2026-11-13T02:00:00+08:00"}],tier_progress:{commission_rate:0.1},money:{today_earned:0,pending:0,month_earned:0},training_pending:false},selling_kits:[],campaigns:[],channel_playbooks:[],training:[]};
+
+const dashboard=motionDashboard();
 const mockReads=new Map(),mockSeen=new Map();
 const requiredBouquet=["BOUQ-1","BOUQ-2","BOUQ-3","BOUQ-4"];
 const requiredCondolence=["COND-1","COND-2","COND-3","COND-4"];
@@ -107,6 +109,7 @@ try{
   if(lang==="zh")await page.locator("#lang").click();
   assert.equal(await page.locator("html").getAttribute("lang"),lang==="zh"?"zh-CN":"en");
   assert.equal(await page.locator("html").getAttribute("data-theme"),theme);
+  await assertTodayUsable(page);
   assert.equal(await page.locator("#todayPage .vd-ht-item").count(),3);
   assert.ok(await page.locator("#todayPage .earning-actions").evaluate(el=>!!(el.compareDocumentPosition(document.querySelector(".journey-card"))&Node.DOCUMENT_POSITION_FOLLOWING)),"earning actions must come before learning");
   const dims=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,view:document.documentElement.clientWidth}));

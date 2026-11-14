@@ -1,0 +1,34 @@
+name: iPhone WebKit Today visibility
+on:
+  pull_request:
+    branches: [main]
+    paths: ['apps/agent-mobile/**', '.github/workflows/ios-today.yml']
+  push:
+    branches: [main]
+    paths: ['apps/agent-mobile/**', '.github/workflows/ios-today.yml']
+permissions:
+  contents: read
+jobs:
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm install --no-save --no-audit --no-fund playwright@1.56.1
+      - run: npx playwright install --with-deps webkit
+      - run: node apps/agent-mobile/build-railway-function.mjs
+      - name: Authenticated Today must render visible task content
+        env:
+          IOS_REPORT_DIR: ${{ runner.temp }}/ios-today
+        run: node apps/agent-mobile/tests/ios-today.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iphone-webkit-today
+          path: ${{ runner.temp }}/ios-today
