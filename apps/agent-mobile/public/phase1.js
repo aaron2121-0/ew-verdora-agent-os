@@ -630,6 +630,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       box.append(out.card);
       if(c.why)box.append(element("p",{className:"ai-priority-why",text:tr("aiWhy")+"："+c.why}));
       box.append(element("small",{className:"muted",text:tr("aiFollowupExact",{time:formatKuchingDateTime(followupAt.toISOString(),getLang())})}));
+      try{
+        const tip=await api.ai({action:"micro_tip",context:"customer_reply"});
+        if(tip?.tip){
+          const micro=createAICard({title:tr("aiMicroTipTitle"),text:String(tip.tip),provider:tip.provider||"template",cached:false,tr});
+          micro.card.classList.add("ai-micro-tip");
+          box.append(micro.card);
+        }
+      }catch{/* Tip must never block the customer reply flow. */}
     }catch(e){waiting.textContent=api.friendlyError(e?.message)}
     finally{aiEnd(ok)}
   }
