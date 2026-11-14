@@ -61,3 +61,44 @@ export function matchesKycImage(bytes,mime) {
     bytes[2]===70 && bytes[3]===70 && bytes[8]===87 &&
     bytes[9]===69 && bytes[10]===66 && bytes[11]===80;
 }
+
+/**
+ * Shared registration dispatcher. The Edge Function calls this exact path,
+ * so offline tests can verify both flag states with mocked privileged RPCs.
+ * Never log or return identity fields.
+ */
+export async function registerAgentWithKycGate({
+  body,uid,admin,kycRequired=false,
+  cleanName=v=>String(v??"").trim().slice(0,120),
+  safeLegacyError=()=> "request_failed",
+  safeKycError=()=> "kyc_request_failed"
+}) {
+  const language=body.language==="zh"?"zh":"en";
+  let registration;
+  if(kycRequired){
+    const valid=validateAgentKyc(body);
+    if(!valid.ok)return {status:422,payload:{error:valid.error}};
+    registration=await admin.rpc("agent_kyc_register_internal",{
+      p_user_id:uid,p_display_name:valid.preferred_name,p_language:language,
+      p_legal_name:valid.legal_name,p_preferred_name:valid.preferred_name,
+      p_ic_number:valid.ic_number,p_phone_whatsapp:valid.phone_whatsapp,
+      p_area:valid.area,p_consent:true,p_consent_version:valid.consent_version
+    });
+    if(registration.error){
+      const error=safeKycError(registration.error);
+      return {status:error==="kyc_duplicate_ic"?409:422,payload:{error}};
+    }
+  }else{
+    const displayName=cleanName(body.display_name);
+    if(!displayName)return {status:400,payload:{error:"display_name_required"}};
+    registration=await admin.rpc("register_agent_internal",{
+      p_user_id:uid,p_display_name:displayName,p_language:language
+    });
+    if(registration.error)return {status:400,payload:{error:safeLegacyError(registration.error)}};
+  }
+  const {data:agent}=await admin.from("agents").select("id,agent_code")
+    .eq("id",registration.data).single();
+  const payload={ok:true,agent_id:registration.data,agent_code:agent?.agent_code||null};
+  if(kycRequired)payload.kyc_status="draft";
+  return {status:200,payload};
+}
