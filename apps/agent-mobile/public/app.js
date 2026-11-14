@@ -302,7 +302,7 @@ async function waitForSupabase(){
 }
 
 async function bootstrap(){
-  initMotion();
+  initMotion();import("/vendor/motion-pack-v1/brand-bg.js").catch(()=>{});
   setupAppearance();
   applyI18n();
   setupHandlers();
