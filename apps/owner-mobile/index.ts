@@ -216,7 +216,7 @@ function kycSignedPhotoUrl(value){
 }
 async function drawKycPhoto(rawUrl,seq,signal){
   const url=kycSignedPhotoUrl(rawUrl);
-  if(!url){$("kycPhotoMessage").textContent="照片暂时无法安全显示 / Secure photo link unavailable.";return}
+  if(!url){$("kycPhotoMessage").textContent="照片暂时无法安全显示 / Secure photo link unavailable.";return false}
   try{
     const response=await fetch(url,{cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer",signal});
     if(!response.ok)throw Error("photo_response");
@@ -224,11 +224,11 @@ async function drawKycPhoto(rawUrl,seq,signal){
     if(!["image/jpeg","image/png","image/webp"].includes(mime))throw Error("photo_type");
     const blob=await response.blob();
     if(blob.size>5*1024*1024||blob.size===0)throw Error("photo_size");
-    if(seq!==kycSeq||signal.aborted)return;
+    if(seq!==kycSeq||signal.aborted)return false;
     if(typeof createImageBitmap!=="function")throw Error("image_bitmap_unsupported");
     const bitmap=await createImageBitmap(blob);
     try{
-      if(seq!==kycSeq||signal.aborted)return;
+      if(seq!==kycSeq||signal.aborted)return false;
       const canvas=$("kycCanvas"),ctx=canvas.getContext("2d");
       if(!ctx)throw Error("canvas_unavailable");
       const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));
@@ -236,10 +236,12 @@ async function drawKycPhoto(rawUrl,seq,signal){
       canvas.height=Math.max(1,Math.round(bitmap.height*scale));
       ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
       $("kycPhotoMessage").textContent="仅供核验，请勿保存或截图。 / Review only. Do not copy.";
+      return true;
     }finally{bitmap.close()}
   }catch{
     if(seq===kycSeq&&!signal.aborted)$("kycPhotoMessage").textContent="照片读取失败，请核实访问权限或图片格式。 / Photo unavailable.";
   }
+  return false;
 }
 async function openKycView(agentId){
   if(!kycUuid.test(agentId))return;
@@ -248,6 +250,7 @@ async function openKycView(agentId){
   kycAbort=controller;
   $("kycMasked").classList.add("hidden");
   $("kycDetail").classList.remove("hidden");
+  $("kycApprove").disabled=true;
   $("kycClock").textContent="限时 60 秒 / Auto-hide after 60 seconds";
   $("kycFields").append(kycTextField("资料读取中 / Loading","…"));
   kycTimer=setTimeout(()=>maskKyc("已超过 60 秒，敏感资料自动遮盖。 / 60-second viewing limit reached."),KYC_VIEW_MS);
@@ -257,7 +260,7 @@ async function openKycView(agentId){
     if(seq!==kycSeq||controller.signal.aborted)return;
     const record=j.kyc??j.record??j.entry;
     if(!record||record.agent_id!==agentId)throw Error("kyc_contract_error");
-    kycActive={agentId,status:String(record.status||""),deleteRequested:Boolean(record.delete_requested_at)};
+    kycActive={agentId,status:String(record.status||""),deleteRequested:Boolean(record.delete_requested_at),photoShown:false};
     const values=[
       ["法定姓名 / Legal name",record.legal_name],
       ["称呼 / Preferred name",record.preferred_name],
@@ -277,7 +280,10 @@ async function openKycView(agentId){
     $("kycActions").classList.toggle("hidden",!submitted);
     $("kycDelete").classList.toggle("hidden",!record.delete_requested_at);
     // Never publish signed URLs in DOM attributes, logs or durable browser data.
-    await drawKycPhoto(record.photo_signed_url,seq,controller.signal);
+    const photoShown=await drawKycPhoto(record.photo_signed_url,seq,controller.signal);
+    if(seq!==kycSeq||controller.signal.aborted)return;
+    if(kycActive?.agentId===agentId)kycActive.photoShown=photoShown;
+    $("kycApprove").disabled=!photoShown;
   }catch{
     if(seq===kycSeq)maskKyc("无法读取该身份资料。请确认权限及 GPT 1 接口格式。 / Unable to view identity record.");
   }
@@ -285,6 +291,9 @@ async function openKycView(agentId){
 async function reviewKyc(decision){
   const selected=kycActive;
   if(!selected||selected.status!=="submitted")return;
+  if(decision==="approve"&&!selected.photoShown){
+    $("kycDecisionMessage").textContent="必须先成功显示 IC 照片才能核准。 / View the IC photo before approval.";return;
+  }
   const code=$("kycRejectCode").value,note=$("kycRejectNote").value.trim();
   let reason=null;
   if(decision==="reject"){
@@ -292,6 +301,7 @@ async function reviewKyc(decision){
       $("kycDecisionMessage").textContent="请选择或填写退回理由；选择「其他」必须填写说明。 / Select or enter a rejection reason.";return;
     }
     reason=(code==="other"?note:(code?(code+(note?" — "+note:"")):note)).slice(0,500);
+    if(reason.trim().length<3){$("kycDecisionMessage").textContent="请至少填写 3 个字符的原因 / Reason must be at least 3 characters.";return}
   }
   const buttons=[$("kycApprove"),$("kycReject"),$("kycDelete")];
   buttons.forEach(b=>b.disabled=true);
