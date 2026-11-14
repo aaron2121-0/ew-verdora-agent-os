@@ -7,7 +7,7 @@ import {fileURLToPath} from "node:url";
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const publicDir=path.join(root,"public");
-const names=["index.html","styles.css","app.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
+const names=["index.html","styles.css","app.js","brand-loader.js","i18n.js","icons.js","components.js","phase1.js","order.js","date.js","draft.js","performance.js","training.js","motion.js","handbook.js","approved-content.js","ai-ui.js","ai-chat.js","kyc.js","unlock.js","privacy.html","brand-mark.svg","favicon.svg","motion-vendor.js","ew-verdora-content/motion/i18n.js","ew-verdora-content/motion/feedback.js","ew-verdora-content/motion/celebrate.js","ew-verdora-content/motion/home-today.js","ew-verdora-content/motion/cards.js","ew-verdora-content/motion/ai-orb.js","ew-verdora-content/motion/transitions.js","ew-verdora-content/motion/tokens.css","ew-verdora-content/motion/feedback.css","ew-verdora-content/motion/celebrate.css","ew-verdora-content/motion/home-today.css","ew-verdora-content/motion/cards.css","ew-verdora-content/motion/ai-orb.css","ew-verdora-content/motion/transitions.css"];
 const files=Object.fromEntries(names.map(name=>[name,fs.readFileSync(path.join(publicDir,name),"utf8")]));
 // Bundle only the actual Claude-reviewed JSON from the repository.
 // No duplicate or rewritten onboarding/microcopy strings in frontend code.
@@ -53,6 +53,7 @@ const motionPackAssets=motionPackRuntime.map(name=>{
  files[target]=fs.readFileSync(path.join(motionPackRoot,...name.split("/")),"utf8");
  return target;
 });
+files["styles.css"]+="\n"+files["vendor/motion-pack-v1/brand-bg.css"];
 
 const fontModuleRoots=[path.join(root,"node_modules"),path.join(root,"..","..","node_modules")];
 const fontFile=(packageName,filename)=>{
@@ -143,13 +144,16 @@ if(Buffer.byteLength(output,"utf8")>900*1024)throw new Error("Railway bundle exc
 fs.writeFileSync(path.join(outDir,"railway-function.ts"),output);
 const jsNames=Object.keys(files).filter(n=>n.endsWith(".js"));
 const lazyBrandJs="vendor/motion-pack-v1/brand-bg.js";
-const initialJsNames=jsNames.filter(n=>n!=="kyc.js"&&n!==lazyBrandJs);
+const lazyBrandLoader="brand-loader.js";
+const initialJsNames=jsNames.filter(n=>n!=="kyc.js"&&n!==lazyBrandJs&&n!==lazyBrandLoader);
 const jsBytes=initialJsNames.reduce((sum,n)=>sum+zlib.gzipSync(Buffer.from(files[n]),{level:9}).length,0);
 const kycJsBytes=zlib.gzipSync(Buffer.from(files["kyc.js"]||""),{level:9}).length;
 const brandJsBytes=zlib.gzipSync(Buffer.from(files[lazyBrandJs]||""),{level:9}).length;
+const brandLoaderBytes=zlib.gzipSync(Buffer.from(files[lazyBrandLoader]||""),{level:9}).length;
 console.log("JS_GZIP_BREAKDOWN "+initialJsNames.map(n=>[n,zlib.gzipSync(Buffer.from(files[n]),{level:9}).length]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]+":"+x[1]).join(","));
 if(jsBytes>150*1024)throw new Error(`Initial JS gzip budget exceeded: ${jsBytes} bytes`);
 if(kycJsBytes>16*1024)throw new Error(`KYC lazy JS gzip budget exceeded: ${kycJsBytes} bytes`);
 if(brandJsBytes>4*1024)throw new Error(`Brand background lazy JS gzip budget exceeded: ${brandJsBytes} bytes`);
-console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; brand lazy JS gzip ${brandJsBytes} bytes; font raw ${inter.length+noto.length} bytes`);
+if(brandLoaderBytes>2*1024)throw new Error(`Brand loader lazy JS gzip budget exceeded: ${brandLoaderBytes} bytes`);
+console.log(`Generated ${output.length} bytes from ${Object.keys(files).length+2} assets; initial JS gzip ${jsBytes} bytes; KYC lazy JS gzip ${kycJsBytes} bytes; brand lazy JS gzip ${brandJsBytes} bytes; brand loader gzip ${brandLoaderBytes} bytes; font raw ${inter.length+noto.length} bytes`);
 console.log("BUNDLE_SHA256 "+createHash("sha256").update(output,"utf8").digest("hex"));
