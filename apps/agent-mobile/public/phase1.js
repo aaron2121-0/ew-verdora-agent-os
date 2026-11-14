@@ -585,7 +585,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
       waiting.remove();
       const actions=element("div",{className:"ai-message-actions"});
       const wa=element("button",{className:"btn btn-whatsapp btn-small",text:tr("aiOpenWhatsApp"),attrs:{type:"button"}});
-      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer");vibrate(10)});
+      wa.addEventListener("click",()=>{window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank","noopener,noreferrer")});
       actions.append(aiCopyButton(msg),wa);
       const hours=Math.min(72,Math.max(4,Number(c.next_followup_hours)||24));
       const followupAt=new Date(Date.now()+hours*3600000),at=followupAt.toISOString();
