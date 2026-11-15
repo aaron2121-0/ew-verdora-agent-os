@@ -134,6 +134,9 @@ Deno.serve(async req=>{
     });
     if(created.error)return reply({error: safeErr(created.error)},400);
     const q=created.data;
+    // Fail closed: a draft/manual-review quote must never reach the Agent's
+    // WhatsApp send step. Do not disclose cost, margin, or floor details.
+    if(!q||q.status!=="approved")return reply({error:"quote_requires_owner_review"},409);
     return reply({ok:true,quote:{
       id:q.id,lead_id:q.lead_id,quote_version:q.quote_version,
       selling_price:q.selling_price,design_commitment:q.design_commitment,

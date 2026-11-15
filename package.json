@@ -7,7 +7,7 @@
   "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --import tsx --test packages/core/test/*.test.ts",
+    "test": "node --import tsx --test packages/core/test/*.test.ts && node --test tests/profit-floor/source.test.mjs",
     "test:db": "bash scripts/test-db.sh",
     "test:kyc": "node --test scripts/agent-kyc-security.test.mjs",
     "simulate": "tsx packages/core/src/sim/run.ts",
