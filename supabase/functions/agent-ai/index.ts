@@ -1,5 +1,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { OCCASION_AI_ACTIONS, handleOccasionAction } from "../_shared/occasion-ai.mjs";
 
 const cors = {
   "Access-Control-Allow-Origin":"*",
@@ -461,10 +462,38 @@ Deno.serve(async req=>{
   const token=auth.slice(7);
   const {data:u,error:ue}=await user.auth.getUser(token);
   if(ue||!u.user) return reply({error:"invalid_session"},401);
-  const {data:agent}=await admin.from("agents").select("*").eq("user_id",u.user.id).maybeSingle();
-  if(!agent) return reply({error:"agent_not_registered"},400);
-  let body={}; try{body=await req.json()}catch{}
+  let body={}; try{const parsed=await req.json();if(parsed&&typeof parsed==="object"&&!Array.isArray(parsed))body=parsed;}catch{}
   const action=body.action||"coach";
+  const {data:agent,error:agentError}=await admin.from("agents").select("*").eq("user_id",u.user.id).maybeSingle();
+  if(agentError)return reply({error:"request_failed"},500);
+
+  // Four occasion actions accept an authenticated Agent OR verified Owner.
+  // All prior actions retain the existing agent-only behaviour.
+  if(OCCASION_AI_ACTIONS.has(action)){
+    if(!agent){
+      const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:u.user.id});
+      if(roleError||role!=="owner")return reply({error:"forbidden"},403);
+    }
+    // Share the existing AI quota categories instead of creating a bypass.
+    if(agent&&geminiKey&&action!=="top_occasions_30d"){
+      const quotaAction={occasion_copy:"platform_post",school_inquiry:"coach",daily_tasks:"weekly_plan"}[action];
+      const quota=await admin.rpc("consume_ai_quota_internal",{p_agent_id:agent.id,p_action:quotaAction});
+      if(quota.error)return reply({error:"quota_check_failed"},500);
+      if(quota.data?.allowed===false)return reply({error:"daily_limit"},429);
+    }
+    try{
+      const result=await handleOccasionAction({
+        action,body,admin,callAI,today:kuchingToday(),
+        guard:(text)=>containsSensitiveOutput(text)||containsMarketingPolicyViolation(text)||Boolean(detectPolicyRisk(text))
+      });
+      return reply(result.body,result.status);
+    }catch{
+      console.error("OCCASION_AI_FAILED");
+      return reply({error:"occasion_request_failed"},500);
+    }
+  }
+
+  if(!agent) return reply({error:"agent_not_registered"},400);
   const lang=agent.preferred_language==="zh"?"zh":"en";
   const today=kuchingToday();
   const {data:profileRow}=await admin.from("agent_ai_profile").select("*").eq("agent_id",agent.id).maybeSingle();
