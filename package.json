@@ -3,13 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "engines": {
-    "node": ">=22"
-  },
-  "workspaces": [
-    "packages/*",
-    "apps/*"
-  ],
+  "engines": { "node": ">=22" },
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --import tsx --test packages/core/test/*.test.ts && node --test tests/profit-floor/source.test.mjs",
