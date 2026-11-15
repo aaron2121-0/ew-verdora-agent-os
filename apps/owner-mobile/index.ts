@@ -727,6 +727,7 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
   }catch(e){msg.textContent=friendlyError(e?.message)}
   finally{b.disabled=false}
 }));
+$("profitFloorSave").classList.toggle("hidden",j.role!=="owner");$("profitFloorInput").disabled=j.role!=="owner";
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
 $("handbookCard").classList.toggle("hidden",j.role!=="owner");
 $("signupToggleCard").classList.toggle("hidden",j.role!=="owner");
