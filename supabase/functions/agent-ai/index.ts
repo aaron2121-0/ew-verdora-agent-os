@@ -744,9 +744,9 @@ Deno.serve(async req=>{
       // Do not send customer names, raw notes or event metadata to the model.
       const verified=aiToolText(plan.name,result,lang);
       const modelContext=JSON.stringify(aiSafeValue(result,true)).slice(0,4500);
-      const generated=aiQuotaAllowed?await callAI("You are EW VERDORA's sales supervisor. Use ONLY this verified read-only tool result. Never invent missing dates, prices, sales targets or customer replies. For a pattern calendar date say '约（往年推算），需核实'. Be concise."+RULES+profileBrief(prof),
+      const generated=aiQuotaAllowed&&!["get_occasion_calendar","get_commission_progress"].includes(plan.name)?await callAI("You are EW VERDORA's sales supervisor. Use ONLY this verified read-only tool result. Never invent missing dates, prices, sales targets or customer replies. For a pattern calendar date say '约（往年推算），需核实'. Be concise."+RULES+profileBrief(prof),
         "Question: "+redact(message)+"\nTool "+plan.name+" results: "+modelContext):null;
-      const replyText=generated&&!containsSensitiveOutput(generated)?redact(generated).slice(0,2500):verified;
+      const replyText=generated&&!containsSensitiveOutput(generated)&&!/(?:RM|MYR)\s*\d/i.test(generated)?redact(generated).slice(0,2500):verified;
       const {data:saved}=await admin.from("ai_chat_messages").insert({agent_id:agent.id,role:"assistant",content:replyText,provider:generated?"gemini":"rules"}).select("id").single();
       return reply({ok:true,reply:replyText,provider:generated?"gemini":"rules",message_id:saved?.id||null,cards,tool_status:[plan.name],tool:plan.name});
     }catch(e){return reply({error:String(e?.message||"read_unavailable")},400);}
