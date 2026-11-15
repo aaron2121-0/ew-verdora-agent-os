@@ -80,8 +80,8 @@ grant select,insert,update,delete on public.occasions to authenticated;
 grant select,insert,update,delete on public.occasion_verifications to authenticated;
 grant all on public.occasions,public.occasion_verifications to service_role;
 
--- The public.occasion_is_owner() helper is referenced by legacy migrations but its
--- definition is not included in this repo. Define a narrow standalone check
+-- Older migrations reference a private owner helper whose definition is not
+-- visible in this repo. Define a narrow standalone check
 -- against the SAME authoritative private.user_roles table, strictly owner-only.
 create or replace function public.occasion_is_owner()
 returns boolean language sql stable security definer set search_path = ''
