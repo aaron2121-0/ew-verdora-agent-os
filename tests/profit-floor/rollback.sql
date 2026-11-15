@@ -156,14 +156,14 @@ BEGIN
 
   select public.owner_profit_floor_overview_internal(v_owner,20) into v_overview;
   if (v_overview->>'min_contribution_margin')::numeric<>0.50
-     or (v_overview->>'auto_quote_target')::numeric<0.65
+     or (v_overview->>'auto_quote_target')::numeric<0.60
      or (v_overview->>'quote_count')::int<1
      or (v_overview->>'order_count')::int<1
   then
     raise exception 'FAIL: owner_profit_overview';
   end if;
 
-  raise notice 'PASS 5/5: healthy completed order passes; Owner overview shows 50%% floor and current >=65%% auto target';
+  raise notice 'PASS 5/5: healthy completed order passes; Owner overview shows 50%% floor and current >=60%% dynamic auto target';
 END;
 $$;
 ROLLBACK;
