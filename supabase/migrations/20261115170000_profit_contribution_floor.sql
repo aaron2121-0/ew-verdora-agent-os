@@ -671,7 +671,7 @@ declare
   v_orders jsonb;
 begin
   select role into v_role from private.user_roles where user_id=p_user_id;
-  if v_role is distinct from 'owner' then
+  if coalesce(v_role,'') not in('owner','admin') then
     raise exception 'forbidden' using errcode='42501';
   end if;
 
