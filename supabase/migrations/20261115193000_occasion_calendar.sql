@@ -80,7 +80,21 @@ grant select,insert,update,delete on public.occasions to authenticated;
 grant select,insert,update,delete on public.occasion_verifications to authenticated;
 grant all on public.occasions,public.occasion_verifications to service_role;
 
--- Role source is existing private.user_roles / private.is_owner(), not JWT
+-- The public.occasion_is_owner() helper is referenced by legacy migrations but its
+-- definition is not included in this repo. Define a narrow standalone check
+-- against the SAME authoritative private.user_roles table, strictly owner-only.
+create or replace function public.occasion_is_owner()
+returns boolean language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from private.user_roles r
+    where r.user_id = (select auth.uid()) and r.role = 'owner'
+  );
+$$;
+revoke all on function public.occasion_is_owner() from public,anon,authenticated;
+grant execute on function public.occasion_is_owner() to authenticated,service_role;
+
+-- Role source is existing private.user_roles (via occasion_is_owner), not JWT
 -- app_metadata or caller-provided role fields.
 create policy occasions_agent_read on public.occasions
   for select to authenticated
@@ -89,8 +103,8 @@ create policy occasions_agent_read on public.occasions
   ));
 create policy occasions_owner_access on public.occasions
   for all to authenticated
-  using (private.is_owner())
-  with check (private.is_owner());
+  using (public.occasion_is_owner())
+  with check (public.occasion_is_owner());
 
 create policy occasion_verifications_agent_read on public.occasion_verifications
   for select to authenticated
@@ -108,8 +122,8 @@ create policy occasion_verifications_agent_submit on public.occasion_verificatio
   );
 create policy occasion_verifications_owner_access on public.occasion_verifications
   for all to authenticated
-  using (private.is_owner())
-  with check (private.is_owner());
+  using (public.occasion_is_owner())
+  with check (public.occasion_is_owner());
 
 -- A graduation can be confirmed only when an Owner-approved, matching
 -- verification exists. This prevents direct table UPDATE from bypassing review.
