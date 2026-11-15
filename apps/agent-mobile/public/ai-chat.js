@@ -53,10 +53,22 @@ export function createAIChat({api,tr,getData,getLang}){
  async function sendText(text){
   const value=String(text||"").trim();if(!value||busy)return;
   busy=true;send.disabled=true;input.value="";message("user",value);aiStart();
-  const loading=el("div","ai-chat-thinking",tr("aiThinking1"));history.append(loading);
+  const reading=/跟进|客户|订单|报价|佣金|场合|节日|calendar|follow.?up|customers?|orders?|commission/i.test(value);
+  const loading=el("div","ai-chat-thinking",reading?(getLang()==="zh"?"正在查询你的业务记录…":"Checking your records…"):tr("aiThinking1"));history.append(loading);
   let cycle=0;const timer=setInterval(()=>{loading.textContent=tr(++cycle%2?"aiThinking2":"aiThinking1")},2400);
   try{
-   const j=await api({action:"chat",message:value});loading.remove();message("assistant",j.reply||"",j.provider,j.message_id,true);aiEnd(true)
+   const j=await api({action:"assistant_chat",message:value});loading.remove();
+   message("assistant",j.reply||"",j.provider,j.message_id,true);
+   if(Array.isArray(j.cards)&&j.cards.length){
+     const m=await import("./ai-read-cards.js");
+     m.renderReadCards({cards:j.cards,container:history,onAsk:sendText,lang:getLang()});
+   }
+   if(/写|文案|回复|draft|message|reply/i.test(value)&&j.reply){
+     const m=await import("./ai-read-cards.js");
+     m.renderCopyCard({text:j.reply,container:history,lang:getLang(),
+       onFeedback:signal=>api({action:"feedback",ai_action:"chat",output_ref:String(j.message_id||""),signal}).catch(()=>{})});
+   }
+   history.scrollTop=history.scrollHeight;aiEnd(true)
   }catch(e){loading.remove();message("system",String(e?.message||"")==="daily_limit"?tr("aiLimit"):tr("errorRequestFailed"),"template",null);aiEnd(false)}
   finally{clearInterval(timer);busy=false;send.disabled=false;input.focus()}
  }
