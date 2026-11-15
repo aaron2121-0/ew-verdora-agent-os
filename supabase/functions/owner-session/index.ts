@@ -28,6 +28,8 @@ function publicError(error,fallback="operation_failed"){
   if(m.includes("invalid amount")) return "invalid_amount";
   if(m.includes("invalid decision")) return "invalid_decision";
   if(m.includes("setting not editable")) return "setting_not_editable";
+  if(m.includes("order_profit_floor_failed")) return "order_profit_floor_failed";
+  if(m.includes("invalid profit floor")) return "invalid_profit_floor";
   if(m.includes("invalid value")) return "invalid_value";
   if(m.includes("invalid")) return "invalid_request";
   return fallback;
@@ -59,7 +61,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief","owner_agent_reminder"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief","owner_agent_reminder","profit_floor_overview","set_profit_floor"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
@@ -633,6 +635,25 @@ Deno.serve(async req=>{
     if(error)return reply({error:publicError(error)},400);
     return reply({ok:true,setting:data});
   }
+  if(action==="profit_floor_overview"){
+    const {data,error}=await admin.rpc("owner_profit_floor_overview_internal",{
+      p_user_id:uid,p_limit:Math.min(100,Math.max(1,Number(b.limit)||20))
+    });
+    if(error)return reply({error:publicError(error)},400);
+    return reply({ok:true,profit_floor:data});
+  }
+  if(action==="set_profit_floor"){
+    if(b.confirm!==true)return reply({error:"confirmation_required"},422);
+    const margin=Number(b.min_contribution_margin);
+    if(!Number.isFinite(margin)||margin<0.50||margin>0.80)
+      return reply({error:"invalid_profit_floor"},422);
+    const {data,error}=await admin.rpc("owner_set_profit_floor_internal",{
+      p_user_id:uid,p_margin:margin
+    });
+    if(error)return reply({error:publicError(error)},400);
+    return reply({ok:true,profit_floor:data});
+  }
+
   if(action==="refresh_profit"){
     const authCheck=await admin.rpc("owner_dashboard_internal",{p_user_id:uid});
     if(authCheck.error)return reply({error:publicError(authCheck.error,"forbidden")},403);
@@ -741,14 +762,18 @@ Deno.serve(async req=>{
     const quoteId=String(b.quote_id||"");
     const code=String(b.order_code||"").trim().toUpperCase();
     const fee=Number(b.delivery_fee);
+    const deliveryCost=Number(b.delivery_cost_estimate);
     const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if(!uuid.test(quoteId)||!/^[A-Z0-9][A-Z0-9-]{2,59}$/.test(code)
-       ||!Number.isFinite(fee)||fee<0||fee>10000||Math.round(fee*100)!==fee*100)
+       ||!Number.isFinite(fee)||fee<0||fee>10000||Math.round(fee*100)!==fee*100
+       ||!Number.isFinite(deliveryCost)||deliveryCost<0||deliveryCost>10000
+       ||Math.round(deliveryCost*100)!==deliveryCost*100)
       return reply({error:"invalid_order_input"},422);
-    // Flower selling price is read from the approved quote in the protected RPC.
-    // Delivery fee is the separate explicit Owner-entered customer charge.
+    // Flower selling price is protected by the quote guard. Delivery gets its own
+    // Owner-entered cost estimate so the full order can be checked before payment.
     const {data:order,error}=await admin.rpc("create_order_from_quote_internal",{
-      p_quote_id:quoteId,p_order_code:code,p_delivery_fee:fee
+      p_quote_id:quoteId,p_order_code:code,p_delivery_fee:fee,
+      p_delivery_cost_estimate:deliveryCost
     });
     if(error)return reply({error:publicError(error,"order_creation_failed")},400);
     const {error:audit}=await admin.rpc("owner_audit_action_internal",{
