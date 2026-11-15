@@ -52,6 +52,11 @@ test("Today identity card is server-gated and uses safe DOM creation",()=>{
   assert.match(kyc,/element\("section"/);
 });
 
+test("pre-KYC registered Agents are taken straight to identity Step 1 when required",()=>{
+  assert.match(app,/result\.kyc_required&&!result\.kyc_status\)await identity\.open\(\{startStep:1\}\)/);
+  assert.match(app,/if\(identity\)\{/);
+});
+
 test("My profile stays available for registered Agents even when KYC is off",()=>{
   assert.match(app,/identitySettingsBtn"\)\?\.classList\.toggle\("hidden",name!=="app"\)/);
   assert.match(app,/!result\.needs_registration\|\|result\.kyc_required\|\|result\.kyc_status/);
