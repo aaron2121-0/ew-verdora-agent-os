@@ -177,10 +177,33 @@ Deno.serve(async (req) => {
     .select("id,agent_code,display_name,status,tier,commission_rate,performance_score,preferred_language,primary_channel")
     .eq("user_id", uid).maybeSingle();
   if (agentError) return reply({ error: safeErr(agentError) }, 400);
-  if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: kycRequired, user: { email: userData.user.email } });
+  if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: kycRequired, kyc_status: null, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
 
-  // Registered profile and authenticated UID are established before occasion dispatch.
+  // KYC is a hard server-side gate. Until identity is submitted (or approved),
+  // only the KYC endpoints and a minimal dashboard response are reachable.
+  let kycGateStatus=null;
+  if(kycRequired){
+    const {data:kycGateData,error:kycGateError}=await admin.rpc("agent_kyc_status_internal",{p_user_id:uid});
+    if(kycGateError)return reply({error:kycErr(kycGateError)},400);
+    kycGateStatus=String(kycGateData?.status||"")||null;
+  }
+  const kycSatisfied=!kycRequired||["submitted","approved"].includes(String(kycGateStatus||""));
+  if(!kycSatisfied){
+    if(action==="dashboard"){
+      return reply({
+        ok:true,needs_registration:false,kyc_required:true,kyc_status:kycGateStatus,
+        agent:{
+          agent_code:agent.agent_code,display_name:agent.display_name,tier:agent.tier,
+          preferred_language:agent.preferred_language
+        }
+      });
+    }
+    const kycOnlyActions=new Set(["kyc_status","kyc_upload_url","kyc_submit","kyc_request_delete"]);
+    if(!kycOnlyActions.has(action))return reply({error:"kyc_required"},403);
+  }
+
+  // Keep occasion calendar routing, but only after the KYC hard gate.
   const occasionResult=await handleOccasionAction({body,uid,admin,role:"agent"});
   if(occasionResult)return reply(occasionResult.payload,occasionResult.status);
 
