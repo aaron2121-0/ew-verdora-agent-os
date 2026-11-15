@@ -60,6 +60,7 @@ function applyI18n(){
 }
 
 function view(name){
+  if(name!=="app")UI?.suspendOccasions?.();
   $("booting")?.classList.add("hidden");
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
@@ -287,6 +288,7 @@ function setupHandlers(){
     const uid=session?.user?.id||"";
     if(uid)await clearOrderDraft(uid);
     UI?.training?.destroy?.();
+    UI?.destroyOccasions?.();
     aiChat?.destroy();aiChat=null;aiProfile?.destroy();aiProfile=null;resetAIOrb();
     kyc?.destroy();kyc=null;
     await sb.auth.signOut();session=null;D=null;UI?.order?.destroy?.();UI=null;view("login");
@@ -370,6 +372,7 @@ async function bootstrap(){
     }
 
     sb.auth.onAuthStateChange(async(_event,next)=>{
+      if(next?.user?.id!==session?.user?.id)UI?.suspendOccasions?.();
       session=next;
       if(session){try{await prepareOrderDraftForUser(session.user?.id||"");await refresh()}catch(e){view("login");$("loginMsg").textContent=friendlyError(e.message)}}
       else view("login");

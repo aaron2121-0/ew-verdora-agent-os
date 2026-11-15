@@ -1,0 +1,58 @@
+name: Occasion Calendar Offline QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/agent-mobile/**'
+      - 'apps/owner-mobile/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/*occasion*'
+      - 'scripts/*occasions*'
+      - 'tests/occasions/**'
+      - '.github/workflows/occasion-calendar.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local-test
+          POSTGRES_DB: occasion_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run check --workspace @ew-verdora/agent-mobile
+      - run: npm run check
+      - name: Private RPC authorization, atomicity and concurrent review tests
+        env:
+          OCCASION_TEST_DATABASE_URL: postgresql://postgres:local-test@127.0.0.1:5432/occasion_test
+        run: node --test tests/occasions/*.test.mjs
+      - run: node --test scripts/import-occasions.test.mjs scripts/owner-occasions.test.mjs
+      - name: Install offline browser test runner
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium webkit
+      - run: node apps/agent-mobile/tests/e2e-occasions.mjs
+      - run: BROWSER=webkit node apps/agent-mobile/tests/e2e-occasions.mjs
+      - run: node --import tsx scripts/owner-occasions.browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: occasion-calendar-390x844
+          path: docs/occasion-calendar/
+          if-no-files-found: ignore
