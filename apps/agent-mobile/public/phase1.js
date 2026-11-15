@@ -410,6 +410,13 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     const occasionEntry=iconButton("calendarDays","场合日历","btn btn-secondary btn-small");
     occasionEntry.addEventListener("click",()=>loadOccasions().then(calendar=>calendar?.openPage()));
     occasionSlot.append(occasionEntry);page.append(occasionSlot);mountOccasionUpcoming(occasionSlot);
+     // Customer-only AI briefing: public occasions remain solely in the Upcoming strip.
+     const aiBrief=element("section",{className:"section-block ai-partner-brief",attrs:{"aria-label":"AI 今日简报"}});
+     page.append(aiBrief);
+     import("./ai-daily-brief.js").then(m=>{
+       if(aiBrief.isConnected)m.mountDailyBrief({host:aiBrief,api:api.ai,getLang,
+         onAsk:text=>document.dispatchEvent(new CustomEvent("ew-open-ai-question",{detail:{text}}))});
+     }).catch(()=>{if(aiBrief.isConnected)aiBrief.replaceChildren(element("p",{text:"今日简报暂时无法加载。"}))});
 
     const greet=element("div",{className:"greeting-row"});
     const greetingKey={morning:"greetingMorning",afternoon:"greetingAfternoon",evening:"greetingEvening",night:"greetingNight"}[greetingPeriod()];
