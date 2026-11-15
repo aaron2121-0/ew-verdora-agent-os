@@ -123,6 +123,14 @@ Deno.serve(async req=>{
   if(agentError)return reply({error:"request_failed"},400);
   if(!agent)return reply({error:"agent_not_found"},404);
 
+  const {data:kycRequired,error:kycFlagError}=await admin.rpc("agent_kyc_required_internal");
+  if(kycFlagError||typeof kycRequired!=="boolean")return reply({error:"kyc_feature_config_unavailable"},503);
+  if(kycRequired){
+    const {data:kycState,error:kycStateError}=await admin.rpc("agent_kyc_status_internal",{p_user_id:userData.user.id});
+    if(kycStateError)return reply({error:"kyc_check_failed"},503);
+    if(!["submitted","approved"].includes(String(kycState?.status||"")))return reply({error:"kyc_required"},403);
+  }
+
   let body={};try{body=await req.json()}catch{}
   const action=clean(body.action,40);
   const day=kuchingToday();

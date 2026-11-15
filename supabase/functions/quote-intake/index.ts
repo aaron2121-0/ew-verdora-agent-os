@@ -92,6 +92,15 @@ Deno.serve(async req=>{
   if(ue||!u.user)return reply({error:"invalid_session"},401);
   const {data:agent}=await admin.from("agents").select("id,status").eq("user_id",u.user.id).maybeSingle();
   if(!agent)return reply({error:"agent_not_registered"},400);
+
+  const {data:kycRequired,error:kycFlagError}=await admin.rpc("agent_kyc_required_internal");
+  if(kycFlagError||typeof kycRequired!=="boolean")return reply({error:"kyc_feature_config_unavailable"},503);
+  if(kycRequired){
+    const {data:kycState,error:kycStateError}=await admin.rpc("agent_kyc_status_internal",{p_user_id:u.user.id});
+    if(kycStateError)return reply({error:"kyc_check_failed"},503);
+    if(!["submitted","approved"].includes(String(kycState?.status||"")))return reply({error:"kyc_required"},403);
+  }
+
   if(["trainee","restricted","recovery","dormant","suspended"].includes(agent.status))return reply({error:"quote_access_locked"},403);
   let b={};try{b=await req.json()}catch{}
   const action=b.action||"status";

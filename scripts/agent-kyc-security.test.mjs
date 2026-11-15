@@ -100,6 +100,29 @@ function mockAgentAdmin() {
   return {admin,calls};
 }
 
+test("KYC hard gate blocks business, AI, quote and training routes before submitted/approved",()=>{
+  const agent=read("supabase/functions/agent-session/index.ts");
+  const ai=read("supabase/functions/agent-ai/index.ts");
+  const quote=read("supabase/functions/quote-intake/index.ts");
+  const training=read("supabase/functions/agent-training/index.ts");
+
+  assert.match(agent,/const kycSatisfied=!kycRequired\|\|\["submitted","approved"\]\.includes/);
+  assert.match(agent,/const kycOnlyActions=new Set\(\["kyc_status","kyc_upload_url","kyc_submit","kyc_request_delete"\]\)/);
+  assert.match(agent,/return reply\(\{error:"kyc_required"\},403\)/);
+  assert.match(agent,/if\(action==="dashboard"\)[\s\S]*?kyc_status:kycGateStatus/);
+  assert.ok(agent.indexOf("if(!kycSatisfied)") < agent.indexOf("handleOccasionAction({body,uid,admin,role:\"agent\"})"));
+  for(const action of ["create_lead","qualify_lead","schedule_followup","complete_followup","set_lead_loss"]){
+    assert.ok(agent.includes('action === "'+action+'"'),"missing business action "+action);
+  }
+
+  for(const source of [ai,quote,training]){
+    assert.match(source,/admin\.rpc\("agent_kyc_required_internal"\)/);
+    assert.match(source,/admin\.rpc\("agent_kyc_status_internal"/);
+    assert.match(source,/\["submitted","approved"\]\.includes\(String\(kycState\?\.status\|\|""\)\)/);
+    assert.match(source,/return reply\(\{error:"kyc_required"\},403\)/);
+  }
+});
+
 test("flag OFF: legacy register with display_name/language succeeds without IC",async()=>{
   const {admin,calls}=mockAgentAdmin();
   const result=await registerAgentWithKycGate({
