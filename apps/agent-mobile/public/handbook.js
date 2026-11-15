@@ -481,7 +481,7 @@ export function createHandbookExperience({getData,getLang,getUserId,api,onRefres
     panel.append(top,artwork,title,sub,dots,next);backdrop.append(panel);welcomeRedraw=draw;draw();
   }
   function spotlight(page){
-    if(safeStore(seenKey(page))==="1"||document.querySelector(".onboarding-layer"))return;
+    if(safeStore(seenKey(page))==="1"||document.querySelector(".onboarding-layer,.occasion-overlay"))return;
     const screen=page==="today"?"home":page==="order"?"quote":page;
     const selectors={
       "CM-HOME-1":"#todayPage .earning-actions","CM-HOME-2":".ai-orb",

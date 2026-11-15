@@ -1,5 +1,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { handleOccasionAction } from "../_shared/occasions.mjs";
 import { validateAgentKyc, KYC_MIME_TYPES, KYC_MAX_BYTES, matchesKycImage, registerAgentWithKycGate } from "../_shared/agent-kyc-validate.mjs";
 
 const cors = {
@@ -178,6 +179,10 @@ Deno.serve(async (req) => {
   if (agentError) return reply({ error: safeErr(agentError) }, 400);
   if (!agent) return reply({ ok: true, needs_registration: true, kyc_required: kycRequired, user: { email: userData.user.email } });
   await admin.from("agents").update({ last_active_at: new Date().toISOString() }).eq("id", agent.id);
+
+  // Registered profile and authenticated UID are established before occasion dispatch.
+  const occasionResult=await handleOccasionAction({body,uid,admin,role:"agent"});
+  if(occasionResult)return reply(occasionResult.payload,occasionResult.status);
 
   // [D2] Registered Agents can view ONLY Owner-approved real portfolio photos.
   if(action==="portfolio_list"){

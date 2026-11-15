@@ -1,4 +1,16 @@
 
+const OCCASIONS_HTML=String.raw`
+<style>.occasion-filters,.occasion-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}.occasion-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.occasion-text{white-space:pre-wrap;overflow-wrap:anywhere}.occasion-link{display:block;color:#8cdbb1;overflow-wrap:anywhere;margin:8px 0}.occasion-form{border:1px solid #385548;border-radius:14px;padding:12px;margin-top:12px}.occasion-form textarea{min-height:90px}.occasion-confirm{display:flex;gap:10px;align-items:flex-start;margin:12px 0;line-height:1.5}.occasion-confirm input{width:24px;height:24px;min-height:24px;flex-shrink:0;accent-color:#67dca8}.occasion-heading{margin:0;font-size:18px}.occasion-help{margin-top:8px}</style>
+<section id="ownerOccasionsCard" class="card hidden" aria-labelledby="ownerOccasionsTitle">
+<div class="row" style="justify-content:space-between;flex-wrap:wrap"><h2 id="ownerOccasionsTitle" class="occasion-heading">场合日历 / Occasion calendar</h2><span id="occasionTotal" class="pill"></span></div>
+<p class="muted">预计日期只用于预热；核对来源并亲自确认后才能开放锁货。 / Estimated dates are for promotion planning; confirm actual dates before stock locking.</p>
+<div class="occasion-actions"><button id="occasionRefresh" type="button" class="btn">刷新场合 / Refresh</button><button id="occasionAdd" type="button" class="btn primary">新增场合 / Add occasion</button></div>
+<div class="occasion-filters"><label class="muted">搜索名称或地区 / Search<input id="occasionSearch" type="search" maxlength="240"></label><label class="muted">月份 / Month<input id="occasionMonthFilter" type="month"></label><label class="muted">类别 / Category<select id="occasionCategoryFilter"><option value="">全部类别 / All categories</option><option value="graduation">毕业季 / Graduation</option><option value="festival">大众节日 / Festival</option><option value="cultural">文化节日 / Cultural</option><option value="business">商务致意 / Business</option><option value="wedding">婚礼 / Wedding</option><option value="event">活动 / Event</option></select></label><label class="muted">日期状态 / Date status<select id="occasionStatusFilter"><option value="">全部状态 / All statuses</option><option value="confirmed">已确认 / Confirmed</option><option value="pattern">预计 / Estimated</option><option value="not_found">未找到 / Not found</option></select></label><label class="muted">用花需求 / Flower demand<select id="occasionDemandFilter"><option value="">全部需求 / All demand</option><option value="high">高 / High</option><option value="medium">中 / Medium</option><option value="low">低 / Low</option></select></label></div>
+<div id="occasionMessage" class="muted occasion-help" role="status" aria-live="polite"></div>
+<div id="occasionFormHost"></div>
+<h3 class="title">待核实日期 / Date verification queue <span id="occasionPendingCount" class="pill">0</span></h3><div id="occasionVerificationQueue"></div>
+<h3 class="title">场合列表 / Occasions</h3><div id="occasionList"></div>
+</section>`;
 const HTML=[
 '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EW VERDORA Owner</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>',
 '<style>*{box-sizing:border-box}body{margin:0;background:#0E1111;color:#ecf3ee;font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}.shell{max-width:760px;margin:auto;padding:18px 14px 60px}.top,.row{display:flex;gap:8px;align-items:center}.top{justify-content:space-between}.brand{font-size:21px;font-weight:850}.muted{font-size:16px;color:#a6b6ae;line-height:1.5}.card{background:#161A1A;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:15px;margin-top:12px}.title{font-weight:800;font-size:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{font-size:22px;font-weight:850}.btn{min-height:48px;border:1px solid #384741;border-radius:13px;background:#1d2924;color:#eaf7ee;padding:0 13px;font-weight:700}.primary{background:#2E7D5B;color:white;border-color:#2E7D5B}input,select,textarea{width:100%;background:#101816;color:#ecf3ee;border:1px solid #384741;border-radius:13px;padding:10px 12px;min-height:48px;font-size:16px}.form{display:grid;gap:8px}.hidden{display:none!important}.item{padding:11px 0;border-top:1px solid rgba(255,255,255,0.08)}.item:first-child{border-top:0}.pill{display:inline-block;border:1px solid #385548;border-radius:999px;padding:4px 8px;font-size:16px}.danger{color:#ff9186}.ok{color:#67dca8}@media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr)}}@media(min-width:1100px){.shell{max-width:1200px}.grid{grid-template-columns:repeat(4,1fr)}}@media(prefers-reduced-motion:no-preference){.card{animation:rise .45s ease both}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}.kyc-mode > :not(#kycPage){display:none!important}.kyc-photo{display:block;width:100%;max-width:100%;height:auto;max-height:650px;object-fit:contain;border:1px solid #384741;border-radius:12px;margin-top:8px;touch-action:pan-y;-webkit-user-select:none;user-select:none}.kyc-photo:not([width]){display:none}.kyc-field{overflow-wrap:anywhere;padding:6px 0;border-bottom:1px solid #384741}.kyc-item{display:block;text-align:left;width:100%;margin-top:8px}.danger-btn{background:#341d1d;border-color:#814441;color:#ffb3ad}.payout-line{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:16px;line-height:1.5}.payout-tick{width:24px;height:24px;min-height:24px;flex-shrink:0;accent-color:#67dca8}.portfolio-thumb{width:100%;max-height:300px;object-fit:contain;background:#101816;border-radius:12px}.portfolio-form{display:grid;gap:9px;margin-top:10px}.portfolio-form textarea{min-height:96px}.portfolio-actions{display:flex;flex-wrap:wrap;gap:9px}.portfolio-actions button{flex:1;min-width:130px}..owner-daily-line{font-size:16px;line-height:1.6;margin:0 0 10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.09)}#launchAgentProgress .item .pill{margin-left:8px}#launchAgentProgress .row button{font-size:16px;min-height:48px}#launchAgentProgress textarea{font-size:16px;line-height:1.6;min-height:120px}.kyc-field strong{display:block;font-size:12px;color:#a6b6ae;margin-bottom:3px}</style></head><body><main class="shell">',
@@ -11,6 +23,7 @@ const HTML=[
 '<div class="card"><div class="row" style="justify-content:space-between"><div class="title">等你确认的报价 / Manual Quote Review</div><span id="quoteCount" class="pill"></span></div><div class="muted">确认分类后由官方函数计算报价，不能在审核时更改全局成本基准。</div><div id="quoteQueue"></div></div>',
 '<div class="card hidden" id="commissionPayCard"><div class="title">待付佣金 / Commissions ready to pay</div><div class="muted">先在银行完成转账，再勾选这笔佣金和填写银行参考号。这里只记录已付，不会自动汇款。 / Transfer through your bank first. This records the payment only.</div><button id="commissionPayRefresh" type="button" class="btn" style="margin-top:12px">刷新待付佣金 / Refresh payouts</button><div id="commissionPayList" role="region" aria-label="待付佣金列表"></div><div id="commissionPayMsg" role="status" aria-live="polite" class="muted"></div></div>',
 '<section id="portfolioCard" class="card hidden"><div class="title">真实作品图库 / Real work gallery</div><div class="muted">照片先让 AI 帮你写说明，自己检查后按核准，Agent 才看得到。 / Agents only see approved work.</div><div class="form" style="margin-top:12px"><input id="portfolioFiles" type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="选择作品照片"><button id="portfolioUploadBtn" type="button" class="btn primary">上传照片并准备说明 / Upload and prepare captions</button><button id="portfolioRefreshBtn" type="button" class="btn">刷新作品 / Refresh gallery</button><div id="portfolioMsg" role="status" aria-live="polite" class="muted"></div></div><div id="portfolioQueue"></div></section>',
+OCCASIONS_HTML,
 '<div class="card hidden" id="launchOrdersCard"><div class="title">Order & Payment / 订单与收款</div><div class="muted">Only create an order after the Agent has accepted a formal quote. Confirm payment only after checking actual bank evidence. 仅确认真实收到的款项。</div><div id="launchQuoteOrders"></div><div class="title" style="margin-top:15px">Orders / 订单</div><div id="launchPayments"></div></div>',
 '<div class="card hidden" id="launchProgressCard"><div class="title">Agent Progress / 代理上手进度</div><div class="muted">Required courses, certification and order access / 必修课、认证及接单权限</div><div id="launchAgentProgress"></div></div>',
 '<div class="card hidden" id="handbookCard"><div class="title">Grok Product Handbook / 产品手册导入</div><div class="muted">Upload Claude-reviewed handbook_content.json. Review by batch and product line, edit drafts, then approve the batch. / 上传已审核 JSON，依批次与业务线检查、编辑草稿，然后整批核准。</div><div class="form" style="margin-top:10px"><input type="file" id="handbookFile" accept=".json,application/json" aria-label="Grok handbook JSON"><button id="handbookImportBtn" class="btn primary">Import draft / 导入待审核</button><div id="handbookMsg" class="muted"></div></div><div class="title" style="margin-top:16px">Pending Owner review / 待核准内容</div><div id="handbookPending"></div></div>',
@@ -27,7 +40,7 @@ const $=x=>document.getElementById(x);
 const escapeHtml=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
 const safeImageUrl=v=>{try{const u=new URL(String(v||""));return u.protocol==="https:"&&u.hostname.endsWith(".supabase.co")?u.href:""}catch{return""}};
 const KUCHING_TZ="Asia/Kuching";
-const kuchingDate=value=>{const parts=new Intl.DateTimeFormat("en-GB",{timeZone:KUCHING_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(value instanceof Date?value:new Date(value));const get=t=>parts.find(p=>p.type===t)?.value||"";return get("year")+"-"+get("month")+"-"+get("day")};
+const kuchingDate=(value=new Date())=>{const parts=new Intl.DateTimeFormat("en-GB",{timeZone:KUCHING_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(value instanceof Date?value:new Date(value));const get=t=>parts.find(p=>p.type===t)?.value||"";return get("year")+"-"+get("month")+"-"+get("day")};
 const kuchingDateTime=value=>new Intl.DateTimeFormat("en-GB",{timeZone:KUCHING_TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value))+" MYT";
 const friendlyError=code=>{
   const c=String(code||"").toLowerCase();
@@ -39,7 +52,7 @@ const friendlyError=code=>{
   return "Unable to complete this action. Please try again. / 暂时无法完成，请再试一次。";
 };
 async function call(body,options={}){let r=await fetch(CFG.url+"/functions/v1/owner-session",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token,"apikey":CFG.key},body:JSON.stringify(body||{}),signal:options.signal,cache:"no-store",referrerPolicy:"no-referrer"});let j=await r.json();if(!r.ok)throw Error(j.error||"Request failed");return j}
-function show(x){if(x!=="app")closeKycPage(); $("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
+function show(x){if(x!=="app"){closeKycPage();clearOwnerOccasions()} $("login").classList.toggle("hidden",x!=="login");$("app").classList.toggle("hidden",x!=="app");$("logout").classList.toggle("hidden",x==="login")}
 async function refreshHandbook(){
   const j=await call({action:"handbook_pending"});
   const entries=j.entries||[],batchById=new Map((j.batches||[]).map(b=>[b.id,b]));
@@ -131,6 +144,183 @@ async function refreshHandbook(){
     finally{btn.disabled=false}
   });
 }
+
+// BEGIN OWNER OCCASIONS
+let ownerOccasionRole=false,ownerOccasionRows=[],ownerOccasionVerifications=[],occasionLoadSeq=0,occasionMutationBusy=false;
+const occasionCategories={graduation:"毕业季 / Graduation",festival:"大众节日 / Festival",cultural:"文化节日 / Cultural",business:"商务致意 / Business",wedding:"婚礼 / Wedding",event:"活动 / Event"};
+const occasionStatuses={confirmed:"已确认 / Confirmed",pattern:"预计 / Estimated",not_found:"未找到 / Not found"};
+const occasionLevels={high:"高 / High",medium:"中 / Medium",low:"低 / Low"};
+const occasionRecurrences={fixed:"固定日期 / Fixed",lunar:"农历或宗教历 / Lunar",variable:"每年变化 / Variable"};
+const occasionUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function occasionNode(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n}
+function occasionError(error){
+  const code=String(error?.message||error||"");
+  if(/owner_required|forbidden|unauthorized|jwt|session/i.test(code))return "需要 Owner 权限或登入已过期，请重新登入。 / Owner access or a fresh sign-in is required.";
+  if(/confirmation_required|confirm_required/i.test(code))return "请先核对日期并勾选亲自确认。 / Check the dates and tick the confirmation.";
+  if(/already_reviewed|not_pending|verification_not_found/i.test(code))return "这项申请已处理或已不存在，请刷新列表。 / This request changed; refresh the queue.";
+  if(/invalid|date|validation|too_long|too_many/i.test(code))return "资料格式有误，请检查日期、链接和必填项目。 / Check dates, links and required fields.";
+  return "暂时无法处理，请刷新后重试。 / Unable to complete the request; refresh and try again.";
+}
+function occasionSafeURL(value){
+  if(typeof value!=="string"||value.length>2048||/\s/.test(value))return "";
+  try{const u=new URL(value);return ["http:","https:"].includes(u.protocol)&&!u.username&&!u.password?u.href:""}catch{return ""}
+}
+function occasionAppendLink(root,value,label){
+  if(!value)return;
+  const url=occasionSafeURL(value);
+  if(!url){root.append(occasionNode("div","来源链接格式无效，未开放链接。 / Invalid source link.","muted"));return}
+  const link=occasionNode("a",label+": "+value,"occasion-link");link.href=url;link.target="_blank";link.rel="noopener noreferrer";link.referrerPolicy="no-referrer";root.append(link);
+}
+function occasionDate(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value||"")||value<"0001-01-01")return false;
+  const d=new Date(value+"T00:00:00Z");return Number.isFinite(d.valueOf())&&d.toISOString().slice(0,10)===value;
+}
+function occasionDisplayDate(row){return row.date_status==="confirmed"?row.date_start:row.estimated_date}
+function clearOwnerOccasions(){
+  ownerOccasionRole=false;ownerOccasionRows=[];ownerOccasionVerifications=[];occasionLoadSeq++;occasionMutationBusy=false;
+  $("ownerOccasionsCard").classList.add("hidden");
+  for(const id of ["occasionList","occasionVerificationQueue","occasionFormHost"])$(id).replaceChildren();
+  for(const id of ["occasionMessage","occasionTotal","occasionPendingCount"])$(id).textContent="";
+  $("occasionRefresh").disabled=false;
+}
+async function refreshOwnerOccasions(){
+  if(!ownerOccasionRole||!session){clearOwnerOccasions();throw Error("owner_required")}
+  const seq=++occasionLoadSeq,token=session.access_token;
+  $("occasionMessage").textContent="读取场合中… / Loading occasions…";$("occasionRefresh").disabled=true;
+  try{
+    const response=await call({action:"occasion_list"});
+    if(seq!==occasionLoadSeq||!ownerOccasionRole||session?.access_token!==token)return;
+    if(!Array.isArray(response.occasions)||!Array.isArray(response.verifications))throw Error("invalid_occasion_response");
+    ownerOccasionRows=response.occasions;ownerOccasionVerifications=response.verifications;
+    $("ownerOccasionsCard").classList.remove("hidden");$("occasionMessage").textContent="";
+    renderOwnerOccasions();renderOwnerOccasionQueue();
+  }catch(error){
+    if(seq===occasionLoadSeq){ownerOccasionRows=[];ownerOccasionVerifications=[];$("occasionList").replaceChildren();$("occasionVerificationQueue").replaceChildren();$("occasionMessage").textContent=occasionError(error)}
+    throw error;
+  }finally{if(seq===occasionLoadSeq)$("occasionRefresh").disabled=false}
+}
+function renderOwnerOccasions(){
+  const root=$("occasionList");root.replaceChildren();
+  if(!ownerOccasionRole)return;
+  const query=$("occasionSearch").value.trim().toLocaleLowerCase(),category=$("occasionCategoryFilter").value,status=$("occasionStatusFilter").value,demand=$("occasionDemandFilter").value,month=$("occasionMonthFilter").value;
+  const rows=ownerOccasionRows.filter(row=>{
+    if(category&&row.category!==category||status&&row.date_status!==status||demand&&row.flower_demand!==demand)return false;
+    if(query&&![row.name_zh,row.name_en,row.location_or_audience].some(value=>String(value||"").toLocaleLowerCase().includes(query)))return false;
+    const start=occasionDisplayDate(row),end=row.date_status==="confirmed"?(row.date_end||start):start;
+    return !month||(start&&end&&String(start).slice(0,7)<=month&&String(end).slice(0,7)>=month);
+  }).sort((a,b)=>String(occasionDisplayDate(a)||"9999").localeCompare(String(occasionDisplayDate(b)||"9999"))||String(a.name_zh).localeCompare(String(b.name_zh)));
+  $("occasionTotal").textContent=rows.length+" / "+ownerOccasionRows.length;
+  if(!rows.length){root.append(occasionNode("p",ownerOccasionRows.length?"没有符合筛选条件的场合。 / No matching occasions.":"还没有场合资料，请新增或先用 CSV 试运行检查。 / No occasions yet; add one or validate a CSV import.","muted"));return}
+  for(const row of rows){
+    const item=occasionNode("article",undefined,"item");
+    item.append(occasionNode("h4",row.name_zh||row.name_en,"title"),occasionNode("div",row.name_en||"","muted"));
+    const start=occasionDisplayDate(row),end=row.date_status==="confirmed"?row.date_end:null;
+    item.append(occasionNode("div",(occasionStatuses[row.date_status]||"未知状态 / Unknown status")+" · "+(start||"日期待核实 / Date needed")+(end&&end!==start?" → "+end:""),"pill"));
+    item.append(occasionNode("div",(occasionCategories[row.category]||"未知类别")+" · 用花需求 "+(occasionLevels[row.flower_demand]||"—")+" · 提前 "+String(row.order_lead_days??0)+" 天 / lead days","muted"));
+    if(row.location_or_audience)item.append(occasionNode("p",row.location_or_audience,"muted occasion-text"));
+    if(Array.isArray(row.typical_products)&&row.typical_products.length)item.append(occasionNode("div","常用花礼 / Products: "+row.typical_products.join("、"),"muted occasion-text"));
+    if(row.evidence)item.append(occasionNode("p","日期依据 / Evidence: "+row.evidence,"muted occasion-text"));
+    occasionAppendLink(item,row.source_url,"来源 / Source");
+    if(row.verified_at)item.append(occasionNode("div","Owner 确认时间 / Confirmed at: "+String(row.verified_at),"muted"));
+    const edit=occasionNode("button","编辑或确认日期 / Edit or confirm","btn");edit.type="button";
+    edit.addEventListener("click",()=>openOwnerOccasionForm(row));item.append(edit);root.append(item);
+  }
+}
+function renderOwnerOccasionQueue(){
+  const root=$("occasionVerificationQueue");root.replaceChildren();if(!ownerOccasionRole)return;
+  const pending=ownerOccasionVerifications.filter(row=>row.status==="pending");$("occasionPendingCount").textContent=String(pending.length);
+  if(!pending.length){root.append(occasionNode("p","目前没有待核实申请。 / No pending date verifications.","muted"));return}
+  for(const verification of pending){
+    const occasion=ownerOccasionRows.find(row=>row.id===verification.occasion_id),item=occasionNode("article",undefined,"item");
+    item.append(occasionNode("h4",occasion?.name_zh||occasion?.name_en||"场合资料待刷新 / Refresh occasion details","title"));
+    item.append(occasionNode("div","提议日期 / Proposed dates: "+String(verification.proposed_date_start||"—")+(verification.proposed_date_end?" → "+verification.proposed_date_end:""),"pill"));
+    if(occasion)item.append(occasionNode("div","目前日期 / Current date: "+(occasionDisplayDate(occasion)||"未找到 / Not found")+" · "+(occasionStatuses[occasion.date_status]||""),"muted"));
+    if(verification.note)item.append(occasionNode("p",verification.note,"muted occasion-text"));
+    occasionAppendLink(item,verification.proof_url,"查看证明 / Proof");
+    if(verification.created_at)item.append(occasionNode("div","提交时间 / Submitted: "+String(verification.created_at),"muted"));
+    const checked=occasionNode("input");checked.type="checkbox";
+    const checkLabel=occasionNode("label",undefined,"occasion-confirm");checkLabel.append(checked,occasionNode("span","我已核对提议日期及证明，亲自确认日期正确。 / I checked the proposed dates and evidence."));
+    const message=occasionNode("div",undefined,"muted");message.setAttribute("role","status");
+    const actions=occasionNode("div",undefined,"occasion-actions"),buttons=[];
+    for(const [decision,label] of [["approved","核准日期 / Approve dates"],["rejected","退回申请 / Reject"]]){
+      const button=occasionNode("button",label,"btn"+(decision==="approved"?" primary":""));button.type="button";buttons.push(button);
+      button.addEventListener("click",async()=>{
+        if(!ownerOccasionRole||!session){message.textContent=occasionError("owner_required");return}
+        if(occasionMutationBusy){message.textContent="另一项操作正在保存，请稍候。 / Another change is saving.";return}
+        if(!occasionUuid.test(String(verification.id||""))||!occasionDate(verification.proposed_date_start)||(verification.proposed_date_end&&(!occasionDate(verification.proposed_date_end)||verification.proposed_date_end<verification.proposed_date_start))){message.textContent="申请日期或编号无效，请刷新。 / Invalid request; refresh the queue.";return}
+        if(decision==="approved"&&!checked.checked){message.textContent="请先核对证明并勾选亲自确认日期。 / Check the evidence and tick the date confirmation.";return}
+        if(!window.confirm(decision==="approved"?"确认采用以上提议日期并标记已确认？ / Approve these dates?":"确认退回这项核实申请？ / Reject this verification?"))return;
+        const token=session.access_token;occasionMutationBusy=true;buttons.forEach(node=>node.disabled=true);message.textContent="正在保存… / Saving…";
+        try{await call({action:"occasion_verification_review",verification_id:verification.id,decision});if(ownerOccasionRole&&session?.access_token===token){await refreshOwnerOccasions();$("occasionMessage").textContent=decision==="approved"?"已核准日期。 / Dates approved.":"申请已退回，原日期不变。 / Verification rejected."}}
+        catch(error){message.textContent=occasionError(error)}finally{occasionMutationBusy=false;buttons.forEach(node=>node.disabled=false)}
+      });actions.append(button);
+    }
+    item.append(checkLabel,actions,message);root.append(item);
+  }
+}
+function openOwnerOccasionForm(initial=null){
+  if(!ownerOccasionRole||!session)return;
+  const host=$("occasionFormHost");host.replaceChildren();
+  const form=occasionNode("form",undefined,"occasion-form");form.noValidate=true;
+  const title=occasionNode("h3",initial?"编辑场合 / Edit occasion":"新增场合 / Add occasion","title");form.append(title);
+  const fields={},grid=occasionNode("div",undefined,"occasion-fields");
+  function field(key,label,type="text",options=null,max=240){
+    const wrap=occasionNode("label",label,"muted"),input=occasionNode(options?"select":type==="textarea"?"textarea":"input");
+    input.name=key;if(!options&&type!=="textarea")input.type=type;
+    if(options)for(const [value,name] of Object.entries(options)){const option=occasionNode("option",name);option.value=value;input.append(option)}
+    if(type==="text"||type==="textarea"||type==="url")input.maxLength=max;
+    input.value=String(initial?.[key]??({category:"festival",flower_demand:"high",order_lead_days:21,recurrence:"fixed",date_status:"pattern",confidence:"medium"}[key]??""));
+    fields[key]=input;wrap.append(input);grid.append(wrap);return input;
+  }
+  field("name_zh","中文名称 * / Chinese name");field("name_en","英文名称 * / English name");
+  field("category","类别 / Category","text",occasionCategories);field("flower_demand","用花需求 / Flower demand","text",occasionLevels);
+  const lead=field("order_lead_days","提前准备天数（0–365） / Lead days","number");lead.min="0";lead.max="365";lead.step="1";
+  field("recurrence","日期规律 / Recurrence","text",occasionRecurrences);field("date_status","日期状态 / Date status","text",occasionStatuses);
+  field("confidence","把握程度 / Confidence","text",occasionLevels);
+  field("date_start","确认开始日期 / Actual start","date");field("date_end","确认结束日期 / Actual end","date");field("estimated_date","预计日期（未确认时使用） / Estimate","date");
+  field("location_or_audience","地区或对象 / Area or audience","text",null,500);
+  const products=field("typical_products","常用花礼（每行一项） / One product per line","textarea",null,5000);products.value=Array.isArray(initial?.typical_products)?initial.typical_products.join("\n"):"";
+  field("past_2024","2024 年资料 / 2024 history","textarea",null,1000);field("past_2025","2025 年资料 / 2025 history","textarea",null,1000);
+  field("source_url","日期来源链接（http/https） / Source URL","url",null,2048);field("evidence","日期依据或备注 / Date evidence","textarea",null,10000);
+  const checked=occasionNode("input");checked.type="checkbox";checked.name="confirm";fields.confirm=checked;
+  const checkLabel=occasionNode("label",undefined,"occasion-confirm");checkLabel.append(checked,occasionNode("span","我已核对来源，亲自确认以上实际日期正确。 / I checked the source and confirm these actual dates."));
+  const syncStatus=()=>{checkLabel.classList.toggle("hidden",fields.date_status.value!=="confirmed");checked.checked=false};
+  fields.date_status.addEventListener("change",syncStatus);syncStatus();
+  for(const key of ["date_start","date_end","source_url","evidence"])fields[key].addEventListener("input",()=>{checked.checked=false});
+  const help=occasionNode("p","选择「已确认」须填写实际开始日期并重新勾选亲自确认。预计或未找到状态只用于预热。 / Confirmed dates require your explicit check.","muted");
+  const message=occasionNode("div",undefined,"muted");message.setAttribute("role","status");message.setAttribute("aria-live","polite");
+  const actions=occasionNode("div",undefined,"occasion-actions"),save=occasionNode("button","保存场合 / Save occasion","btn primary"),cancel=occasionNode("button","取消 / Cancel","btn");save.type="submit";cancel.type="button";
+  cancel.addEventListener("click",()=>{if(!save.disabled)host.replaceChildren()});actions.append(save,cancel);form.append(grid,help,checkLabel,message,actions);host.append(form);fields.name_zh.focus();
+  form.addEventListener("submit",async event=>{
+    event.preventDefault();if(!ownerOccasionRole||!session){message.textContent=occasionError("owner_required");return}
+    if(occasionMutationBusy){message.textContent="另一项操作正在保存，请稍候。 / Another change is saving.";return}
+    const value=key=>fields[key].value.trim(),nullable=key=>value(key)||null;
+    const input={name_zh:value("name_zh"),name_en:value("name_en"),category:value("category"),flower_demand:value("flower_demand"),order_lead_days:Number(value("order_lead_days")),recurrence:value("recurrence"),date_status:value("date_status"),confidence:value("confidence"),date_start:nullable("date_start"),date_end:nullable("date_end"),estimated_date:nullable("estimated_date"),location_or_audience:value("location_or_audience"),typical_products:value("typical_products").split(/\r?\n/).map(v=>v.trim()).filter(Boolean),past_2024:nullable("past_2024"),past_2025:nullable("past_2025"),source_url:nullable("source_url"),evidence:nullable("evidence")};
+    const invalid=reason=>{message.textContent=reason};
+    if(!input.name_zh||!input.name_en||input.name_zh.length>240||input.name_en.length>240)return invalid("中英文名称都必填，各限 240 字。 / Both names are required, up to 240 characters.");
+    if(!Object.hasOwn(occasionCategories,input.category)||!Object.hasOwn(occasionStatuses,input.date_status)||!Object.hasOwn(occasionLevels,input.flower_demand)||!Object.hasOwn(occasionLevels,input.confidence)||!Object.hasOwn(occasionRecurrences,input.recurrence))return invalid("请选择有效的类别、状态及把握程度。 / Choose valid categories and statuses.");
+    if(!/^\d+$/.test(value("order_lead_days"))||!Number.isInteger(input.order_lead_days)||input.order_lead_days>365)return invalid("提前准备天数必须是 0–365 的整数。 / Lead days must be an integer from 0 to 365.");
+    if([input.date_start,input.date_end,input.estimated_date].some(v=>v&&!occasionDate(v)))return invalid("日期无效，请使用真实的年-月-日。 / Enter real dates as YYYY-MM-DD.");
+    if(input.date_end&&(!input.date_start||input.date_end<input.date_start))return invalid("结束日期不能早于开始日期，且须先填写开始日期。 / End date requires a start date and cannot precede it.");
+    if(input.date_status==="confirmed"&&(!input.date_start||!checked.checked))return invalid("请填写实际开始日期，并勾选亲自确认日期。 / Enter the actual start and tick the date confirmation.");
+    if(input.date_status==="pattern"&&!input.estimated_date)return invalid("预计状态须填写预计日期。 / Estimated status needs an estimated date.");
+    if(input.source_url&&!occasionSafeURL(input.source_url))return invalid("来源链接必须是 http/https，不能含登入资料或空格。 / Use an http(s) source without credentials or spaces.");
+    if(input.typical_products.length>40||input.typical_products.some(v=>v.length>120))return invalid("常用花礼最多 40 项，每项限 120 字。 / Up to 40 products, 120 characters each.");
+    if(input.location_or_audience.length>500||String(input.past_2024||"").length>1000||String(input.past_2025||"").length>1000||String(input.evidence||"").length>10000)return invalid("地区、往年资料或依据过长，请缩短后保存。 / Shorten the area, history or evidence.");
+    if(initial&&!occasionUuid.test(String(initial.id||"")))return invalid("场合编号无效，请刷新。 / Invalid occasion ID; refresh.");
+    if(input.date_status!=="confirmed"){input.date_start=null;input.date_end=null}
+    if(input.date_status==="not_found")input.estimated_date=null;
+    const payload={action:"occasion_upsert",occasion:input,confirm:input.date_status==="confirmed"&&checked.checked};if(initial)payload.id=initial.id;
+    const token=session.access_token;occasionMutationBusy=true;save.disabled=true;cancel.disabled=true;message.textContent="正在保存… / Saving…";
+    try{await call(payload);if(ownerOccasionRole&&session?.access_token===token){host.replaceChildren();await refreshOwnerOccasions();$("occasionMessage").textContent="场合已保存。 / Occasion saved."}}
+    catch(error){message.textContent=occasionError(error)}finally{occasionMutationBusy=false;save.disabled=false;cancel.disabled=false}
+  });
+}
+$("ownerOccasionsCard").classList.add("hidden");
+$("occasionAdd").addEventListener("click",()=>openOwnerOccasionForm());
+$("occasionRefresh").addEventListener("click",()=>refreshOwnerOccasions().catch(error=>{$("occasionMessage").textContent=occasionError(error)}));
+for(const id of ["occasionSearch","occasionMonthFilter","occasionCategoryFilter","occasionStatusFilter","occasionDemandFilter"])$(id).addEventListener(id==="occasionSearch"?"input":"change",renderOwnerOccasions);
+// END OWNER OCCASIONS
 
 // D1 payout controls are constructed with DOM nodes, never user-data HTML.
 function element(tag,options={}){
@@ -731,6 +921,9 @@ document.querySelectorAll(".q-act").forEach(b=>b.addEventListener("click",async(
 }));
 $("profitFloorSave").classList.toggle("hidden",j.role!=="owner");$("profitFloorInput").disabled=j.role!=="owner";
 $("baselineCard").classList.toggle("hidden",j.role!=="owner");
+ownerOccasionRole=j.role==="owner";
+$("ownerOccasionsCard").classList.toggle("hidden",!ownerOccasionRole);
+if(ownerOccasionRole){try{await refreshOwnerOccasions()}catch(error){$("occasionMessage").textContent=occasionError(error)}}else clearOwnerOccasions();
 $("handbookCard").classList.toggle("hidden",j.role!=="owner");
 $("signupToggleCard").classList.toggle("hidden",j.role!=="owner");
 if(j.role==="owner")await refreshSignupSetting();
@@ -951,7 +1144,7 @@ if(tokenHash){
 let g=await sb.auth.getSession();
 session=g.data.session;
 if(session)await refresh();else show("login");
-sb.auth.onAuthStateChange(async(_e,s)=>{session=s;if(s)await refresh();else show("login")});
+sb.auth.onAuthStateChange(async(_e,s)=>{if(s?.user?.id!==session?.user?.id)clearOwnerOccasions();session=s;if(s)await refresh();else show("login")});
 $("date").value=kuchingDate()
 })();
 `;

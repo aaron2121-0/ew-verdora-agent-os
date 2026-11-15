@@ -1,0 +1,28 @@
+.occasion-scene {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 7 / 5;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #f2efe7;
+  contain: layout paint;
+  isolation: isolate;
+}
+.occasion-scene > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.occasion-scene-clock {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .occasion-scene { scroll-behavior: auto; }
+}

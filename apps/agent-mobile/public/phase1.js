@@ -61,6 +61,26 @@ function categoryKey(value){
 
 export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,renderTodayTop=null}){
   let active="today";
+  let occasions=null,occasionImport=null,occasionDestroyed=false;
+  function loadOccasions(){
+    occasionImport ||= import("./occasions.js").then(({createOccasionCalendar})=>{
+      if(occasionDestroyed)return null;
+      occasions=createOccasionCalendar({api,getUserId,onBack:()=>navigate("today"),isToday:()=>document.getElementById("todayPage")?.classList.contains("active")});
+      return occasions;
+    }).catch(()=>{occasionImport=null;return null});
+    return occasionImport;
+  }
+  function mountOccasionUpcoming(host){
+    loadOccasions().then(calendar=>{if(calendar&&host.isConnected&&!occasionDestroyed)calendar.mountUpcoming(host)});
+  }
+  function suspendOccasions(){
+    occasions?.suspend();
+    if(!document.querySelector("#app > .section.active")){
+      active="today";document.getElementById("todayPage")?.classList.add("active");updateNavIndicator();
+    }
+  }
+  function destroyOccasions(){occasionDestroyed=true;occasions?.destroy()}
+
   let previousNavIndex=0;
   let lockController=null;
   let detailController=null;
@@ -216,6 +236,7 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
 
   function navigate(next,{scrollTo=null,focusModule=null,focusExam=false}={}){
     if(next==="order"&&isLocked()){showLock();return}
+    occasions?.deactivate();
     active=next;
     if(next!=="today")window.VerdoraMotion?.brandBg?.destroy?.();
     pageSwap(next);
@@ -385,6 +406,10 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     });
     live.append(left,refresh);
     page.append(live);
+    const occasionSlot=element("div",{className:"occasion-loading"});
+    const occasionEntry=iconButton("calendarDays","场合日历","btn btn-secondary btn-small");
+    occasionEntry.addEventListener("click",()=>loadOccasions().then(calendar=>calendar?.openPage()));
+    occasionSlot.append(occasionEntry);page.append(occasionSlot);mountOccasionUpcoming(occasionSlot);
 
     const greet=element("div",{className:"greeting-row"});
     const greetingKey={morning:"greetingMorning",afternoon:"greetingAfternoon",evening:"greetingEvening",night:"greetingNight"}[greetingPeriod()];
@@ -1100,12 +1125,14 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     performance.onLanguageChange();
     training.onLanguageChange();
     handbook.onLanguageChange?.();
+    occasions?.onLanguageChange();
     if(active==="handbook")handbook.reRender();
   }
 
   function onForeground(){
     performance.onForeground();
     training.onForeground();
+    occasions?.refresh({force:true});
   }
 
   async function init(){
@@ -1119,5 +1146,5 @@ export function createPhase1UI({getData,getLang,getUserId,tr,api,onRefresh,rende
     refreshUnlockSummary();
   }
 
-  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training};
+  return {init,renderAll,onLanguageChange,onForeground,navigate,showLock,renderNavBadges,order,performance,training,suspendOccasions,destroyOccasions};
 }

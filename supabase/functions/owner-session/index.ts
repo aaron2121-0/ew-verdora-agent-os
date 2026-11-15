@@ -1,5 +1,6 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { handleOccasionAction } from "../_shared/occasions.mjs";
 import { validateHandbookContent } from "../_shared/handbook-content-validate.mjs";
 const cors={
   "Access-Control-Allow-Origin":"*",
@@ -63,6 +64,10 @@ Deno.serve(async req=>{
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
   const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief","owner_agent_reminder","set_profit_floor"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
+
+  // Owner role and authenticated UID are established before occasion dispatch.
+  const occasionResult=await handleOccasionAction({body:b,uid,admin,role});
+  if(occasionResult)return reply(occasionResult.payload,occasionResult.status);
 
 
 
