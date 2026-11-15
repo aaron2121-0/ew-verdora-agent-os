@@ -138,7 +138,13 @@ async function refresh(){
       return result;
     }
     view("app");
-    if(identity)await identity.sync();
+    if(identity){
+      await identity.sync();
+      // Existing Agents created before KYC have no private.agent_kyc row yet.
+      // When KYC becomes required, take them straight into the existing Step 1
+      // flow; saving Step 2 attaches KYC to their existing Agent ID.
+      if(result.kyc_required&&!result.kyc_status)await identity.open({startStep:1});
+    }
     if(!UI){
       UI=createPhase1UI({
         getData:()=>D,
