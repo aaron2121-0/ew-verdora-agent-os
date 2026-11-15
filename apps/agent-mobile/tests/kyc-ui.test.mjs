@@ -52,9 +52,17 @@ test("Today identity card is server-gated and uses safe DOM creation",()=>{
   assert.match(kyc,/element\("section"/);
 });
 
-test("pre-KYC registered Agents are taken straight to identity Step 1 when required",()=>{
-  assert.match(app,/result\.kyc_required&&!result\.kyc_status\)await identity\.open\(\{startStep:1\}\)/);
-  assert.match(app,/if\(identity\)\{/);
+test("KYC hard gate keeps unsubmitted Agents in a locked identity-only view",()=>{
+  assert.match(app,/const kycBlocked=Boolean\(/);
+  assert.match(app,/!\["submitted","approved"\]\.includes\(String\(result\.kyc_status\|\|""\)\)/);
+  assert.match(app,/view\("kyc"\)/);
+  assert.match(app,/identity\.open\(\{startStep:1,locked:true\}\)/);
+  assert.match(app,/\$\("app"\)\.classList\.toggle\("hidden",!appView\)/);
+  assert.match(app,/\$\("nav"\)\.classList\.toggle\("hidden",!appView\)/);
+  assert.match(app,/\$\("aiProfileOpen"\)\?\.classList\.toggle\("hidden",!appView\)/);
+  assert.ok(app.indexOf("if(kycBlocked&&identity)") < app.indexOf("if(!UI)"));
+  assert.match(kyc,/async function open\(\{startStep=1,locked:lockFlow=false\}=\{\}\)/);
+  assert.match(kyc,/closeBtn\?\.classList\.toggle\("hidden",locked\)/);
 });
 
 test("My profile stays available for registered Agents even when KYC is off",()=>{
