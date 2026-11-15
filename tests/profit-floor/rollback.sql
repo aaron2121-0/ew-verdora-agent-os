@@ -51,7 +51,7 @@ BEGIN
   then
     raise exception 'FAIL: below_floor_quote_not_routed';
   end if;
-  raise notice 'PASS 1/5: RM100 / RM45 / 10%% quote is draft+manual_review; hard-floor minimum RM140';
+  raise log 'PASS 1/5: RM100 / RM45 / 10%% quote is draft+manual_review; hard-floor minimum RM140';
 
   insert into public.leads(agent_id,source,status)
   values(v_agent,'other','new') returning id into v_lead_high;
@@ -65,7 +65,7 @@ BEGIN
   then
     raise exception 'FAIL: healthy_quote_rejected';
   end if;
-  raise notice 'PASS 2/5: RM300 / RM45 / 10%% quote auto-approved above dynamic target';
+  raise log 'PASS 2/5: RM300 / RM45 / 10%% quote auto-approved above dynamic target';
 
   begin
     perform public.create_order_from_quote_internal(
@@ -83,7 +83,7 @@ BEGIN
   then
     raise exception 'FAIL: delivery_guard_did_not_block';
   end if;
-  raise notice 'PASS 3/5: delivery-aware order below 50%% was blocked before payment';
+  raise log 'PASS 3/5: delivery-aware order below 50%% was blocked before payment';
 
   select * into v_order
   from public.create_order_from_quote_internal(
@@ -120,7 +120,7 @@ BEGIN
   then
     raise exception 'FAIL: completed_low_margin_not_alerted';
   end if;
-  raise notice 'PASS 4/5: completed order below floor was recorded and Owner exception created';
+  raise log 'PASS 4/5: completed order below floor was recorded and Owner exception created';
 
   insert into public.leads(agent_id,source,status)
   values(v_agent,'other','new') returning id into v_lead_healthy;
@@ -163,7 +163,7 @@ BEGIN
     raise exception 'FAIL: owner_profit_overview';
   end if;
 
-  raise notice 'PASS 5/5: healthy completed order passes; Owner overview shows 50%% floor and current >=60%% dynamic auto target';
+  raise log 'PASS 5/5: healthy completed order passes; Owner overview shows 50%% floor and current >=60%% dynamic auto target';
 END;
 $$;
 ROLLBACK;
