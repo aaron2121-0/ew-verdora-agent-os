@@ -61,18 +61,20 @@ function applyI18n(){
 
 function view(name){
   if(name!=="app")UI?.suspendOccasions?.();
+  const appView=name==="app";
+  const authenticatedView=appView||name==="kyc";
   $("booting")?.classList.add("hidden");
   $("login").classList.toggle("hidden",name!=="login");
   $("register").classList.toggle("hidden",name!=="register");
-  $("app").classList.toggle("hidden",name!=="app");
-  $("nav").classList.toggle("hidden",name!=="app");
-  $("logout").classList.toggle("hidden",name!=="app");
-  $("topbar").classList.toggle("app-active",name==="app");
-  $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
+  $("app").classList.toggle("hidden",!appView);
+  $("nav").classList.toggle("hidden",!appView);
+  $("logout").classList.toggle("hidden",!authenticatedView);
+  $("topbar").classList.toggle("app-active",authenticatedView);
+  $("aiProfileOpen")?.classList.toggle("hidden",!appView);
   $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app");
   window.VerdoraMotion?.brandBg?.destroy?.();
   if(name==="login")import("./brand-loader.js").then(m=>m.mountBrandBg($("login"),{placement:"tr",seed:20261114})).catch(()=>{});
-  if(name==="app")import("./logo-motion-bridge.js").then(m=>m.runWelcome({
+  if(appView)import("./logo-motion-bridge.js").then(m=>m.runWelcome({
     name:String(D?.agent?.display_name||D?.agent?.full_name||"").split(" ")[0]||"",
     lang:lang==="zh"?"zh":"en"
   })).catch(()=>{});
@@ -133,19 +135,28 @@ async function refresh(){
     const result=await fn("agent-session",{action:"dashboard"});
     D=result;
     const identity=(!result.needs_registration||result.kyc_required||result.kyc_status)?await ensureKyc():null;
+    const kycBlocked=Boolean(
+      result.kyc_required &&
+      !["submitted","approved"].includes(String(result.kyc_status||""))
+    );
     if(result.needs_registration){
-      view("register");
-      if(result.kyc_required&&identity){await identity.sync();await identity.open({startStep:1})}
+      if(result.kyc_required&&identity){
+        view("kyc");
+        await identity.sync();
+        await identity.open({startStep:1,locked:true});
+      }else{
+        view("register");
+      }
+      return result;
+    }
+    if(kycBlocked&&identity){
+      view("kyc");
+      await identity.sync();
+      await identity.open({startStep:1,locked:true});
       return result;
     }
     view("app");
-    if(identity){
-      await identity.sync();
-      // Existing Agents created before KYC have no private.agent_kyc row yet.
-      // When KYC becomes required, take them straight into the existing Step 1
-      // flow; saving Step 2 attaches KYC to their existing Agent ID.
-      if(result.kyc_required&&!result.kyc_status)await identity.open({startStep:1});
-    }
+    if(identity)await identity.sync();
     if(!UI){
       UI=createPhase1UI({
         getData:()=>D,
