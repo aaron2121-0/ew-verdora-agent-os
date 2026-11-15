@@ -61,7 +61,7 @@ Deno.serve(async req=>{
   // Every action is authenticated AND role-authorized before dispatch.
   const {data:role,error:roleError}=await admin.rpc("owner_role_internal",{p_user_id:uid});
   if(roleError || !["owner","admin"].includes(role))return reply({error:"forbidden"},403);
-  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief","owner_agent_reminder","set_profit_floor"]);
+  const ownerOnly=new Set(["create_agent_invite","create_owner_recovery_link","set_reference_baseline","update_setting","patch_setting","refresh_profit","add_opex","handbook_import","handbook_pending","handbook_update","handbook_review","handbook_bulk_approve","launch_agent_progress","launch_orders","launch_create_order","launch_confirm_payment","launch_complete_order","commission_payable_list","commission_mark_paid","kyc_list","kyc_view","kyc_review","kyc_delete","portfolio_upload_url","portfolio_list","portfolio_review","owner_daily_brief","owner_agent_reminder","set_profit_floor","occasion_review"]);
   if(ownerOnly.has(action)&&role!=="owner")return reply({error:"forbidden"},403);
 
 
@@ -524,6 +524,35 @@ Deno.serve(async req=>{
     if(auditError)return reply({error:"audit_failed"},500);
     return reply({ok:true,email,expires_at:expiresAt,invite_url:inviteUrl});
   }
+  // Occasion Calendar review: only the trusted Owner session may call this
+  // service-role RPC. No SQL errors or raw proof data are leaked.
+  if(action==="occasion_review"){
+    const verificationId=String(b.verification_id||"");
+    const decision=String(b.decision||"");
+    const reason=String(b.reason||"").trim().slice(0,1000);
+    if(!kycUUID.test(verificationId))return reply({error:"occasion_invalid_verification"},422);
+    if(!["approve","reject"].includes(decision))return reply({error:"occasion_invalid_decision"},422);
+    if(decision==="reject"&&reason.length<3)return reply({error:"occasion_reject_reason_required"},422);
+    const {data,error}=await admin.rpc("owner_review_occasion_verification_internal",{
+      p_user_id:uid,p_verification_id:verificationId,p_decision:decision,
+      p_reason:decision==="reject"?reason:null
+    });
+    if(error){
+      const allowed=new Set(["occasion_forbidden","occasion_invalid_decision",
+        "occasion_reject_reason_required","occasion_verification_not_found",
+        "occasion_already_reviewed","occasion_not_found"]);
+      const message=String(error.message||"");
+      const safe=allowed.has(message)?message:"occasion_review_failed";
+      const http=safe==="occasion_forbidden"?403:
+        safe==="occasion_verification_not_found"||safe==="occasion_not_found"?404:
+        safe==="occasion_already_reviewed"?409:
+        safe==="occasion_invalid_decision"||safe==="occasion_reject_reason_required"?422:500;
+      console.error("OCCASION_REVIEW",error.code||"");
+      return reply({error:safe},http);
+    }
+    return reply({ok:true,verification:data});
+  }
+
   if(action==="kyc_list"){
     const status=String(b.status||"all");
     if(!["all","draft","submitted","approved","rejected"].includes(status))
