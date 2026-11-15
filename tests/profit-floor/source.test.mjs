@@ -11,6 +11,7 @@ const migration=read("supabase/migrations/20261115170000_profit_contribution_flo
 const ownerSession=read("supabase/functions/owner-session/index.ts");
 const ownerUi=read("apps/owner-mobile/index.ts");
 const agentAi=read("supabase/functions/agent-ai/index.ts");
+const quoteIntake=read("supabase/functions/quote-intake/index.ts");
 
 test("hard floor is configurable but never below 50 percent",()=>{
   assert.match(migration,/profit_floor/);
@@ -44,10 +45,13 @@ test("Owner backend exposes floor controls and delivery estimate",()=>{
   assert.match(ownerUi,/profitFloorOrders/);
 });
 
-test("Agent AI sensitive-output boundary stays intact and gets no floor details",()=>{
+test("Agent-facing paths fail closed without leaking financial guard details",()=>{
   assert.match(agentAi,/containsSensitiveOutput/);
   assert.doesNotMatch(agentAi,/profit_floor/);
   assert.doesNotMatch(agentAi,/minimum_contribution_margin_floor/);
+  assert.match(quoteIntake,/q\.status!==["']approved["']/);
+  assert.match(quoteIntake,/quote_requires_owner_review/);
+  assert.doesNotMatch(quoteIntake,/hard_floor_min_selling_price/);
 });
 
 test("money functions use dollar-quoted bodies",()=>{
