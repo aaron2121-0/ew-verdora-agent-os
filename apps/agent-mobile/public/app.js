@@ -68,7 +68,7 @@ function view(name){
   $("logout").classList.toggle("hidden",name!=="app");
   $("topbar").classList.toggle("app-active",name==="app");
   $("aiProfileOpen")?.classList.toggle("hidden",name!=="app");
-  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app"||!D?.kyc_status);
+  $("identitySettingsBtn")?.classList.toggle("hidden",name!=="app");
   window.VerdoraMotion?.brandBg?.destroy?.();
   if(name==="login")import("./brand-loader.js").then(m=>m.mountBrandBg($("login"),{placement:"tr",seed:20261114})).catch(()=>{});
   if(name==="app")import("./logo-motion-bridge.js").then(m=>m.runWelcome({
@@ -131,7 +131,7 @@ async function refresh(){
   refreshBusy=(async()=>{
     const result=await fn("agent-session",{action:"dashboard"});
     D=result;
-    const identity=(result.kyc_required||result.kyc_status)?await ensureKyc():null;
+    const identity=(!result.needs_registration||result.kyc_required||result.kyc_status)?await ensureKyc():null;
     if(result.needs_registration){
       view("register");
       if(result.kyc_required&&identity){await identity.sync();await identity.open({startStep:1})}

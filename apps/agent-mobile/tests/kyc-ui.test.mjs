@@ -52,6 +52,16 @@ test("Today identity card is server-gated and uses safe DOM creation",()=>{
   assert.match(kyc,/element\("section"/);
 });
 
+test("My profile stays available for registered Agents even when KYC is off",()=>{
+  assert.match(app,/identitySettingsBtn"\)\?\.classList\.toggle\("hidden",name!=="app"\)/);
+  assert.match(app,/!result\.needs_registration\|\|result\.kyc_required\|\|result\.kyc_status/);
+  assert.match(kyc,/Boolean\(d\.needs_registration\|\|!d\.agent\)/);
+  for(const field of ["display_name","agent_code","tier","preferred_language"])assert.match(kyc,new RegExp(field));
+  assert.match(kyc,/identityNotRequired/);
+  assert.match(kyc,/identity-settings-action/);
+  assert.doesNotMatch(kyc,/button\.classList\.toggle\("hidden",!d\.kyc_status\)/);
+});
+
 test("identity UI has readable 16px text and 48px+ actions",()=>{
   assert.match(css,/\.identity-flow-body\{font-size:16px/);
   assert.match(css,/\.identity-next\{width:100%;min-height:52px;font-size:17px/);

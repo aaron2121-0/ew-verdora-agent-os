@@ -1049,7 +1049,7 @@ I18N.zh.handbookTitle="产品手册";
 I18N.zh.handbookSubtitle="五大业务线 · 核准作品 · 客户话术";
 
 Object.assign(I18N.en,{
-  identitySettings:"Identity details",identityStartTitle:"Complete identity verification to start taking orders",
+  identitySettings:"My profile",profileDisplayName:"Display name",profileAgentCode:"Agent code",profileTier:"Tier",profileLanguage:"Language",profileLanguageEn:"English",profileLanguageZh:"Chinese",identityNotRequired:"Identity verification is not required right now.",identityContinueTitle:"Identity verification is not finished yet",identityContinueAction:"Continue verification",identityStartTitle:"Complete identity verification to start taking orders",
   identityStartBody:"About 2 minutes. We only ask for what is needed to confirm who receives the commission.",identityStart:"Start",
   identityWaitingTitle:"Sent · waiting for review",identityWaitingBody:"The Owner usually finishes checking within 1 day. We will let you know when it is done.",
   identityVerifiedTitle:"Identity verified ✓",identityVerifiedBody:"Your identity has been confirmed.",
@@ -1057,7 +1057,7 @@ Object.assign(I18N.en,{
   identityOwnerReason:"What to fix: {reason}",identityFixAction:"Retake / edit details"
 });
 Object.assign(I18N.zh,{
-  identitySettings:"身份资料",identityStartTitle:"完成身份验证，就能开始接单",
+  identitySettings:"我的资料",profileDisplayName:"显示名",profileAgentCode:"Agent 编号",profileTier:"等级",profileLanguage:"语言",profileLanguageEn:"English",profileLanguageZh:"中文",identityNotRequired:"目前不需要身份认证。",identityContinueTitle:"身份认证还没完成",identityContinueAction:"继续认证",identityStartTitle:"完成身份验证，就能开始接单",
   identityStartBody:"大约 2 分钟。只收确认本人和佣金付款需要的资料。",identityStart:"开始",
   identityWaitingTitle:"已送出，等待审核",identityWaitingBody:"老板通常 1 天内会审核完，好了会通知你。",
   identityVerifiedTitle:"身份已验证 ✓",identityVerifiedBody:"身份已经确认完成。",

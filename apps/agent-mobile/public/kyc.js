@@ -158,7 +158,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     const button=document.getElementById("identitySettingsBtn");
     if(!button)return;
     const d=getData()||{};
-    button.classList.toggle("hidden",!d.kyc_status);
+    button.classList.toggle("hidden",Boolean(d.needs_registration||!d.agent));
     button.setAttribute("aria-label",t("identitySettings"));
     button.title=t("identitySettings");
   }
@@ -442,31 +442,62 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     const closeBtn=element("button",{className:"btn btn-text identity-settings-close",text:"×",attrs:{type:"button","aria-label":t("close")}});
     closeBtn.addEventListener("click",()=>host.classList.add("hidden"));
     panel.append(closeBtn,element("h2",{id:"identitySettingsTitle",text:t("identitySettings")}));
-    const status=safeStatus(detail?.status||getData()?.kyc_status);
-    panel.append(element("p",{text:status==="approved"?t("identityVerifiedTitle"):t("identitySettingsBody")}));
-    if(confirming){
-      const warn=element("div",{className:"identity-delete-warning"});
-      warn.append(element("strong",{text:t("identityDeleteConfirmTitle")}),element("p",{text:t("identityDeleteConsequence")}));
-      const cancel=element("button",{className:"btn btn-secondary",text:t("identityKeepData"),attrs:{type:"button"}});
-      const confirm=element("button",{className:"btn btn-danger",text:t("identityDeleteConfirmAction"),attrs:{type:"button"}});
-      cancel.addEventListener("click",()=>renderSettings(false));
-      confirm.addEventListener("click",async()=>{
-        if(busy)return;
-        busy=true;setButtonLoading(confirm,true,t("identityDeleting"));
-        try{
-          await api({action:"kyc_request_delete",confirm:true});
-          host.classList.add("hidden");
-          detail={...(detail||{}),delete_requested:true};
-          toast(t("identityDeleteRequested"),{tone:"success"});
-        }catch(error){toast(humanError(error?.message),{tone:"danger"})}
-        finally{busy=false;setButtonLoading(confirm,false,t("identityDeleteConfirmAction"))}
-      });
-      warn.append(cancel,confirm);panel.append(warn);
+    const d=getData()||{};
+    const agent=d.agent||{};
+    const language=agent.preferred_language==="zh"?t("profileLanguageZh"):t("profileLanguageEn");
+    const summary=element("dl",{className:"identity-profile-summary"});
+    for(const [label,value] of [
+      [t("profileDisplayName"),String(agent.display_name||"—")],
+      [t("profileAgentCode"),String(agent.agent_code||"—")],
+      [t("profileTier"),String(agent.tier||"—")],
+      [t("profileLanguage"),language]
+    ]){
+      const row=element("div",{className:"identity-profile-row"});
+      row.append(element("dt",{text:label}),element("dd",{text:value}));
+      summary.append(row);
+    }
+    panel.append(summary);
+    const status=safeStatus(detail?.status||d.kyc_status);
+    if(d.kyc_required||status){
+      const statusText=status==="approved"?t("identityVerifiedTitle"):
+        status==="submitted"?t("identityWaitingTitle"):
+        status==="rejected"?t("identityFixTitle"):
+        status==="draft"?t("identityContinueTitle"):
+        t("identityStartTitle");
+      panel.append(element("p",{className:"identity-settings-status",text:statusText}));
+      if((d.kyc_required||status) && !["approved","submitted"].includes(status)){
+        const start=element("button",{className:"btn btn-primary identity-settings-action",text:status==="rejected"?t("identityFixAction"):status==="draft"?t("identityContinueAction"):t("identityStart"),attrs:{type:"button"}});
+        start.addEventListener("click",()=>{host.classList.add("hidden");open({startStep:1})});
+        panel.append(start);
+      }
     }else{
-      panel.append(element("p",{className:"identity-settings-note",text:t("identityDeleteConsequence")}));
-      const remove=element("button",{className:"btn btn-danger identity-delete-start",text:t("identityDeleteAction"),attrs:{type:"button"}});
-      remove.addEventListener("click",()=>renderSettings(true));
-      panel.append(remove);
+      panel.append(element("p",{className:"identity-settings-status",text:t("identityNotRequired")}));
+    }
+    if(status){
+      if(confirming){
+        const warn=element("div",{className:"identity-delete-warning"});
+        warn.append(element("strong",{text:t("identityDeleteConfirmTitle")}),element("p",{text:t("identityDeleteConsequence")}));
+        const cancel=element("button",{className:"btn btn-secondary",text:t("identityKeepData"),attrs:{type:"button"}});
+        const confirm=element("button",{className:"btn btn-danger",text:t("identityDeleteConfirmAction"),attrs:{type:"button"}});
+        cancel.addEventListener("click",()=>renderSettings(false));
+        confirm.addEventListener("click",async()=>{
+          if(busy)return;
+          busy=true;setButtonLoading(confirm,true,t("identityDeleting"));
+          try{
+            await api({action:"kyc_request_delete",confirm:true});
+            host.classList.add("hidden");
+            detail={...(detail||{}),delete_requested:true};
+            toast(t("identityDeleteRequested"),{tone:"success"});
+          }catch(error){toast(humanError(error?.message),{tone:"danger"})}
+          finally{busy=false;setButtonLoading(confirm,false,t("identityDeleteConfirmAction"))}
+        });
+        warn.append(cancel,confirm);panel.append(warn);
+      }else{
+        panel.append(element("p",{className:"identity-settings-note",text:t("identityDeleteConsequence")}));
+        const remove=element("button",{className:"btn btn-danger identity-delete-start",text:t("identityDeleteAction"),attrs:{type:"button"}});
+        remove.addEventListener("click",()=>renderSettings(true));
+        panel.append(remove);
+      }
     }
     host.append(panel);
   }
