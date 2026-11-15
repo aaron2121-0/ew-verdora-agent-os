@@ -540,3 +540,16 @@ body:has(.spotlight-layer) #nav{z-index:86;position:fixed}
 .lm-swap.on{opacity:1}
 .lm-swap-logo{width:clamp(84px,22vmin,140px)}
 @media (prefers-reduced-motion:reduce){.lm-swap{display:none}}
+
+
+/* Phase 1 AI partner cards: lightweight, accessible; no external assets. */
+.ai-partner-brief{padding:16px;border:1px solid var(--border,#d8d8d8);border-radius:16px;margin:14px 0;display:grid;gap:9px}
+.ai-partner-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ai-partner-head h2{font-size:1.05rem;margin:0}
+.ai-read-results{display:grid;gap:10px;padding:10px 2px}
+.ai-read-card{display:grid;gap:6px;border:1px solid var(--border,#d9d9d9);border-radius:14px;padding:12px;background:var(--surface,#fff);overflow-wrap:anywhere}
+.ai-read-card strong{font-size:.92rem}
+.ai-read-subtitle{margin:0;font-size:.8rem;opacity:.84;line-height:1.5}
+.ai-read-copy{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;margin:0}
+.ai-read-card .btn{justify-self:start;min-height:36px}
+@media(prefers-reduced-motion:reduce){.ai-partner-brief *, .ai-read-card *{animation:none!important;transition:none!important}}
