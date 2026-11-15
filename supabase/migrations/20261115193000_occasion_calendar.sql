@@ -143,6 +143,37 @@ before insert or update on public.occasions
 for each row execute function private.occasion_stamp_and_guard();
 revoke all on function private.occasion_stamp_and_guard() from public,anon,authenticated;
 
+-- Direct authenticated table writes may create pending proposals, but must never
+-- forge an approved/rejected proposal (including a forged reviewed_by).
+-- Approval transitions only happen from the service-role review RPC.
+create or replace function private.occasion_review_transition_guard()
+returns trigger language plpgsql security definer set search_path = ''
+as $
+declare v_service boolean;
+begin
+  v_service := coalesce(current_setting('request.jwt.claim.role',true),'') = 'service_role';
+  if tg_op = 'INSERT' then
+    if new.status <> 'pending' or new.reviewed_by is not null or new.reviewed_at is not null then
+      if not v_service then
+        raise exception 'occasion_review_rpc_required' using errcode = '42501';
+      end if;
+    end if;
+  elsif
+    (new.status is distinct from old.status
+      or new.reviewed_by is distinct from old.reviewed_by
+      or new.reviewed_at is distinct from old.reviewed_at)
+    and not v_service
+  then
+    raise exception 'occasion_review_rpc_required' using errcode = '42501';
+  end if;
+  return new;
+end;
+$;
+create trigger occasion_review_transition_guard
+before insert or update on public.occasion_verifications
+for each row execute function private.occasion_review_transition_guard();
+revoke all on function private.occasion_review_transition_guard() from public,anon,authenticated;
+
 -- Only the trusted service-role Owner Edge Function may call the review RPC.
 -- It verifies the JWT first, supplies the authenticated uid and maps errors
 -- to safe allowlisted codes. A direct client RPC call is forbidden.
