@@ -3,10 +3,10 @@
 // This loader fetches the bundle from an immutable GitHub commit, verifies its
 // SHA-256, and parses ONLY the ASSETS/TYPES JSON data (no remote code is executed).
 // To release a new bundle: update BUNDLE_COMMIT + BUNDLE_SHA256 + VERSION, then redeploy.
-const BUNDLE_COMMIT="44827f3a8c5fbbb644759a863e5bf679a4627eb9";
-const BUNDLE_SHA256="9e6ba53bc0277924b1476688c49fd5afaf41c0f95953f81f635ac3f9d9dab4e0";
+const BUNDLE_COMMIT="ed76e3be6e3e0b04b39676186c5da427876ecbc1";
+const BUNDLE_SHA256="2fd687184f69e2b55bd37bd8780bf00c8683008c15284d98f6de2e4889b7a10f";
 const BUNDLE_URL=`https://raw.githubusercontent.com/aaron2121-0/ew-verdora-agent-os/${BUNDLE_COMMIT}/apps/agent-mobile/dist/railway-function.ts`;
-const VERSION="1.3.0";
+const VERSION="1.4.0";
 
 async function loadBundle(){
   let lastErr="";
