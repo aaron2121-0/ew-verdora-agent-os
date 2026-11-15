@@ -41,6 +41,9 @@ test("Owner backend exposes floor controls and delivery estimate",()=>{
   assert.match(ownerSession,/p_delivery_cost_estimate:deliveryCost/);
   assert.match(ownerUi,/Contribution Margin Floor/);
   assert.match(ownerUi,/launch-delivery-cost/);
+  assert.match(ownerUi,/feeRaw===["']["']/);
+  assert.match(ownerUi,/deliveryCostRaw===["']["']/);
+  assert.doesNotMatch(ownerUi,/launch-delivery-cost[^\n]*value=['"]0['"]/);
   assert.match(ownerUi,/profitFloorQuotes/);
   assert.match(ownerUi,/profitFloorOrders/);
 });
