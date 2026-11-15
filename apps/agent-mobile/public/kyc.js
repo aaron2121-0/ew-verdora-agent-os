@@ -84,6 +84,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
   let objectPath="";
   let busy=false;
   let consent=false;
+  let locked=false;
   let icLast4="";
   const form={legal_name:"",preferred_name:"",ic_number:"",phone_whatsapp:"",area:""};
   const t=(key,vars={})=>{
@@ -412,6 +413,8 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     flow.querySelector(".identity-progress-bar").style.width=String(step*25)+"%";
     const back=flow.querySelector(".identity-back");
     back.classList.toggle("hidden",step===1);
+    const closeBtn=flow.querySelector(".identity-close");
+    closeBtn?.classList.toggle("hidden",locked);
     if(step===1)renderStep1(body);
     else if(step===2)renderStep2(body);
     else if(step===3)renderStep3(body);
@@ -419,8 +422,9 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
     decorateD6KycStep(body,step,getLang());
     body.querySelector("input,button")?.focus({preventScroll:true});
   }
-  async function open({startStep=1}={}){
+  async function open({startStep=1,locked:lockFlow=false}={}){
     await ensureCopy();
+    locked=Boolean(lockFlow);
     step=Math.min(4,Math.max(1,Number(startStep)||1));
     ensureFlow().classList.remove("hidden");
     document.body.classList.add("identity-open");
@@ -429,6 +433,7 @@ export function createKycExperience({getData,getLang,tr,api,rawUpload,onRefresh}
   function close(){
     flow?.classList.add("hidden");
     document.body.classList.remove("identity-open");
+    locked=false;
   }
   function ensureSettings(){
     if(settings)return settings;
