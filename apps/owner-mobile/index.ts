@@ -377,8 +377,8 @@ async function refreshLaunchPanels(){
       "</b> <span class='pill'>"+es(q.agent_name)+"</span>"+
       "<div class='muted'>Approved flower amount RM "+Number(q.selling_price||0).toFixed(2)+" · "+es(q.status)+"</div>"+
       "<div class='form'><input class='launch-code' maxlength='60' placeholder='Order code / 订单编号 (e.g. EV-2026-0001)' aria-label='Order code'>"+
-      "<input class='launch-fee' type='number' min='0' max='10000' step='0.01' value='0' aria-label='Customer delivery fee RM' placeholder='Customer delivery fee / 客人付运费'>"+
-      "<input class='launch-delivery-cost' type='number' min='0' max='10000' step='0.01' value='0' aria-label='Expected delivery cost RM' placeholder='Expected delivery cost / 预计送货成本'>"+
+      "<input class='launch-fee' type='number' min='0' max='10000' step='0.01' aria-label='Customer delivery fee RM' placeholder='Customer delivery fee / 客人付运费（自取填 0）'>"+
+      "<input class='launch-delivery-cost' type='number' min='0' max='10000' step='0.01' aria-label='Expected delivery cost RM' placeholder='Expected delivery cost / 预计送货成本（自取填 0）'>"+
       "<button class='btn primary launch-create-order' type='button'>Create order / 建立订单</button>"+
       "<div class='muted launch-qmsg'></div></div></div>";
   }).join(""):"<div class='muted item'>No eligible accepted quotes / 暂无可建立订单的报价。</div>";
@@ -386,10 +386,12 @@ async function refreshLaunchPanels(){
   document.querySelectorAll(".launch-create-order").forEach(btn=>btn.onclick=async()=>{
     const wrap=btn.closest(".launch-quote"),id=wrap.dataset.quote,q=byId.get(id);
     const code=wrap.querySelector(".launch-code").value.trim();
-    const fee=Number(wrap.querySelector(".launch-fee").value);
-    const deliveryCost=Number(wrap.querySelector(".launch-delivery-cost").value);
+    const feeRaw=wrap.querySelector(".launch-fee").value.trim();
+    const deliveryCostRaw=wrap.querySelector(".launch-delivery-cost").value.trim();
+    const fee=Number(feeRaw);
+    const deliveryCost=Number(deliveryCostRaw);
     const msg=wrap.querySelector(".launch-qmsg");
-    if(!q||!code||!Number.isFinite(fee)||fee<0||!Number.isFinite(deliveryCost)||deliveryCost<0){msg.textContent="Enter a valid order code, delivery fee and expected delivery cost. / 请填写订单编号、客人付运费及预计送货成本。";return}
+    if(!q||!code||feeRaw===""||deliveryCostRaw===""||!Number.isFinite(fee)||fee<0||!Number.isFinite(deliveryCost)||deliveryCost<0){msg.textContent="Enter the delivery fee and expected delivery cost explicitly; enter 0 for pickup/no cost. / 请明确填写客人付运费及预计送货成本，自取或无成本也要填 0。";return}
     const total=Number(q.selling_price)+fee;
     if(!confirm("Create order "+code+"?\nFlower RM "+Number(q.selling_price).toFixed(2)+" + Delivery RM "+fee.toFixed(2)+" = RM "+total.toFixed(2)+"\nExpected delivery cost RM "+deliveryCost.toFixed(2)+"\n确认建立订单？"))return;
     btn.disabled=true;
